@@ -104,7 +104,7 @@ OUT_FILES = ("day_joint.csv", "day_joint_stages.csv", "day_joint_plans.json", "d
 CSV_FIELDS = (
     "fleet", "date", "R", "L", "waves", "legs", "columns", "columns_outside_day", "day_status", "K_or_S", "large_peak",
     "total_minutes", "car_minutes", "routes", "lb0", "lb0w", "lb_L", "lb_S", "bound_used", "bound_source",
-    "certificate_tier", "timing_dependent", "non_lexicographic", "crosscheck_solver", "crosscheck_status", "checker_ok",
+    "certificate_tier", "timing_dependent", "non_lexicographic", "crosscheck_solver", "crosscheck_status", "wave_values_status", "checker_ok",
     "ts_confirmation", "wall_seconds", "note",
 )
 STAGE_FIELDS = ("fleet", "date", "R", "L", "solver", "stage", "status", "stop_reason", "objective", "bound", "bound_ceil",
@@ -258,17 +258,45 @@ def real_deps(cfg: Config) -> Deps:
 
 # ---------------------------------------------------------------- the label hook (J9b fills it at integration)
 def label_day_cell(facts: dict) -> dict:
-    """THE label hook: ``day_status``, ``bound_used`` and ``bound_source`` of a solved cell.
+    """THE label hook: ``day_status``, ``bound_used``, ``bound_source`` (and a ``reason``) of a cell.
 
-    ``facts`` (all plain values): fleet, date, ride, large_limit, solve_status (primary ``DaySolveResult.status``),
-    objective (tuple or None), stage_statuses, timing_dependent, non_lexicographic, crosscheck_status
-    (agree / blocking / inconclusive / not_run), stage1_bound_ceil, bounds (name -> value), certificate_tier.
-    The placeholder maps the solver status to the protocol label and names no bound; J9b's ``label_cell`` replaces it
-    (labels of design 4.3, ``optimal_stage1_by_bound``, ``bound_used`` with its source, ``proof_claim_allowed``).
+    ``facts`` (plain values): fleet, date, ride, large_limit, solve_status (primary ``DaySolveResult.status``, or
+    ``"certificate"`` for a certificate cell), objective, stage_statuses, timing_dependent, non_lexicographic,
+    bound_above_incumbent, crosscheck_status (agree / blocking / inconclusive / not_run), wave_values_status (the same four
+    words, owner decision E14 2026-10-21), stage1_bound_ceil, bounds, certificate (None, or tier / kind / lower_bound /
+    point / contributions) and certificate_tier.
+
+    The placeholder FAILS CLOSED until J9b's ``label_cell`` replaces it: ``optimal`` only when the two solvers agree, every
+    stage is optimal, no timing / non-lexicographic / bound-above-incumbent flag is set and the wave values are not
+    contradicted (a plain ``optimal`` needs no wave value; ``blocking`` is a solver contradiction and withholds it);
+    otherwise ``feasible_with_gap`` (an incumbent) or ``bound_only`` with the reason. A tier-2 certificate leans on
+    solver-proven wave minima and is withheld unless ``wave_values_status == agree``; a tier-1 certificate needs none.
     """
-    mapping = {"optimal": "optimal", "feasible_with_gap": "feasible_with_gap", "bound_only": "bound_only",
-               "infeasible_proven": "infeasible_solver_proven", "rejected": "rejected", "input_rejected": "input_rejected"}
-    return {"day_status": mapping.get(facts["solve_status"], "rejected"), "bound_used": None, "bound_source": ""}
+    wave_status = facts.get("wave_values_status", NOT_RUN)
+    cert_ = facts.get("certificate")
+    if cert_ is not None:
+        info = {"bound_used": cert_["lower_bound"], "bound_source": cert_["kind"]}
+        if cert_["tier"] == 1 or (cert_["tier"] == 2 and wave_status == AGREE):
+            return {"day_status": "infeasible_certified", "reason": "", **info}
+        return {"day_status": "bound_only", "bound_used": cert_["lower_bound"], "bound_source": cert_["kind"] + "_withheld",
+                "reason": f"tier-{cert_['tier']} certificate withheld: wave values {wave_status}, not cross-checked by both solvers"}
+    status = facts["solve_status"]
+    reasons = []
+    if facts["crosscheck_status"] != AGREE:
+        reasons.append(f"cross-check {facts['crosscheck_status']}")
+    if wave_status == BLOCKING:
+        reasons.append("wave values contradicted by the two solvers")
+    for flag in ("timing_dependent", "non_lexicographic", "bound_above_incumbent"):
+        if facts.get(flag):
+            reasons.append(flag)
+    if any(st != "optimal" for st in facts.get("stage_statuses", ())):
+        reasons.append("a stage is not optimal")
+    reason = "; ".join(reasons)
+    if status == "optimal":
+        return {"day_status": "feasible_with_gap" if reasons else "optimal", "bound_used": None, "bound_source": "", "reason": reason}
+    mapping = {"feasible_with_gap": "feasible_with_gap", "bound_only": "bound_only", "infeasible_proven": "infeasible_solver_proven",
+               "rejected": "rejected", "input_rejected": "input_rejected"}
+    return {"day_status": mapping.get(status, "rejected"), "bound_used": None, "bound_source": "", "reason": reason}
 
 
 # ---------------------------------------------------------------- inputs
@@ -348,46 +376,94 @@ def type_specs(types) -> dict:
 
 
 # ---------------------------------------------------------------- bounds
-def _wave_value(deps: Deps, cfg: Config, wave, day_wave, *, minimize_type, large_id, peak, errors, tag):
-    """``(WaveValue, source)`` of one wave quantity. Unavailable values fall back to a trivial valid floor, never to 0 silently."""
-    objective_l = minimize_type is not None
-    trivial = bounds_mod.WaveValue(0 if objective_l else 1, bounds_mod.PROOF_ARITHMETIC,
-                                   bounds_mod.OBJ_L if objective_l else bounds_mod.OBJ_K_ANY)
+AGREE, BLOCKING, INCONCLUSIVE, NOT_RUN = "agree", "blocking", "inconclusive", "not_run"
+
+
+@dataclasses.dataclass(frozen=True)
+class WaveRecord:
+    """One wave quantity as the bounds use it, with what each solver said and the two-solver verdict (owner decision E14, 2026-10-21)."""
+
+    kind: str  # "k_any" or "l"
+    wave_id: str
+    used: object  # WaveValue passed to the bounds
+    verdict: str  # agree / blocking / inconclusive / not_run
+    detail: str  # both solvers' values, e.g. "gurobi=3[optimal];highs=3[optimal]"
+
+
+def _solver_value(deps, wave, day_wave, minimize_type, large_id, solver, peak):
+    """``(WaveValue or None, stage-1 optimal, text)`` of one solver. A refused or unproven value is ``None`` (never an error)."""
+    sp = deps.wave_solver(wave, day_wave.enumeration, minimize_type, solver, peak)
+    if sp.status == "backend_unavailable":
+        raise BackendUnavailable(f"wave solver {solver}: {sp.note}")
+    try:
+        wv = bounds_mod.wave_value_from_sp(sp, legs=wave.legs, minimize_type=minimize_type, large_type_id=large_id)
+    except ValueError as exc:
+        return None, False, f"{solver}=refused({str(exc)[:60]})"
+    optimal = sp.stage1 is not None and sp.stage1.status == "optimal" and sp.stage1.objective is not None
+    return wv, optimal, f"{solver}={wv.value}[{'optimal' if optimal else 'bound'}]"
+
+
+def _wave_record(deps: Deps, cfg: Config, wave, day_wave, *, minimize_type, large_id, peak, errors, tag) -> WaveRecord:
+    """The wave value used and its verdict.
+
+    * ``agree``: both solvers solved the wave, both stage 1 optimal, equal values.
+    * ``blocking``: both proven and different, or one solver's proven bound exceeds the other's proven optimum; the value
+      used is the smaller one and is tagged ``PROOF_UNVERIFIED`` (tier 2 refuses it).
+    * ``inconclusive``: a value comes from a bound, a time limit, a refusal or the trivial floor.
+    * ``not_run``: ``--no-crosscheck`` or ``--wave-values trivial`` (no two-solver check was attempted).
+    """
+    kind, objective = ("l", bounds_mod.OBJ_L) if minimize_type is not None else ("k_any", bounds_mod.OBJ_K_ANY)
+    trivial = bounds_mod.WaveValue(0 if kind == "l" else 1, bounds_mod.PROOF_ARITHMETIC, objective)
     if cfg.wave_values != "sp" or deps.wave_solver is None:
-        return trivial, "trivial_floor"
-    values = []
-    for solver in (("gurobi", "highs") if cfg.crosscheck else ("highs",)):
-        sp = deps.wave_solver(wave, day_wave.enumeration, minimize_type, solver, peak)
-        if sp.status == "backend_unavailable":
-            raise BackendUnavailable(f"wave solver {solver}: {sp.note}")
-        try:
-            wv = bounds_mod.wave_value_from_sp(sp, legs=wave.legs, minimize_type=minimize_type, large_type_id=large_id)
-        except ValueError as exc:
-            errors.append(f"{tag} {wave.wave_id}: wave value from {solver} refused ({exc}); trivial floor used")
-            return trivial, "trivial_floor"
-        values.append((solver, wv, sp.stage1 is not None and sp.stage1.status == "optimal"))
-    if len(values) == 2 and values[0][2] and values[1][2] and values[0][1].value != values[1][1].value:
-        errors.append(f"{tag} {wave.wave_id}: the two solvers prove different wave values "
-                      f"({values[0][1].value} vs {values[1][1].value})")
-    best = min(values, key=lambda v: v[1].value)  # both are lower bounds: the smaller is safe under disagreement
-    return best[1], "wave_sp:" + "+".join(v[0] for v in values)
+        return WaveRecord(kind, wave.wave_id, trivial, NOT_RUN, "trivial_floor")
+    solvers = ("gurobi", "highs") if cfg.crosscheck else ("highs",)
+    got = [_solver_value(deps, wave, day_wave, minimize_type, large_id, sv, peak) for sv in solvers]
+    detail = ";".join(g[2] for g in got)
+    proven = [g for g in got if g[0] is not None]
+    if not proven:
+        return WaveRecord(kind, wave.wave_id, trivial, NOT_RUN if len(solvers) == 1 else INCONCLUSIVE, detail + ";trivial_floor")
+    low = min(proven, key=lambda g: g[0].value)[0]
+    if len(solvers) == 1:
+        return WaveRecord(kind, wave.wave_id, low, NOT_RUN, detail)
+    if len(proven) < 2:
+        return WaveRecord(kind, wave.wave_id, low, INCONCLUSIVE, detail)
+    (va, oa, _), (vb, ob, _) = got
+    conflict = (oa and ob and va.value != vb.value) or (oa and not ob and vb.value > va.value) or (ob and not oa and va.value > vb.value)
+    if conflict:
+        errors.append(f"{tag} {wave.wave_id}: the two solvers contradict each other on the {kind} wave value ({detail})")
+        return WaveRecord(kind, wave.wave_id, dataclasses.replace(low, proof=bounds_mod.PROOF_UNVERIFIED), BLOCKING, detail)
+    if oa and ob:
+        return WaveRecord(kind, wave.wave_id, low, AGREE, detail)
+    return WaveRecord(kind, wave.wave_id, low, INCONCLUSIVE, detail)
+
+
+def wave_values_status(records) -> str:
+    verdicts = {r.verdict for r in records}
+    for v in (BLOCKING, INCONCLUSIVE, NOT_RUN):
+        if v in verdicts:
+            return v
+    return AGREE if verdicts else NOT_RUN
 
 
 def day_bounds(instance, fleet: FleetInput, limit, deps, cfg, errors, tag) -> tuple:
+    """``(DayBounds, [WaveRecord])``. Unverified (blocking) ``l_w`` values are replaced by the arithmetic floor 0: tier 2 refuses them."""
     typed = fleet.typed
     peak_legs = max(w.wave.legs for w in instance.waves)
-    k_any, l, sources = {}, {}, {}
+    k_any, l, records = {}, {}, []
     for dw in instance.waves:
-        wv, src = _wave_value(deps, cfg, dw.wave, dw, minimize_type=None, large_id=fleet.fixed_id, peak=dw.wave.legs == peak_legs,
-                              errors=errors, tag=tag)
-        k_any[dw.wave_id], sources[("k_any", dw.wave_id)] = wv, src
+        peak = dw.wave.legs == peak_legs
+        rec = _wave_record(deps, cfg, dw.wave, dw, minimize_type=None, large_id=fleet.fixed_id, peak=peak, errors=errors, tag=tag)
+        records.append(rec)
+        k_any[dw.wave_id] = rec.used
         if typed and cfg.wave_values == "sp":
-            lv, lsrc = _wave_value(deps, cfg, dw.wave, dw, minimize_type=fleet.fixed_id, large_id=fleet.fixed_id,
-                                   peak=dw.wave.legs == peak_legs, errors=errors, tag=tag)
-            l[dw.wave_id], sources[("l", dw.wave_id)] = lv, lsrc
+            lrec = _wave_record(deps, cfg, dw.wave, dw, minimize_type=fleet.fixed_id, large_id=fleet.fixed_id, peak=peak,
+                                errors=errors, tag=tag)
+            records.append(lrec)
+            l[dw.wave_id] = lrec.used if lrec.used.proof != bounds_mod.PROOF_UNVERIFIED else bounds_mod.WaveValue(
+                0, bounds_mod.PROOF_ARITHMETIC, bounds_mod.OBJ_L)
     if typed:
-        return bounds_mod.compute_day_bounds(instance, l=l or None, k_any=k_any, large_limit=limit, large_type_index=0), sources
-    return bounds_mod.compute_day_bounds(instance, k=k_any), sources
+        return bounds_mod.compute_day_bounds(instance, l=l or None, k_any=k_any, large_limit=limit, large_type_index=0), records
+    return bounds_mod.compute_day_bounds(instance, k=k_any), records
 
 
 # ---------------------------------------------------------------- plan, certification, checker, TS
@@ -474,6 +550,10 @@ def ts_confirm(fleet: FleetInput, instance, plan, limit, objective, deps, tag) -
 
 
 # ---------------------------------------------------------------- one cell
+def _facts_base(fleet, date, ride, limit) -> dict:
+    return {"fleet": fleet.name, "date": date, "ride": ride, "large_limit": limit}
+
+
 def _bound_dict(b):
     return None if b is None else {"value": b.value, "point": b.point,
                                    "contributions": [(c.wave_id, c.value, c.proof) for c in b.contributions]}
@@ -498,9 +578,9 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
     base = {"fleet": fleet.name, "date": date, "R": ride, "L": limit}
     row = dict(base, waves="", legs="", columns="", columns_outside_day="", day_status="", K_or_S="", large_peak="", total_minutes="",
                car_minutes="", routes="", lb0="", lb0w="", lb_L="", lb_S="", bound_used="", bound_source="", certificate_tier="",
-               timing_dependent="", non_lexicographic="", crosscheck_solver="", crosscheck_status="not_run", checker_ok="",
+               timing_dependent="", non_lexicographic="", crosscheck_solver="", crosscheck_status="not_run", wave_values_status="", checker_ok="",
                ts_confirmation="", wall_seconds="", note="")
-    out = {"row": row, "stages": [], "plan": None, "lb_rows": [], "mps": {}, "errors": errors, "columns": None}
+    out = {"row": row, "stages": [], "plan": None, "lb_rows": [], "mps": {}, "errors": errors, "columns": None, "versions": {}}
 
     def finish(status, note=""):
         row.update(day_status=status, note=note, wall_seconds=round(time.perf_counter() - t0, 2))
@@ -525,26 +605,44 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
 
     # J2 bounds and certificate
     try:
-        bnds, sources = day_bounds(instance, fleet, limit, deps, cfg, errors, tag)
+        bnds, records = day_bounds(instance, fleet, limit, deps, cfg, errors, tag)
     except bounds_mod.WaveInfeasible as exc:
         errors.append(f"{tag}: {exc}")
         return finish("rejected", f"wave infeasible: {exc}")
+    wstatus = wave_values_status(records)
+    row["wave_values_status"] = wstatus
+    by_key = {(r.kind, r.wave_id): r for r in records}
+    for r in records:  # both solvers' values of every wave, whether or not a bound contributes
+        out["lb_rows"].append(dict(base, bound=f"wave_{r.kind}", value=r.used.value, point="",
+                                   contributions=f"{r.wave_id}:{r.used.value}:{r.used.proof}",
+                                   wave_value_source=f"{r.detail};verdict={r.verdict}"))
     for name in ("lb0", "lb0w", "lb_l", "lb_s"):
         b = getattr(bnds, name)
         if b is not None:
             row[{"lb_l": "lb_L", "lb_s": "lb_S"}.get(name, name)] = b.value
             kind = "l" if name == "lb_l" else "k_any"
-            src = ";".join(sorted({f"{sources.get((kind, c.wave_id), '')}" for c in b.contributions})) or ""
+            src = ";".join(f"{c.wave_id}={by_key[(kind, c.wave_id)].verdict}" for c in b.contributions if (kind, c.wave_id) in by_key)
             out["lb_rows"].append(dict(base, bound=name, value=b.value, point=b.point,
                                        contributions=";".join(f"{c.wave_id}:{c.value}:{c.proof}" for c in b.contributions),
                                        wave_value_source=src))
+    certificate = None
     if bnds.certificate is not None:
         c = bnds.certificate
-        row.update(certificate_tier=c.tier, bound_used=c.lower_bound, bound_source=f"{c.kind}@{c.point}")
+        row["certificate_tier"] = c.tier
         out["lb_rows"].append(dict(base, bound="certificate", value=c.lower_bound, point=c.point,
                                    contributions=";".join(f"{x.wave_id}:{x.value}:{x.proof}" for x in c.contributions),
-                                   wave_value_source=c.kind))
-        return finish("infeasible_certified", f"{c.kind}: LB_L {c.lower_bound} > L {c.large_limit}")
+                                   wave_value_source=f"{c.kind};wave_values={wstatus}"))
+        certificate = {"tier": c.tier, "kind": c.kind, "lower_bound": c.lower_bound, "point": c.point, "large_limit": c.large_limit,
+                       "contributions": [(x.wave_id, x.value, x.proof) for x in c.contributions]}
+        label = label_day_cell(dict(_facts_base(fleet, date, ride, limit), solve_status="certificate", objective=None,
+                                    stage_statuses=[], timing_dependent=False, non_lexicographic=False, bound_above_incumbent=False,
+                                    crosscheck_status="not_run", wave_values_status=wstatus, stage1_bound_ceil=None,
+                                    bounds={n: _bound_dict(getattr(bnds, n)) for n in ("lb0", "lb0w", "lb_l", "lb_s")},
+                                    certificate=certificate, certificate_tier=c.tier))
+        row.update(bound_used=label.get("bound_used", ""), bound_source=label.get("bound_source", ""))
+        if label["day_status"] == "infeasible_certified":
+            return finish("infeasible_certified", f"{c.kind}: LB_L {c.lower_bound} > L {c.large_limit}")
+        out["note_prefix"] = label.get("reason", "")  # withheld: the day MIP is still solved below
 
     # J3/J4 primary solver, J5 cross-check
     kw = dict(aggregate=cfg.aggregate)
@@ -554,13 +652,16 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
     if highs.status == "backend_unavailable":
         raise BackendUnavailable(f"{tag}: highs: {highs.note}")
     out["stages"] += _stage_rows(base, "highs", highs)
+    out["versions"]["highs"] = highs.solver_version
     out["mps"] = {f"{tag}|stage{s.stage}": s.mps_sha256 for s in highs.stages if s.mps_sha256}
     cc_status = "not_run"
+    guro = None
     if deps.gurobi_run is not None:
         guro = deps.gurobi_run(instance, settings=gdb.GurobiSettings(time_limit=cfg.time_limit, work_limit=cfg.work_limit), **kw)
         if guro.status == "backend_unavailable":
             raise BackendUnavailable(f"{tag}: gurobi: {guro.note}")
         out["stages"] += _stage_rows(base, "gurobi", guro)
+        out["versions"]["gurobi"] = guro.solver_version
         cc = gdb.crosscheck_day_results(highs, guro)
         cc_status = cc.verdict
         row["crosscheck_solver"] = "gurobi"
@@ -607,14 +708,19 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
     if status_override is not None:
         return finish(status_override, " | ".join(notes) or "solver disagreement or rejected stage")
     stage1 = highs.stages[0].result if highs.stages else None
-    facts = {"fleet": fleet.name, "date": date, "ride": ride, "large_limit": limit, "solve_status": highs.status,
-             "objective": highs.objective, "stage_statuses": [s.result.status for s in highs.stages],
-             "timing_dependent": highs.timing_dependent, "non_lexicographic": highs.non_lexicographic,
-             "crosscheck_status": cc_status, "stage1_bound_ceil": None if stage1 is None else stage1.bound_ceil,
-             "bounds": {n: _bound_dict(getattr(bnds, n)) for n in ("lb0", "lb0w", "lb_l", "lb_s")}, "certificate_tier": None}
+    stage_results = [s.result for s in highs.stages] + [st.result for st in (guro.stages if guro is not None else ())]
+    facts = dict(_facts_base(fleet, date, ride, limit), solve_status=highs.status, objective=highs.objective,
+                 stage_statuses=[s.result.status for s in highs.stages], timing_dependent=highs.timing_dependent,
+                 non_lexicographic=highs.non_lexicographic,
+                 bound_above_incumbent=any(str(r.solver_message or "").startswith(hb.BOUND_ABOVE_INCUMBENT) for r in stage_results),
+                 crosscheck_status=cc_status, wave_values_status=wstatus,
+                 stage1_bound_ceil=None if stage1 is None else stage1.bound_ceil,
+                 bounds={n: _bound_dict(getattr(bnds, n)) for n in ("lb0", "lb0w", "lb_l", "lb_s")}, certificate=None,
+                 certificate_tier=None if certificate is None else certificate["tier"])
     label = label_day_cell(facts)
     row.update(bound_used="" if label.get("bound_used") is None else label["bound_used"], bound_source=label.get("bound_source", ""))
-    return finish(label["day_status"], " | ".join(notes) or highs.note)
+    note = " | ".join(x for x in (out.get("note_prefix"), " | ".join(notes), label.get("reason"), highs.note) if x)
+    return finish(label["day_status"], note)
 
 
 # ---------------------------------------------------------------- output
@@ -724,6 +830,7 @@ def main(argv=None, deps: Optional[Deps] = None) -> int:
         return 2
     deps = deps or real_deps(cfg)
     rows, stage_rows, lb_rows, plans, mps, errors, cell_log, columns_per_day = [], [], [], {}, {}, [], [], {}
+    versions: dict = {}
     try:
         for fleet in fleets:
             dates = sorted({w.service_date for w in fleet.campaign.waves_for(fleet.campaign.rides[0])})
@@ -739,6 +846,7 @@ def main(argv=None, deps: Optional[Deps] = None) -> int:
                         stage_rows += res["stages"]
                         lb_rows += res["lb_rows"]
                         mps.update(res["mps"])
+                        versions.update({k: v for k, v in res["versions"].items() if v})
                         errors += res["errors"]
                         if res["plan"] is not None:
                             plans[f"{fleet.name}|{date}|R{ride}|L{'-' if limit is None else limit}"] = res["plan"]
@@ -759,15 +867,15 @@ def main(argv=None, deps: Optional[Deps] = None) -> int:
     (out / "day_joint_plans.json").write_text(json.dumps(plans, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     wall = round(time.perf_counter() - t_start, 1)
     hs, gs = hb.HighsSettings(time_limit=cfg.time_limit), gdb.GurobiSettings(time_limit=cfg.time_limit, work_limit=cfg.work_limit)
-    solvers = {"highs": {"name": "highs", "version": hb.highs_probe()[1] if deps.highs_run is hb.run_day_stages else "fake",
+    solvers = {"highs": {"name": "highs", "version": versions.get("highs") or "not_run",
                          "options": hs.option_string(), "threads": hs.threads, "seed": hs.seed, "time_limit_seconds": cfg.time_limit,
                          "work_limit": None}}
     if cfg.crosscheck:
-        solvers["gurobi"] = {"name": "gurobi", "version": None, "options": gs.solver_options_string(), "threads": gs.threads,
+        solvers["gurobi"] = {"name": "gurobi", "version": versions.get("gurobi") or "not_run", "options": gs.solver_options_string(), "threads": gs.threads,
                              "seed": gs.seed, "time_limit_seconds": cfg.time_limit, "work_limit": cfg.work_limit}
     manifest = {
         "protocol": protocol.DAY_JOINT_PROTOCOL_ID, "schema_version": protocol.DAY_JOINT_MANIFEST_SCHEMA_VERSION,
-        "work_package": WORK_PACKAGE, "git_commit": commit, "dirty_working_tree": bool(dirty), "development_run": bool(dirty),
+        "work_package": WORK_PACKAGE, "git_commit": commit, "dirty_working_tree": bool(dirty), "development_run": bool(dirty) or not cfg.crosscheck or cfg.wave_values != "sp",
         "python_provenance": provenance, "python_version": platform.python_version(), "host_os": ab.host_description(),
         "run_label": cfg.run_label, "sensitivity_run": sensitivity,
         "source_manifests": {f.name: {"path": wg._rel(f.path), "manifest_sha256": sha256_file(f.path / "run_manifest.json"),
@@ -780,14 +888,10 @@ def main(argv=None, deps: Optional[Deps] = None) -> int:
         "options": {"fleets": names, "rides": rides_f, "dates": dates_f, "limits": limits_f},
         "run_history": {"invocations": [{"serial": True, "jobs": args.jobs, "wall_seconds": wall}], "jobs": args.jobs, "cache": "none",
                         "cells_planned": len(rows), "cells_solved": sum(1 for r in rows if r["day_status"] not in ("input_rejected",)),
-                        "stopped_on_backend_unavailable": False, "cells": cell_log},
+                        "cells": cell_log},
         "claim": protocol.DAY_JOINT_CLAIM, "blocking_errors": errors, "total_wall_seconds": wall,
     }
-    to_validate = json.loads(json.dumps(manifest))
-    if sensitivity:  # the validator knows only the 600 s protocol limit (E14 Q3)
-        for solver in to_validate["solvers"].values():
-            solver["time_limit_seconds"] = protocol.DAY_JOINT_TIME_LIMIT_SECONDS
-    problems = protocol.validate_day_joint_manifest(to_validate) + strict_manifest_problems(manifest)
+    problems = protocol.validate_day_joint_manifest(manifest) + strict_manifest_problems(manifest)
     if problems:
         errors.extend(f"manifest: {p}" for p in problems)
         manifest["blocking_errors"] = errors

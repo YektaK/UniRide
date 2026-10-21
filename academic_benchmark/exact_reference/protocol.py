@@ -500,7 +500,7 @@ def validate_day_joint_manifest(manifest: Mapping) -> List[str]:
             if not isinstance(solvers.get("highs"), Mapping):
                 problems.append("solvers.highs missing (primary solver, E14 Q4)")
             for name, solver in solvers.items():
-                problems.extend(_day_joint_solver_errors(name, solver))
+                problems.extend(_day_joint_solver_errors(name, solver, sensitivity=_is_sensitivity_run(manifest)))
     enumeration = manifest.get("enumeration")
     if "enumeration" in manifest:
         if not isinstance(enumeration, Mapping):
@@ -522,7 +522,13 @@ def validate_day_joint_manifest(manifest: Mapping) -> List[str]:
     return problems
 
 
-def _day_joint_solver_errors(name: str, solver) -> List[str]:
+def _is_sensitivity_run(manifest: Mapping) -> bool:
+    """A labelled sensitivity run: ``sensitivity_run`` is exactly ``True`` and ``run_label`` a non-empty string."""
+    label = manifest.get("run_label")
+    return manifest.get("sensitivity_run") is True and isinstance(label, str) and bool(label.strip())
+
+
+def _day_joint_solver_errors(name: str, solver, sensitivity: bool = False) -> List[str]:
     if not isinstance(solver, Mapping):
         return [f"solvers.{name} must be a mapping"]
     errors = [f"solvers.{name}.{f} missing" for f in _DAY_JOINT_SOLVER_FIELDS if f not in solver]
@@ -530,8 +536,13 @@ def _day_joint_solver_errors(name: str, solver) -> List[str]:
         return errors
     if solver["threads"] != THREADS:
         errors.append(f"solvers.{name}.threads must be {THREADS} (E14 Q3)")
-    if solver["time_limit_seconds"] != DAY_JOINT_TIME_LIMIT_SECONDS:
-        errors.append(f"solvers.{name}.time_limit_seconds must be {DAY_JOINT_TIME_LIMIT_SECONDS} (E14 Q3)")
+    limit = solver["time_limit_seconds"]
+    if sensitivity:  # a labelled sensitivity run (never pooled with the 600 s protocol run) may use another positive limit
+        if isinstance(limit, bool) or not isinstance(limit, (int, float)) or not limit > 0:
+            errors.append(f"solvers.{name}.time_limit_seconds must be a positive number")
+    elif limit != DAY_JOINT_TIME_LIMIT_SECONDS:
+        errors.append(f"solvers.{name}.time_limit_seconds must be {DAY_JOINT_TIME_LIMIT_SECONDS} unless sensitivity_run is true "
+                      "with a non-empty run_label (E14 Q3)")
     work = solver["work_limit"]
     if work is not None and (not isinstance(work, (int, float)) or isinstance(work, bool) or work <= 0):
         errors.append(f"solvers.{name}.work_limit must be null or a positive number")

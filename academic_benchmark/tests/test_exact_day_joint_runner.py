@@ -400,14 +400,14 @@ def test_real_ts_cli_confirms_a_typed_cell_and_refuses_a_single_type(tmp_path):
 
 
 # ---------------------------------------------------------------- J9a review round 1 (DUZELT): wave-value verdicts, hook, flags
-def skewed_wave_solver(mode, calls=None):
+def skewed_wave_solver(mode, calls=None, only=None):
     """The fake wave solver, but Gurobi answers differently: plus1 (proven +1), bound (only a bound), bound_above (a bound above
     the HiGHS optimum) or refused (a status that gives no value)."""
     base = make_fake_wave_solver(calls)
 
     def solve(wave, enumeration, minimize_type, solver, peak):
         sp = base(wave, enumeration, minimize_type, solver, peak)
-        if solver != "gurobi":
+        if solver != "gurobi" or (only == "l" and minimize_type is None):
             return sp
         v = sp.stage1.objective
         if mode == "plus1":
@@ -576,3 +576,88 @@ def test_placeholder_hook_withholds_a_tier2_certificate_unless_the_wave_values_a
     for status in ("inconclusive", "blocking", "not_run"):
         got = rj.label_day_cell(dict(base, certificate=cert_(2), wave_values_status=status))
         assert got["day_status"] == "bound_only" and "withheld" in got["reason"] and got["bound_source"].endswith("_withheld")
+
+
+# ---------------------------------------------------------------- J9a review round 2 (DUZELT): proof tags, blocked l_w, verdict order
+def _record_all_days(monkeypatch):
+    """Collect every WaveRecord the runner builds (the runner's own records, not a re-derivation)."""
+    collected: list = []
+    real = rj.day_bounds
+
+    def spy(instance, fleet, limit, deps, cfg, errors, tag):
+        bounds, records = real(instance, fleet, limit, deps, cfg, errors, tag)
+        collected.extend(records)
+        return bounds, records
+
+    monkeypatch.setattr(rj, "day_bounds", spy)
+    return collected
+
+
+def test_every_agreed_solver_value_is_tagged_solver_proven(tmp_path, monkeypatch):
+    """J9b grants an arithmetic claim when every contribution is arithmetic_floor: a solver value must never carry that tag."""
+    records = _record_all_days(monkeypatch)
+    rc, out = run(tmp_path, "--fleets", f"{rj.HOMOGENEOUS},large+sedan", *SUBSET)
+    assert rc == 0 and records
+    assert {r.verdict for r in records} == {"agree"}
+    assert all(r.used.proof == "solver_proven" and r.in_bounds is None for r in records)
+    lb = read_csv(out / "lb0.csv")
+    for r in lb:
+        tags = [c.split(":")[-1] for c in r["contributions"].split(";") if c]
+        if r["bound"] in ("wave_k_any", "wave_l", "lb0", "lb0w", "lb_s"):
+            assert set(tags) == {"solver_proven"}, (r["bound"], tags)
+        elif r["bound"] == "lb_l":  # the merged capacity floor may win a tie with the solver value
+            assert set(tags) <= {"solver_proven", "arithmetic_floor"}, tags
+        if r["bound"].startswith("wave_"):
+            assert r["used_proof"] == "solver_proven" and r["used_value"] == r["value"]
+
+
+def test_arithmetic_floor_appears_only_for_the_trivial_floors(tmp_path, monkeypatch):
+    records = _record_all_days(monkeypatch)
+    rc, out = run(tmp_path, "--fleets", f"{rj.HOMOGENEOUS},large+sedan", *SUBSET, "--wave-values", "trivial")
+    assert rc == 0
+    assert all(r.verdict == "not_run" and r.used.proof == "arithmetic_floor" and r.used.value == (0 if r.kind == "l" else 1)
+               for r in records)
+    assert any(r.kind == "l" for r in records) and any(r.kind == "k_any" for r in records)
+
+
+def test_blocked_k_any_values_are_unverified_and_used_as_such(tmp_path, monkeypatch):
+    records = _record_all_days(monkeypatch)
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET, deps=deps_with_waves(skewed_wave_solver("plus1")))
+    assert rc == 1 and records and {r.verdict for r in records} == {"blocking"}
+    assert all(r.kind == "k_any" and r.used.proof == "unverified" and r.in_bounds is None for r in records)
+    assert all(r["used_proof"] == "unverified" for r in read_csv(out / "lb0.csv") if r["bound"] == "wave_k_any")
+
+
+def test_blocked_l_w_is_replaced_by_the_arithmetic_floor_zero(tmp_path, monkeypatch):
+    records = _record_all_days(monkeypatch)
+    rc, out = run(tmp_path, "--fleets", "large+sedan", *SUBSET, deps=deps_with_waves(skewed_wave_solver("plus1", only="l")))
+    assert rc == 1  # a blocking error, no crash (tier 2 would refuse an unverified l_w)
+    row = read_csv(out / "day_joint.csv")[0]
+    assert row["wave_values_status"] == "blocking" and row["day_status"] != "infeasible_certified"
+    l_records = [r for r in records if r.kind == "l"]
+    assert l_records and all(r.verdict == "blocking" and r.used.proof == "unverified" for r in l_records)
+    assert all(r.in_bounds.value == 0 and r.in_bounds.proof == "arithmetic_floor" for r in l_records)
+    assert all(r.verdict == "agree" for r in records if r.kind == "k_any")
+    lb = read_csv(out / "lb0.csv")
+    wave_l = [r for r in lb if r["bound"] == "wave_l"]
+    # polish 1: the row shows the solver value (unverified) and, separately, what the bounds received
+    assert wave_l and all(r["contributions"].endswith(":unverified") and r["used_value"] == "0" and r["used_proof"] == "arithmetic_floor"
+                          for r in wave_l)
+    assert any(int(r["value"]) > 0 for r in wave_l)
+    lb_l = [r for r in lb if r["bound"] == "lb_l"][0]
+    tags = [c.split(":")[-1] for c in lb_l["contributions"].split(";") if c]
+    assert tags and set(tags) == {"arithmetic_floor"}
+
+
+def test_wave_values_status_takes_the_worst_verdict():
+    def rec(verdict):
+        return rj.WaveRecord("k_any", "w", None, verdict, "")
+
+    status = rj.wave_values_status
+    assert status([]) == "not_run"
+    assert status([rec("agree")]) == "agree"
+    assert status([rec("agree"), rec("not_run")]) == "not_run"  # not_run beats agree
+    assert status([rec("agree"), rec("not_run"), rec("inconclusive")]) == "inconclusive"  # inconclusive beats not_run
+    assert status([rec("not_run"), rec("inconclusive"), rec("agree"), rec("blocking")]) == "blocking"  # blocking beats all
+    assert status([rec("inconclusive"), rec("blocking")]) == "blocking"
+    assert status([rec("blocking"), rec("agree")]) == "blocking"

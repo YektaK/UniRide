@@ -496,3 +496,11 @@ def test_day_joint_manifest_accepts_another_limit_only_as_a_labelled_sensitivity
     for bad in (0, -5, True, "900"):
         assert any("time_limit_seconds" in e for e in p.validate_day_joint_manifest(
             _with_limit(bad, sensitivity_run=True, run_label="x"))), bad
+
+
+def test_day_joint_manifest_refuses_a_non_finite_sensitivity_limit():
+    p = _proto()
+    for bad in (float("inf"), float("-inf"), float("nan")):
+        errors = p.validate_day_joint_manifest(_with_limit(bad, sensitivity_run=True, run_label="x"))
+        assert any("time_limit_seconds" in e and "finite" in e for e in errors), bad
+    assert p.validate_day_joint_manifest(_with_limit(1e6, sensitivity_run=True, run_label="x")) == []

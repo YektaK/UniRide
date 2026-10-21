@@ -103,7 +103,8 @@ def reconcile_objective(objective: Optional[float], coefficients: Sequence[float
     within the amount the deviations explain: the objective of the raw values and that of the rounded values differ by
     exactly ``sum(c_j * (x_j - round(x_j)))``, so the allowance is ``sum(|c_j| * |x_j - round(x_j)|)`` plus a floating-
     point margin (``_BOUND_TOL`` plus 1e-9 relative), capped at 0.25 so that it can never reach another integer. A real
-    mismatch (a deviation beyond the variable tolerance, or an objective that the values do not produce) returns the raw
+    mismatch (a deviation beyond the variable tolerance, an objective that the values do not produce, or a coefficient
+    that is not an integer) returns the raw
     objective unchanged, so the existing rejection (non-integral objective in ``classify_outcome``, the runner's
     recomputed-objective check) still applies. Whenever the objective is accepted here it equals ``round(objective)``,
     so a result that was accepted before is accepted with the same value.
@@ -112,6 +113,8 @@ def reconcile_objective(objective: Optional[float], coefficients: Sequence[float
         return objective
     if len(coefficients) != len(values):
         raise ValueError("coefficients and values differ in length")
+    if any(not float(c).is_integer() for c in coefficients):
+        return objective  # the recomputed value is an integer only for integer coefficients (the exact models have them)
     recomputed, explained = 0, 0.0
     for c, x in zip(coefficients, values):
         x = float(x)

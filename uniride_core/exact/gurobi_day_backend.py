@@ -38,6 +38,7 @@ from typing import Callable, Mapping, Optional, Tuple
 
 from .ampl_backend import (
     _BOUND_SENTINEL,
+    _BOUND_TOL,
     AmplSession,
     ExactBackendUnavailable,
     SolverSettings,
@@ -47,10 +48,12 @@ from .ampl_backend import (
     classify_outcome,
     has_incumbent,
     reconcile_objective,
+    snap_to_integer_data,
 )
 from .day_instance import READY, DayInstance
 from .day_joint import JointModel
 from .highs_backend import (
+    BOUND_ABOVE_INCUMBENT,
     DEFAULT_TIME_LIMIT_SECONDS,
     DaySolveResult,
     DayStage,
@@ -214,7 +217,13 @@ def readback_model(ampl) -> dict:
 
 # ---------------------------------------------------------------- outcome classification
 def classify_gurobi_outcome(num: int, message: str, objective: Optional[float], bound: Optional[float]) -> StageResult:
-    """Map AMPL ``solve_result_num`` and message of a Gurobi stage to the protocol labels (design 4)."""
+    """Map AMPL ``solve_result_num`` and message of a Gurobi stage to the protocol labels (design 4).
+
+    The bound goes through the same ``snap_to_integer_data`` rule as the HiGHS bound (a solver bound can sit a hair above an
+    integer: 540.000003 is the integer 540, not the lower bound 541), and a bound that is still above the incumbent after
+    the snap is clipped to it with the HiGHS note ``bound_above_incumbent`` in ``solver_message`` (J9b: the label then
+    withholds the proof claim). The wave path (``classify_outcome``) is not snapped: its design rule is ``ceil(b - 1e-6)``.
+    """
     msg = str(message).lower()
     if 200 <= num < 300 and "unbounded" not in msg:
         # AMPL's own phrase: AMPL settled it and Gurobi never ran (see GurobiSettings.ampl_presolve)
@@ -222,7 +231,14 @@ def classify_gurobi_outcome(num: int, message: str, objective: Optional[float], 
                            bound_source="ampl_presolve" if _AMPL_PRESOLVE_INFEASIBLE in msg else None)
     if 200 <= num < 400:  # unbounded, or "infeasible or unbounded": no proof of anything
         return StageResult(status="rejected", stop_reason="solver_failure")
-    return classify_outcome(num, message, objective, bound)
+    _, bound = snap_to_integer_data(None, bound)
+    out = classify_outcome(num, message, objective, bound)
+    if out.objective is not None and out.bound is not None and out.bound_source == "solver":
+        unclipped = max(0, math.ceil(out.bound - _BOUND_TOL))  # the ceiling rule of classify_outcome, before its clip
+        if unclipped > out.objective:
+            out = dataclasses.replace(out, solver_message=f"{BOUND_ABOVE_INCUMBENT}: ceil(bound - 1e-6)={unclipped} > "
+                                                          f"incumbent={out.objective}; bound clipped to the incumbent")
+    return out
 
 
 def stage_solve_from_values(model: JointModel, out: StageResult, raw: Optional[Mapping[str, float]]) -> StageSolve:
@@ -296,7 +312,7 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     if found:
         work = float(found[-1])
     first = _scrub(message.splitlines()[0]) if message else ""
-    out = dataclasses.replace(out, solve_result=str(ampl.solve_result), solve_result_num=num, solver_message=first,
+    out = dataclasses.replace(out, solve_result=str(ampl.solve_result), solve_result_num=num, solver_message=f"{out.solver_message}; {first}" if out.solver_message else first,
                               wall_seconds=round(seconds, 4), work_units=work, time_limit=settings.time_limit,
                               work_limit=settings.work_limit)
     return stage_solve_from_values(model, out, raw)

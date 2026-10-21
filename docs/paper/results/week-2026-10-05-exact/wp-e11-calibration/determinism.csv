@@ -1,0 +1,7 @@
+pair,day_joint_csv_equal,day_joint_stages_csv_equal,lb0_csv_equal,day_joint_week_csv_equal,day_joint_plans_json_byte_identical,mps_sha256_equal
+doblo-1005,True,True,True,True,True,True
+doblo-1008,True,True,True,True,True,True
+homog-1005,True,True,True,True,True,True
+homog-1008,True,True,True,True,True,True
+sedan-1005,True,True,True,True,True,True
+sedan-1008,True,True,True,True,True,True

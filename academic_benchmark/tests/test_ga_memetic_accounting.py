@@ -165,7 +165,7 @@ def _solve(matrix, **overrides):
 @pytest.mark.parametrize("kind", sorted(MATRICES))
 def test_objective_evaluations_equal_independent_count_and_never_exceed_budget(kind, counted):
     matrix = MATRICES[kind]
-    for budget in (POP, 20, 26, 27, 28, 100, 139, 140, 150, 160, 161, 162, 400):
+    for budget in (POP + 1, 20, 26, 27, 28, 100, 139, 140, 150, 160, 161, 162, 400):
         counted["n"] = 0
         result = _solve(matrix, evaluation_budget=budget)
         stats = result.extra_stats
@@ -216,6 +216,61 @@ def test_boundary_triplet_inside_the_final_polish(kind, budget, evaluations, ter
     assert stats["termination_reason"] == (
         "evaluation_budget_exhausted" if terminated else "max_iterations"
     )
+
+
+@pytest.mark.parametrize("kind", sorted(MATRICES))
+def test_memetic_fixed_budget_equal_to_the_population_is_refused_before_any_evaluation(
+    kind, counted
+):
+    """B == population_size cannot start the initial polish: refused, nothing evaluated."""
+    with pytest.raises(ValueError, match="population initialization"):
+        _solve(MATRICES[kind], evaluation_budget=POP)
+    assert counted["n"] == 0
+    with pytest.raises(ValueError, match="population initialization"):
+        _executor()(PROBLEMS[kind], _fixed_params(POP), seed=1, run_idx=0)
+    assert counted["n"] == 0
+
+
+@pytest.mark.parametrize("kind", sorted(MATRICES))
+def test_memetic_fixed_budget_of_population_plus_one_gives_a_valid_row(kind, counted):
+    problem = PROBLEMS[kind]
+    manifest = FairComparisonManifest.from_value(_fixed_params(POP + 1)["fair_comparison"])
+    row = _executor()(problem, _fixed_params(POP + 1), seed=1, run_idx=0)
+    manifest.validate_result(row)
+    assert row.evaluations == row.objective_evaluations == counted["n"] == POP + 1
+    assert row.iterations == 0
+    assert row.budget_terminated is True
+    assert row.termination_reason == "evaluation_budget_exhausted"
+    assert row.polish_policy["initial"] is True and row.polish_policy["final"] is False
+    assert row.polish_policy["evaluations"] == {"initial": 1, "periodic": 0, "final": 0}
+
+
+def test_pure_ga_still_accepts_a_budget_equal_to_the_population():
+    from uniride_core.algorithms.tsp_matrix_metaheuristics import GAOptimizer
+
+    result = GAOptimizer(
+        population_size=POP, elite_count=ELITE, random_seed=3, evaluation_budget=POP
+    ).solve_with_matrix(SYMMETRIC_7, recalculate=False, closed_tsp=True)
+    assert result.extra_stats["objective_evaluations"] == POP
+    assert result.extra_stats["termination_reason"] == "evaluation_budget_exhausted"
+
+
+@pytest.mark.parametrize("protocol", ["fixed", "native"])
+def test_initialization_policy_follows_the_executed_initial_polish(protocol, monkeypatch):
+    """The label is derived from polish_policy.initial, not from the memetic flag.
+
+    With the initial polish switched off inside the solver, the row must report
+    initial False and the plain initialization policy (the native validator enforces the
+    same pairing).
+    """
+    from uniride_core.algorithms.tsp_matrix_metaheuristics import GAOptimizer
+
+    monkeypatch.setattr(GAOptimizer, "polish_initial_population", lambda self, population: False)
+    params = _fixed_params(COMPLETE) if protocol == "fixed" else _native_params()
+    row = _executor()(SYMMETRIC_TSP, params, seed=1, run_idx=0)
+    assert row.polish_policy["initial"] is False
+    assert row.polish_policy["final"] is True
+    assert row.initialization_policy == "paired_seed_random_population_all_nodes"
 
 
 def test_solver_rejects_memetic_without_any_polish_and_pure_default_is_unchanged():

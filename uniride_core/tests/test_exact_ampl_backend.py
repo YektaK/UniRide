@@ -661,6 +661,15 @@ def test_a_wave_duration_with_near_integral_lam_and_a_raw_objective_beyond_the_o
     lam = lambda r: 1 - 1.2e-5 / cost if r == r_best else 0.0  # noqa: E731
     _, out = _wave_stage_call("stage2", cost - 1.2e-5, lam, bound=cost - 1.2e-5)
     assert out.status == "optimal" and out.objective == cost and out.selection == ((r_best, 1),)
+    assert out.bound == cost - 1.2e-5 and out.bound_ceil == cost  # the wave path keeps the raw bound (no snap, no reconcile)
+
+
+def test_the_wave_path_does_not_snap_bounds_only_the_gurobi_day_path_does():
+    """Design rule of the wave path (EXACT_SOLVER_AMPL_DESIGN 1.2): ceil(bound - 1e-6); the snap is the day path's and TSP's (E10)."""
+    from uniride_core.exact.ampl_backend import classify_outcome
+
+    out = classify_outcome(402, "Gurobi 13.0.3: time limit, feasible solution; objective 606", 606.0, 540.000003)
+    assert out.bound_ceil == 541 and out.bound == 540.000003
 
 
 def test_a_wave_stage_with_a_real_objective_mismatch_or_a_fractional_lam_is_still_rejected():
@@ -698,13 +707,28 @@ def test_reconcile_objective(objective, coefficients, values, want):
     assert got == want if want is None or want == float("inf") else got == pytest.approx(want, abs=1e-12)
 
 
-def test_reconcile_objective_never_moves_to_another_integer():
-    """Huge coefficients: the deviations of 1e-5 each could 'explain' a whole unit, so the allowance is capped below 1/2."""
+def test_reconcile_objective_cap_stops_a_large_coefficient_from_moving_the_objective_to_another_integer():
+    """The per-value check passes (deviation 8e-6 is inside _INT_TOL), so the 0.25 cap is what decides.
+
+    Coefficient 1e5 and deviation 8e-6 explain 0.8 of objective, more than the gap to the next integer, so without the
+    cap an objective 0.55 away from the integer 100000 would be "explained" and silently accepted as 100000. With the cap
+    (0.25) it is returned unchanged (the caller rejects it); a gap of 0.2 is still accepted and equals round(raw).
+    """
+    from uniride_core.exact.ampl_backend import _INT_TOL, reconcile_objective
+
+    values = (1 + 8e-6,)
+    assert abs(values[0] - 1) < _INT_TOL  # inside the variable tolerance: the cap, not the per-value check, is tested
+    assert reconcile_objective(100_000.55, (100_000,), values) == 100_000.55
+    assert reconcile_objective(100_000.45, (100_000,), values) == 100_000.45
+    assert reconcile_objective(100_000.2, (100_000,), values) == 100_000.0 == round(100_000.2)
+    assert reconcile_objective(99_999.8, (100_000,), values) == 100_000.0 == round(99_999.8)
+
+
+def test_reconcile_objective_needs_integer_coefficients():
+    """Coefficient 81.4 would round to 81 and then 'explain' the objective; any non-integral coefficient returns it unchanged."""
     from uniride_core.exact.ampl_backend import reconcile_objective
 
-    assert reconcile_objective(1_000_010.0, (1_000_000,), (1 + 1e-5,)) == 1_000_010.0  # 10 away from the integer 1000000
-    # whenever it accepts, the answer is the integer nearest to the raw objective (so earlier accepted results keep their value)
-    for raw, coef, val in ((539.9999877, (81, 72), (4 - 1e-7, 3 - 5.8e-8)), (28.000005, (1, 1), (14.0, 14.0)),
-                           (6.0, (2, 2), (2.0, 1.0))):
-        got = reconcile_objective(raw, coef, val)
-        assert got == round(raw) or got == raw
+    values = (4 - 1e-7, 3 - 5.8333333e-8)
+    assert reconcile_objective(539.9999877, (81, 72), values) == 540.0  # integral coefficients: reconciled
+    assert reconcile_objective(539.9999877, (81.4, 72), values) == 539.9999877
+    assert reconcile_objective(539.9999877, (81.0, 72.0), values) == 540.0  # integral floats are fine

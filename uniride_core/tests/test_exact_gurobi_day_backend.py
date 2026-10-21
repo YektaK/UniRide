@@ -574,14 +574,18 @@ _NOISY_OBJECTIVE = 539.9999877
 _NOISY_BOUND = 539.9999877417731
 
 
-def _noise_model():
-    """Three integer variables with the J11 tour coefficients; x0 = 4, x1 = 3, x2 = 0 gives 81*4 + 72*3 = 540."""
+def _noise_model(fix_x2=True):
+    """Three integer variables with the J11 tour coefficients; x0 = 4, x1 = 3, x2 = 0 gives 81*4 + 72*3 = 540.
+
+    ``fix_x2=False`` leaves x2 free (0 to 10), so x = (4, 3, 1) is also feasible, with objective 606."""
     from uniride_core.exact.day_joint import JointModel, MipRow, MipVariable
 
     variables = (MipVariable("x0", 0, 10, 81, "column"), MipVariable("x1", 0, 10, 72, "column"),
                  MipVariable("x2", 0, 10, 66, "column"))
     rows = (MipRow("r0", "E", 4, ((0, 1),), "cover"), MipRow("r1", "E", 3, ((1, 1),), "cover"),
             MipRow("r2", "E", 0, ((2, 1),), "cover"))
+    if not fix_x2:
+        rows = rows[:2]
     return JointModel("noise", "homogeneous", 3, "Obj", variables, rows, {})
 
 
@@ -596,8 +600,8 @@ def _noisy_values():
 class _ValueAmpl(_FakeAmpl):
     """A fake AMPL session that returns an incumbent: objective, best bound and the values of the variable ``x``."""
 
-    def __init__(self, objective, values, bound=_NOISY_BOUND, message="Gurobi 13.0.3: optimal solution; objective 540"):
-        super().__init__(num=0, message=message)
+    def __init__(self, objective, values, bound=_NOISY_BOUND, message="Gurobi 13.0.3: optimal solution; objective 540", num=0):
+        super().__init__(num=num, message=message)
         self.objective, self.values, self.bound = objective, values, bound
         self.solve_result = "solved"
         self.var = {"x": type("V", (), {"get_values": staticmethod(
@@ -612,10 +616,10 @@ class _ValueAmpl(_FakeAmpl):
         return type("O", (), {"value": staticmethod(lambda: self.objective)})()
 
 
-def _solve_noise_stage(monkeypatch, objective, values, **kwargs):
+def _solve_noise_stage(monkeypatch, objective, values, *, fix_x2=True, **kwargs):
     monkeypatch.setattr(gb, "load_day_model", lambda ampl, model: None)
     session = _FakeSession(_ValueAmpl(objective, values, **kwargs))
-    return gb.gurobi_solve_stage(session, _noise_model(), GurobiSettings())
+    return gb.gurobi_solve_stage(session, _noise_model(fix_x2), GurobiSettings())
 
 
 def test_the_j11_stage_with_a_raw_objective_539_9999877_and_near_integral_values_is_accepted_as_540(monkeypatch):
@@ -624,6 +628,10 @@ def test_the_j11_stage_with_a_raw_objective_539_9999877_and_near_integral_values
     solved = _solve_noise_stage(monkeypatch, _NOISY_OBJECTIVE, values)
     assert (solved.result.status, solved.result.stop_reason, solved.result.objective) == ("optimal", "optimal", 540)
     assert solved.values == {"x0": 4, "x1": 3, "x2": 0}
+    # the BOUND is never reconciled to the integer 540: it is the solver's bound lowered by the HiGHS snap rule only
+    # (1e-8 relative minus 1e-6), and below 540 here
+    assert solved.result.bound == pytest.approx(_NOISY_BOUND - (1e-8 * _NOISY_BOUND - 1e-6), abs=1e-12)
+    assert solved.result.bound != 540 and solved.result.bound_ceil == 540 and solved.result.solver_message.startswith("Gurobi")
 
 
 @pytest.mark.parametrize("objective,values", [
@@ -643,3 +651,64 @@ def test_a_fractional_value_or_an_objective_that_disagrees_after_rounding_is_sti
     solved = _solve_noise_stage(monkeypatch, objective, values)
     assert solved.result.status == "rejected" and solved.result.stop_reason == "solver_failure"
     assert solved.values is None  # a rejected stage carries no values
+
+
+# ------------------------------------------------------------------ 7. Gurobi bounds are snapped like HiGHS bounds, and the clip leaves its note
+from uniride_core.exact.day_labels import label_cell  # noqa: E402
+from uniride_core.exact.highs_backend import BOUND_ABOVE_INCUMBENT  # noqa: E402
+
+_LIMIT_MESSAGE = "Gurobi 13.0.3: time limit, feasible solution; objective 606"
+_X_606 = [4.0, 3.0, 1.0]  # objective 81*4 + 72*3 + 66 = 606 on the model with x2 free
+
+
+def test_an_upward_noise_bound_on_a_limit_stage_is_snapped_not_rounded_up_a_whole_unit(monkeypatch):
+    # bound 540.000003 is 3e-6 above the integer 540, inside the snap allowance (1e-8 relative minus 1e-6, plus the 1e-6 of
+    # the ceiling rule): the lower bound is 540, not 541
+    solved = _solve_noise_stage(monkeypatch, 606.0, _X_606, fix_x2=False, bound=540.000003, num=402, message=_LIMIT_MESSAGE)
+    r = solved.result
+    assert (r.status, r.stop_reason, r.objective, r.bound_ceil) == ("feasible_with_gap", "wall_limit", 606, 540)
+    assert not str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT)
+
+
+def test_a_bound_genuinely_above_540_is_still_rounded_up(monkeypatch):
+    solved = _solve_noise_stage(monkeypatch, 606.0, _X_606, fix_x2=False, bound=540.2, num=402, message=_LIMIT_MESSAGE)
+    assert solved.result.bound_ceil == 541 and not str(solved.result.solver_message).startswith(BOUND_ABOVE_INCUMBENT)
+
+
+def test_a_correct_plan_is_not_blocking_against_an_upward_noise_gurobi_bound_on_a_limit_stage(monkeypatch):
+    # HiGHS has a verified plan of 540 and proves it; Gurobi stopped on its limit with 606 and bound 540.000003. Rounded up
+    # to 541 that bound "proved" the HiGHS plan impossible and made the cross-check BLOCKING (wrong, fail-safe).
+    solved = _solve_noise_stage(monkeypatch, 606.0, _X_606, fix_x2=False, bound=540.000003, num=402, message=_LIMIT_MESSAGE)
+    tail = {2: _opt(30), 3: _opt(12)}
+    check = crosscheck_day_results(_fake_day({1: _opt(540), **tail}), _fake_day({1: solved.result, **tail}))
+    assert check.verdict != "blocking" and check.stages[0].verdict == "inconclusive"
+    # a bound that really is above the plan still blocks
+    above = _solve_noise_stage(monkeypatch, 606.0, _X_606, fix_x2=False, bound=541.0, num=402, message=_LIMIT_MESSAGE)
+    assert crosscheck_day_results(_fake_day({1: _opt(540), **tail}), _fake_day({1: above.result, **tail})).verdict == "blocking"
+
+
+def test_a_gurobi_bound_above_the_incumbent_beyond_the_snap_carries_the_note_and_withholds_the_claim(monkeypatch):
+    # optimal stage with objective 540 and bound 540.00001: 1e-5 above, beyond the snap allowance (5.4e-6): the ceiling is 541,
+    # clipped to the incumbent 540, and the clip note is written like HiGHS does (J9b flag)
+    solved = _solve_noise_stage(monkeypatch, 540.0, [4.0, 3.0, 0.0], bound=540.00001)
+    r = solved.result
+    assert r.bound_ceil == 540 and r.objective == 540
+    assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT) and "Gurobi 13.0.3" in r.solver_message
+    day = _fake_day({1: r, 2: _opt(30), 3: _opt(12)})
+    label = label_cell(enumeration_complete=True, result=day, crosscheck="agree", checker_ok=True)
+    assert any(f.startswith(BOUND_ABOVE_INCUMBENT) for f in label.flags)
+    assert not label.proof_claim_allowed and label.proof_claim_reason == BOUND_ABOVE_INCUMBENT
+
+
+def test_a_solved_gurobi_stage_with_a_consistent_bound_has_no_note_and_keeps_its_claim(monkeypatch):
+    for bound in (540.0, _NOISY_BOUND, 539.2):
+        solved = _solve_noise_stage(monkeypatch, 540.0, [4.0, 3.0, 0.0], bound=bound)
+        assert not str(solved.result.solver_message).startswith(BOUND_ABOVE_INCUMBENT), bound
+    day = _fake_day({1: _solve_noise_stage(monkeypatch, 540.0, [4.0, 3.0, 0.0], bound=540.0).result, 2: _opt(30), 3: _opt(12)})
+    label = label_cell(enumeration_complete=True, result=day, crosscheck="agree", checker_ok=True)
+    assert label.proof_claim_allowed and not [f for f in label.flags if f.startswith(BOUND_ABOVE_INCUMBENT)]
+
+
+def test_a_gurobi_bound_only_stage_is_snapped_too():
+    out = classify_gurobi_outcome(450, "Gurobi 13.0.3: time limit, no solution", None, 540.000003)
+    assert (out.status, out.bound_ceil, out.objective) == ("bound_only", 540, None)

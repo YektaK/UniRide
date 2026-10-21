@@ -47,6 +47,7 @@ from academic_benchmark.fair_pilot import (
 )
 from academic_benchmark.native_protocol import (
     APPROVED_NATIVE_ALGORITHMS,
+    NATIVE_MEMETIC_2OPT_ALGORITHMS,
     NATIVE_PROTOCOL,
     NATIVE_TERMINATION_REGIME,
     NativeComparisonManifest,
@@ -56,6 +57,7 @@ from academic_benchmark.native_protocol import (
 
 
 _GWO_HHO = frozenset({"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"})
+_POLISH_KEYS = frozenset({"polish_iters", "final_polish_iters", "polish_interval"})
 _CONFIG_KEYS = frozenset({
     "protocol_version",
     "comparison_regime",
@@ -84,6 +86,14 @@ _ALLOWED_ALGORITHM_KEYS = {
     "Core-OrOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
     }),
+    "Core-GWO-TSP-Memetic-2opt": frozenset({
+        "pack_size", "max_iterations", "initial_a", "exploration_rate",
+        "max_no_improvement",
+    }) | _POLISH_KEYS,
+    "Core-HHO-TSP-Memetic-2opt": frozenset({
+        "hawks", "max_iterations", "initial_energy", "jump_probability",
+        "max_no_improvement", "dive_count", "levy_scale",
+    }) | _POLISH_KEYS,
     "ALNS-TSP": ALNS_REQUIRED_PARAMS | ALNS_OPTIONAL_PARAMS,
     "Core-GA-TSP": GA_REQUIRED_PARAMS | GA_OPTIONAL_PARAMS,
     "Core-PSO-TSP": PSO_REQUIRED_PARAMS | PSO_OPTIONAL_PARAMS,
@@ -101,6 +111,15 @@ _REQUIRED_ALGORITHM_KEYS = {
     }),
     "Core-OrOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
+    }),
+    # A memetic block must state its polish budget: the claim covers counted polish only.
+    "Core-GWO-TSP-Memetic-2opt": frozenset({
+        "pack_size", "max_iterations", "max_no_improvement",
+        "polish_iters", "final_polish_iters",
+    }),
+    "Core-HHO-TSP-Memetic-2opt": frozenset({
+        "hawks", "max_iterations", "max_no_improvement",
+        "polish_iters", "final_polish_iters",
     }),
     "ALNS-TSP": ALNS_REQUIRED_PARAMS,
     "Core-GA-TSP": GA_REQUIRED_PARAMS,
@@ -213,6 +232,19 @@ def _validate_algorithm_parameters(
                 raise NativePilotError(f"Core-PSO-TSP: {exc}") from exc
             continue
         _strict_int(block["max_iterations"], f"{algorithm_id}.max_iterations", 1)
+        if algorithm_id in NATIVE_MEMETIC_2OPT_ALGORITHMS:
+            _strict_int(block["max_no_improvement"], f"{algorithm_id}.max_no_improvement", 1)
+            _strict_int(block["pack_size" if "GWO" in algorithm_id else "hawks"],
+                        f"{algorithm_id}.population", 3 if "GWO" in algorithm_id else 1)
+            polish = _strict_int(block["polish_iters"], f"{algorithm_id}.polish_iters", 0)
+            final = _strict_int(block["final_polish_iters"], f"{algorithm_id}.final_polish_iters", 0)
+            if polish <= 0 and final <= 0:
+                raise NativePilotError(
+                    f"{algorithm_id}: a memetic block needs a positive polish_iters or "
+                    "final_polish_iters; use the Pure variant for no polish"
+                )
+            if "polish_interval" in block:
+                _strict_int(block["polish_interval"], f"{algorithm_id}.polish_interval", 0)
 
     gwo = algorithms["Core-GWO-TSP-Pure"]
     _strict_int(gwo["pack_size"], "Core-GWO-TSP-Pure.pack_size", 3)

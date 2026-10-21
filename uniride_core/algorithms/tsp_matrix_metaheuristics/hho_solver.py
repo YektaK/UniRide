@@ -78,6 +78,7 @@ class HHOOptimizer(BaseTSPSolver):
         evaluation_budget: Optional[int] = None,
         shared_budget: Optional[ObjectiveEvaluationBudget] = None,
         stage_cap: Optional[int] = None,
+        count_polish: bool = False,
     ):
         super().__init__("HHO", random_seed)
         self.hawks = hawks
@@ -106,6 +107,12 @@ class HHOOptimizer(BaseTSPSolver):
         # the solver owns its counter and solve() resets it, as before.
         self._injected_budget = shared_budget is not None
         self._fair_mode = evaluation_budget is not None or self._injected_budget
+        # C-10: a governed native run has no cap but must still count its polish.
+        # ``count_polish`` routes the 2-opt polish through the budgeted Python
+        # 2-opt (one unit per candidate tour, unlimited counter), exactly as the
+        # fixed-budget mode does; the uncounted Numba kernel is only taken by
+        # ungoverned runs.
+        self._count_polish = self._fair_mode or bool(count_polish)
         if self._injected_budget:
             self._objective_budget = StageCappedBudget(shared_budget, stage_cap)
             if self._objective_budget.limit is None:
@@ -219,7 +226,7 @@ class HHOOptimizer(BaseTSPSolver):
         initial_cost: Optional[float] = None,
         phase: Optional[str] = None,
     ) -> Tuple[List[int], float, bool]:
-        if self._fair_mode:
+        if self._count_polish:
             result = improve_two_opt_budgeted(
                 route, self._dist_matrix, self._objective_budget,
                 max_iterations=iters, first_improvement=False,
@@ -421,10 +428,10 @@ class HHOOptimizer(BaseTSPSolver):
                 "budget_terminated": budget_terminated,
                 "variant": "memetic_2opt" if self.polish_enabled else "pure",
                 "polish_executed": dict(self._polish_executed),
-                # Candidate evaluations spent by each polish phase (fixed-budget
-                # mode only; the native path has no counter, see C-10).
+                # Candidate evaluations spent by each polish phase (counted polish:
+                # fixed-budget mode and governed native runs; None for ungoverned runs).
                 "polish_evaluations": (
-                    dict(self._polish_evaluations) if self._fair_mode else None
+                    dict(self._polish_evaluations) if self._count_polish else None
                 ),
                 "execution_backend": self._backend_observation.label(),
                 **(

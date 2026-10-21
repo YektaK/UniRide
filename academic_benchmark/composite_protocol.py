@@ -43,6 +43,7 @@ from uniride_core.algorithms.composition import (
 KIND_3OPT = "global_then_final_3opt"
 KIND_ALNS = "global_then_final_alns"
 COMPOSITE_VARIANTS = frozenset({KIND_3OPT, KIND_ALNS})
+COMPOSITE_VARIANT = KIND_3OPT  # the C-08 name (the 3-opt kind), kept for existing importers
 COMPOSITE_COMPLETE_REASON = COMPOSITE_COMPLETE
 # composition kind -> polish stage ID / polish_policy operator
 POLISH_STAGE_IDS: Dict[str, str] = {KIND_3OPT: "Core-ThreeOpt-TSP", KIND_ALNS: "ALNS-TSP"}

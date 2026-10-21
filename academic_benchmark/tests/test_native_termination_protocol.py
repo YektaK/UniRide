@@ -12,6 +12,11 @@ from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
 import academic_benchmark.native_pilot as native_pilot_module
 
+from academic_benchmark.tests.native_config_helpers import (
+    ALNS_PARAMS,
+    algorithm_config as _algorithm_config,
+    native_pilot_config as _config,
+)
 from academic_benchmark.fairness import (
     FairComparisonManifest,
     validate_scientific_alns_params,
@@ -79,18 +84,6 @@ def _problem(name: str = "tiny-tsp", *, directed: bool = False, uniform: bool = 
     )
 
 
-ALNS_PARAMS = {
-    "max_iterations": 8,
-    "max_no_improvement": 3,
-    "remove_ratio": 0.34,
-    "min_remove": 1,
-    "segment_length": 2,
-    "weight_update_factor": 0.2,
-    "use_sa": True,
-    "sa_start_temp": 4.0,
-    "sa_cooling_rate": 0.9,
-}
-
 def _executor(algorithm_id: str):
     from academic_benchmark.engine_core import AlgorithmRegistry
     import academic_benchmark.core.registry_setup  # noqa: F401
@@ -103,52 +96,6 @@ def _native_payload(base_seed: int = 71) -> dict[str, Any]:
         "protocol_version": NATIVE_PROTOCOL,
         "comparison_regime": NATIVE_TERMINATION_REGIME,
         "base_seed": base_seed,
-    }
-
-
-def _algorithm_config() -> dict[str, dict[str, Any]]:
-    return {
-        "Core-GWO-TSP-Pure": {
-            "pack_size": 4,
-            "max_iterations": 2,
-            "max_no_improvement": 1,
-        },
-        "Core-HHO-TSP-Pure": {
-            "hawks": 4,
-            "max_iterations": 2,
-            "max_no_improvement": 1,
-            "dive_count": 1,
-        },
-        "Core-TwoOpt-TSP": {
-            "max_iterations": 2,
-            "first_improvement": False,
-        },
-        "Core-ThreeOpt-TSP": {
-            "max_iterations": 2,
-            "first_improvement": True,
-            "window": 4,
-        },
-        "Core-OrOpt-TSP": {
-            "max_iterations": 3,
-            "first_improvement": False,
-            "window": 3,
-        },
-        "ALNS-TSP": dict(ALNS_PARAMS),
-    }
-
-
-def _config() -> dict[str, Any]:
-    return {
-        "protocol_version": NATIVE_PROTOCOL,
-        "comparison_regime": NATIVE_TERMINATION_REGIME,
-        "problems": ["tiny-tsp", "tiny-atsp"],
-        "algorithms": _algorithm_config(),
-        "runs": 1,
-        "base_seed": 71,
-        "workers": 1,
-        "replay_replicates": [0],
-        "allow_repository_output": False,
-        "overwrite": False,
     }
 
 

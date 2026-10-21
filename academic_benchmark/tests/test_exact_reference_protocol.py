@@ -472,3 +472,35 @@ def test_other_validators_do_not_accept_a_joint_manifest_and_stay_unchanged():
     assert any("protocol" in e for e in p.validate_union_day_manifest({**_union_manifest(), "protocol": "exact_day_joint_v1"}))
     with pytest.raises(ValueError):
         p.assert_not_pooled([{"protocol": "exact_day_joint_v1"}])
+
+
+# WP-E11 J9a review polish 6: a time limit other than 600 s is valid only in a labelled sensitivity run.
+def _with_limit(limit, **extra):
+    m = _joint_manifest()
+    for solver in m["solvers"].values():
+        solver["time_limit_seconds"] = limit
+    m.update(extra)
+    return m
+
+
+def test_day_joint_manifest_accepts_another_limit_only_as_a_labelled_sensitivity_run():
+    p = _proto()
+    assert p.validate_day_joint_manifest(_with_limit(900, sensitivity_run=True, run_label="long-900")) == []
+    assert p.validate_day_joint_manifest(_with_limit(600, sensitivity_run=False, run_label="")) == []
+    for extra in ({}, {"sensitivity_run": False, "run_label": "long-900"}, {"sensitivity_run": True, "run_label": ""},
+                  {"sensitivity_run": True, "run_label": "  "}, {"sensitivity_run": True}, {"sensitivity_run": 1, "run_label": "x"},
+                  {"run_label": "long-900"}):
+        errors = p.validate_day_joint_manifest(_with_limit(900, **extra))
+        assert any("time_limit_seconds" in e for e in errors), extra
+    # a sensitivity run still needs a positive number, not a bool
+    for bad in (0, -5, True, "900"):
+        assert any("time_limit_seconds" in e for e in p.validate_day_joint_manifest(
+            _with_limit(bad, sensitivity_run=True, run_label="x"))), bad
+
+
+def test_day_joint_manifest_refuses_a_non_finite_sensitivity_limit():
+    p = _proto()
+    for bad in (float("inf"), float("-inf"), float("nan")):
+        errors = p.validate_day_joint_manifest(_with_limit(bad, sensitivity_run=True, run_label="x"))
+        assert any("time_limit_seconds" in e and "finite" in e for e in errors), bad
+    assert p.validate_day_joint_manifest(_with_limit(1e6, sensitivity_run=True, run_label="x")) == []

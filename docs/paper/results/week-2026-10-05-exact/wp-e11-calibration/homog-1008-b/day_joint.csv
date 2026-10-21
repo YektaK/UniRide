@@ -1,0 +1,4 @@
+fleet,date,R,L,waves,legs,columns,columns_outside_day,day_status,K_or_S,large_peak,total_minutes,car_minutes,routes,lb0,lb0w,lb_L,lb_S,bound_used,bound_source,bound_proof,proof_claim_allowed,proof_claim_reason,reason,flags,unverified_bounds,certificate_tier,timing_dependent,non_lexicographic,crosscheck_solver,crosscheck_status,wave_values_status,checker_ok,ts_confirmation,wall_seconds,note
+single_4sw5so,2026-10-08,50,,13,46,267,0,optimal,4,,1499,,25,3,4,,,4,lb0w,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,not_applicable_single_type,36.95,
+single_4sw5so,2026-10-08,60,,13,46,436,0,optimal,4,,1370,,20,3,3,,,4,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,not_applicable_single_type,32.69,
+single_4sw5so,2026-10-08,90,,13,46,950,0,optimal,3,,1313,,18,2,2,,,3,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,not_applicable_single_type,33.53,

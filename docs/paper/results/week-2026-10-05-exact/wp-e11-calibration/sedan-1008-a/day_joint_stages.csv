@@ -1,0 +1,15 @@
+fleet,date,R,L,solver,stage,status,stop_reason,objective,bound,bound_ceil,bound_source,timing_dependent,non_lexicographic,wall_seconds,work_units,solve_result,mps_sha256
+large+sedan,2026-10-08,50,2,highs,1,infeasible_proven,infeasible,,,,,False,False,0.002589399999123998,,kInfeasible,b3afdb6ac746331c4f141cb14ab84e1a647d23c1694c175819338b2934dab7ab
+large+sedan,2026-10-08,50,2,gurobi,1,infeasible_proven,infeasible,,,,,False,False,0.3277,0.0,infeasible,b3afdb6ac746331c4f141cb14ab84e1a647d23c1694c175819338b2934dab7ab
+large+sedan,2026-10-08,60,2,highs,1,optimal,optimal,2,2.0,2,solver,False,False,0.19195810000019264,,kOptimal,646d1d6af92ed13991317c8a8d88837c5bead79d6d895ebebb041a10a28b34fd
+large+sedan,2026-10-08,60,2,highs,2,optimal,optimal,1378,1377.99998722,1378,solver,False,False,0.1891630999998597,,kOptimal,ef119167a6f2584e1ac05cb91c28f785accc1ba1d4dfa6385ace8e127fa9b7f3
+large+sedan,2026-10-08,60,2,highs,3,optimal,optimal,362,361.99999738,362,solver,False,False,0.21249669999997423,,kOptimal,be4eef6b679f7be680cde017ad61bf2667c9fe65027b5fa121314d9c3991e062
+large+sedan,2026-10-08,60,2,gurobi,1,optimal,optimal,2,2.0,2,solver,False,False,0.3005,0.01,solved,646d1d6af92ed13991317c8a8d88837c5bead79d6d895ebebb041a10a28b34fd
+large+sedan,2026-10-08,60,2,gurobi,2,optimal,optimal,1378,1378.0,1378,solver,False,False,0.3375,0.01,solved,ef119167a6f2584e1ac05cb91c28f785accc1ba1d4dfa6385ace8e127fa9b7f3
+large+sedan,2026-10-08,60,2,gurobi,3,optimal,optimal,362,362.0,362,solver,False,False,0.3094,0.02,solved,be4eef6b679f7be680cde017ad61bf2667c9fe65027b5fa121314d9c3991e062
+large+sedan,2026-10-08,90,2,highs,1,optimal,optimal,1,1.0,1,solver,False,False,0.6661762999992789,,kOptimal,6b71d8a112238e695f754a2744d39d9a9a3fb0b024a71a2a4818f2f06a5efea6
+large+sedan,2026-10-08,90,2,highs,2,optimal,optimal,1323,1322.99998777,1323,solver,False,False,1.577058400000169,,kOptimal,f5dcc461a7948b08c9a13c6faa91b1bad26278ae36fed4d0b9b61d70c7c0185b
+large+sedan,2026-10-08,90,2,highs,3,optimal,optimal,280,279.9999982,280,solver,False,False,1.1770964999996067,,kOptimal,78f2bae1b8721a4ce653fefe8082ab0e0c62e509c958c25d8c63280e5643cbef
+large+sedan,2026-10-08,90,2,gurobi,1,optimal,optimal,1,1.0,1,solver,False,False,0.3204,0.06,solved,6b71d8a112238e695f754a2744d39d9a9a3fb0b024a71a2a4818f2f06a5efea6
+large+sedan,2026-10-08,90,2,gurobi,2,optimal,optimal,1323,1323.0,1323,solver,False,False,0.3344,0.06,solved,f5dcc461a7948b08c9a13c6faa91b1bad26278ae36fed4d0b9b61d70c7c0185b
+large+sedan,2026-10-08,90,2,gurobi,3,optimal,optimal,280,280.0,280,solver,False,False,0.4772,0.16,solved,78f2bae1b8721a4ce653fefe8082ab0e0c62e509c958c25d8c63280e5643cbef

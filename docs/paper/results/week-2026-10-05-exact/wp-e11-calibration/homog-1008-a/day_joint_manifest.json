@@ -1,0 +1,126 @@
+{
+  "aggregate": true,
+  "blocking_errors": [],
+  "claim": "Exact joint day model over all enumerated routes of a service date (solver-proven value or bound); a separate protocol, never pooled with exact_reference_v1 wave rows, union_day_v1 menu rows or heuristic rows; prototype results are reproduction targets, never tuning targets.",
+  "crosscheck_enabled": true,
+  "development_run": false,
+  "dirty_working_tree": false,
+  "enumeration": {
+    "column_cap": 2000000,
+    "columns_per_day": {
+      "single_4sw5so|2026-10-08|R50": 267,
+      "single_4sw5so|2026-10-08|R60": 436,
+      "single_4sw5so|2026-10-08|R90": 950
+    },
+    "label_cap": 5000000,
+    "wall_clock_limit_seconds": 600
+  },
+  "git_commit": "9736ff898f51eb1ed5a8f93b21c4841c49301311",
+  "host_os": "Windows-11",
+  "mps_sha256": {
+    "single_4sw5so|2026-10-08|R50|L-|stage1": "1d51cf5ef8c1f18cbf725a38826e5425398f9004809a1428b612a2645c5247ff",
+    "single_4sw5so|2026-10-08|R50|L-|stage2": "01cbe1ff4305680c6e5b249edb738ee734151e1b07b31055fe2bb3362f62ba48",
+    "single_4sw5so|2026-10-08|R60|L-|stage1": "3a0dafd9f36fea379e2dc871ebc70399a539a426471290fd826d386d73868b06",
+    "single_4sw5so|2026-10-08|R60|L-|stage2": "8e93a57d71b39c803128875f16f0f3b52485cb1919e1eb3ad865df5f39dda96f",
+    "single_4sw5so|2026-10-08|R90|L-|stage1": "5fb168f1ae92df2d2bf5c3d5b211d603aa6b537171e71acdecb5d06ce8272cfe",
+    "single_4sw5so|2026-10-08|R90|L-|stage2": "e0b22de389499c5aeeb8db5c9bff26f2d59e875c2ffc07ff8332f95228a76782"
+  },
+  "options": {
+    "dates": [
+      "2026-10-08"
+    ],
+    "fleets": [
+      "single_4sw5so"
+    ],
+    "limits": [],
+    "rides": [
+      50,
+      60,
+      90
+    ]
+  },
+  "output_sha256": {
+    "day_joint.csv": "f0a870695d0a7a3fa7e46db95f6841f3a264df3466a1cdca344474a64ff6f9d5",
+    "day_joint_plans.json": "64cd9fe78a213d5b0f7a99831874af2aba38e8762e7daedae51ba7c37a2682fb",
+    "day_joint_stages.csv": "07245f00b0daf1c9ab2d1de5a5605bf4416712b6fc5f4527f90b57bcf426aac5",
+    "day_joint_week.csv": "f82a571bd91c0d5c5a3c0e5cefeb3e3997394faa0033ee296ff50502b6b6d572",
+    "lb0.csv": "965c852b9536740288b66e9371580b7f58e1ffa19c2054e3e310de0d57a4f8c9"
+  },
+  "protocol": "exact_day_joint_v1",
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "optimizer_api": "optimizer_api/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "run_history": {
+    "cache": "none",
+    "cells": [
+      {
+        "cell": "single_4sw5so|2026-10-08|R50|L-",
+        "day_status": "optimal",
+        "wall_seconds": 32.36
+      },
+      {
+        "cell": "single_4sw5so|2026-10-08|R60|L-",
+        "day_status": "optimal",
+        "wall_seconds": 31.87
+      },
+      {
+        "cell": "single_4sw5so|2026-10-08|R90|L-",
+        "day_status": "optimal",
+        "wall_seconds": 33.47
+      }
+    ],
+    "cells_planned": 3,
+    "cells_solved": 3,
+    "invocations": [
+      {
+        "jobs": 1,
+        "serial": true,
+        "wall_seconds": 98.0
+      }
+    ],
+    "jobs": 1
+  },
+  "run_label": "",
+  "schema_version": 1,
+  "sensitivity_run": false,
+  "solvers": {
+    "gurobi": {
+      "name": "gurobi",
+      "options": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "Gurobi 13.0.3",
+      "work_limit": null
+    },
+    "highs": {
+      "name": "highs",
+      "options": "output_flag=false threads=1 random_seed=0 mip_rel_gap=0 mip_abs_gap=0.99 time_limit=600",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "1.15.1",
+      "work_limit": null
+    }
+  },
+  "source_manifests": {
+    "single_4sw5so": {
+      "fixed_type": null,
+      "git_commit": "6be127d048ae6c871baffd0c1992e0eb617231b2",
+      "manifest_sha256": "f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15",
+      "minimised_type": null,
+      "path": "docs/paper/results/week-2026-10-05-4sw5so"
+    }
+  },
+  "tools": {
+    "cli_command": "node --conditions=react-server --import tsx scripts/verify-typed-selection.ts",
+    "node": "v25.5.0",
+    "tsx": null
+  },
+  "total_wall_seconds": 98.0,
+  "wave_values": "sp",
+  "work_package": "WP-E11"
+}

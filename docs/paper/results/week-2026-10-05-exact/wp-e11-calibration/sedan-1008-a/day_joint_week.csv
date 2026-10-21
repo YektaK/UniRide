@@ -1,0 +1,4 @@
+fleet,R,L,dates,weekly_fleet_max,vehicle_days_sum,cells_not_proven,cells_without_value
+large+sedan,50,2,1,,,0,1
+large+sedan,60,2,1,2,2,0,0
+large+sedan,90,2,1,1,1,0,0

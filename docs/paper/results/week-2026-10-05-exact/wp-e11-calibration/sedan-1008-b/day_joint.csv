@@ -1,0 +1,4 @@
+fleet,date,R,L,waves,legs,columns,columns_outside_day,day_status,K_or_S,large_peak,total_minutes,car_minutes,routes,lb0,lb0w,lb_L,lb_S,bound_used,bound_source,bound_proof,proof_claim_allowed,proof_claim_reason,reason,flags,unverified_bounds,certificate_tier,timing_dependent,non_lexicographic,crosscheck_solver,crosscheck_status,wave_values_status,checker_ok,ts_confirmation,wall_seconds,note
+large+sedan,2026-10-08,50,2,13,46,335,0,infeasible_solver_proven,,,,,,,,2,1,,,,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,,,61.92,
+large+sedan,2026-10-08,60,2,13,46,509,0,optimal,2,2,1378,362,20,,,2,1,2,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,confirmed,63.42,
+large+sedan,2026-10-08,90,2,13,46,1029,0,optimal,1,2,1323,280,18,,,2,0,1,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,confirmed,66.86,

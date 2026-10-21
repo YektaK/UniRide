@@ -1,0 +1,131 @@
+{
+  "aggregate": true,
+  "blocking_errors": [],
+  "claim": "Exact joint day model over all enumerated routes of a service date (solver-proven value or bound); a separate protocol, never pooled with exact_reference_v1 wave rows, union_day_v1 menu rows or heuristic rows; prototype results are reproduction targets, never tuning targets.",
+  "crosscheck_enabled": true,
+  "development_run": false,
+  "dirty_working_tree": false,
+  "enumeration": {
+    "column_cap": 2000000,
+    "columns_per_day": {
+      "large+doblo_cap3|2026-10-08|R50": 425,
+      "large+doblo_cap3|2026-10-08|R60": 619,
+      "large+doblo_cap3|2026-10-08|R90": 1147
+    },
+    "label_cap": 5000000,
+    "wall_clock_limit_seconds": 600
+  },
+  "git_commit": "2da41c3b5f419300e94f320a9cd76a3e6cfe0c55",
+  "host_os": "Windows-11",
+  "mps_sha256": {
+    "large+doblo_cap3|2026-10-08|R50|L1|stage1": "89bf15fb78763a61b4c47ad927d08d9d6b038766a0aa70085fb486951731a013",
+    "large+doblo_cap3|2026-10-08|R50|L1|stage2": "b7ece9657556d909b68f8633e97d3175e08d1c8ff6b2f2ff16c36488b0bbc53a",
+    "large+doblo_cap3|2026-10-08|R50|L1|stage3": "01b4dbdf8ee054947059d913c8981b51adac03fca6391c36967c745ee765f60f",
+    "large+doblo_cap3|2026-10-08|R60|L1|stage1": "bb4fc32c59deb883a258bbba6516654c42b2331b627af53e78448290cd575215",
+    "large+doblo_cap3|2026-10-08|R60|L1|stage2": "3a2ed4fcb2a4d13b6bc8a880a8317b30ef6ad222a2351e13c166035a553323cd",
+    "large+doblo_cap3|2026-10-08|R60|L1|stage3": "37d3093dc263302c5749645a6c6aba92f51d14d092490ba400f4ab900fd45d5e",
+    "large+doblo_cap3|2026-10-08|R90|L1|stage1": "57129276aa48c4bd7f7f81ef5683437f23ba871a5197f631d21b82427ac1a1f8",
+    "large+doblo_cap3|2026-10-08|R90|L1|stage2": "1d6d8a69517f475ae1cd95ecc0f7a6b5893931a4551025e04591b8e9e2fae345",
+    "large+doblo_cap3|2026-10-08|R90|L1|stage3": "cf033f5f88b9e46aca65ef05c21e863cb2f6c8f06f25d55325ec3dbb49242418"
+  },
+  "options": {
+    "dates": [
+      "2026-10-08"
+    ],
+    "fleets": [
+      "large+doblo_cap3"
+    ],
+    "limits": [
+      1
+    ],
+    "rides": [
+      50,
+      60,
+      90
+    ]
+  },
+  "output_sha256": {
+    "day_joint.csv": "115813ea7667c53b511bbecea4473d91435358a0259c1589fa96da77f01d9560",
+    "day_joint_plans.json": "beb7b61879e14c5fc5c2c37e1c97fff56dff825f79659db5cdd7dadc279afad5",
+    "day_joint_stages.csv": "ead0c7b6310323ddecbf8eda931143b5dcdb51d99af7c6cc454f2bb1e0907b24",
+    "day_joint_week.csv": "d760bbcb5b0e8680e5bd13588424fb1645fe8425dd0ae6a17b45f02c2aa028b6",
+    "lb0.csv": "07479c88213e8b1a70218efb4605e20fad3f43e0f703dac185fd154da5817685"
+  },
+  "protocol": "exact_day_joint_v1",
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "optimizer_api": "optimizer_api/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "run_history": {
+    "cache": "none",
+    "cells": [
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R50|L1",
+        "day_status": "optimal",
+        "wall_seconds": 64.97
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R60|L1",
+        "day_status": "optimal",
+        "wall_seconds": 65.28
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R90|L1",
+        "day_status": "optimal",
+        "wall_seconds": 66.83
+      }
+    ],
+    "cells_planned": 3,
+    "cells_solved": 3,
+    "invocations": [
+      {
+        "jobs": 1,
+        "serial": true,
+        "wall_seconds": 197.5
+      }
+    ],
+    "jobs": 1
+  },
+  "run_label": "",
+  "schema_version": 1,
+  "sensitivity_run": false,
+  "solvers": {
+    "gurobi": {
+      "name": "gurobi",
+      "options": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "Gurobi 13.0.3",
+      "work_limit": null
+    },
+    "highs": {
+      "name": "highs",
+      "options": "output_flag=false threads=1 random_seed=0 mip_rel_gap=0 mip_abs_gap=0.99 time_limit=600",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "1.15.1",
+      "work_limit": null
+    }
+  },
+  "source_manifests": {
+    "large+doblo_cap3": {
+      "fixed_type": "large",
+      "git_commit": "f29aa3d884882ada678e11ba3d5761b1ea65665a",
+      "manifest_sha256": "b7dcd7da657a4cb660f1f4bba54b7c9b14285a127fce5e18346c692b158c1e5b",
+      "minimised_type": "minivan",
+      "path": "docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3"
+    }
+  },
+  "tools": {
+    "cli_command": "node --conditions=react-server --import tsx scripts/verify-typed-selection.ts",
+    "node": "v25.5.0",
+    "tsx": null
+  },
+  "total_wall_seconds": 197.5,
+  "wave_values": "sp",
+  "work_package": "WP-E11"
+}

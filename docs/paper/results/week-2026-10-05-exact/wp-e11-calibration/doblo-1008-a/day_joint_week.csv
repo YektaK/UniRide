@@ -1,0 +1,4 @@
+fleet,R,L,dates,weekly_fleet_max,vehicle_days_sum,cells_not_proven,cells_without_value
+large+doblo_cap3,50,1,1,3,3,0,0
+large+doblo_cap3,60,1,1,3,3,0,0
+large+doblo_cap3,90,1,1,2,2,0,0

@@ -36,7 +36,7 @@ def test_run_matrix_benchmark_persists_multiple_algorithms(tmp_path):
     result = run_matrix_benchmark(
         db_path=db_path,
         run_id="matrix-cli-error-test",
-        algorithms=["Core-Greedy-Routing", "Core-TwoOpt-TSP"],
+        algorithms=["Core-Greedy-Routing", "Matrix-TwoOpt-TSP-legacy"],
         problem_types=["cvrp"],
         seed_missing_smoke=True,
     )
@@ -44,7 +44,7 @@ def test_run_matrix_benchmark_persists_multiple_algorithms(tmp_path):
     rows = query_benchmark_results(run_id="matrix-cli-error-test", limit=10, db_path=db_path)
 
     assert result == {"run_id": "matrix-cli-error-test", "saved_results": 2, "errors": []}
-    assert {row["algorithm"] for row in rows} == {"Core-Greedy-Routing", "Core-TwoOpt-TSP"}
+    assert {row["algorithm"] for row in rows} == {"Core-Greedy-Routing", "Matrix-TwoOpt-TSP-legacy"}
     assert {row["status"] for row in rows} == {"completed"}
 
 
@@ -75,12 +75,12 @@ def test_run_matrix_benchmark_merges_per_algorithm_params(tmp_path):
     run_matrix_benchmark(
         db_path=db_path,
         run_id="matrix-cli-per-algo-params-test",
-        algorithms=["Core-Greedy-Routing", "Core-TwoOpt-TSP"],
+        algorithms=["Core-Greedy-Routing", "Matrix-TwoOpt-TSP-legacy"],
         problem_types=["cvrp"],
         seed_missing_smoke=True,
         algorithm_params={"time_limit_seconds": 3},
         per_algorithm_params={
-            "Core-TwoOpt-TSP": {"time_limit_seconds": 5, "max_passes": 2},
+            "Matrix-TwoOpt-TSP-legacy": {"time_limit_seconds": 5, "max_passes": 2},
         },
     )
 
@@ -91,7 +91,7 @@ def test_run_matrix_benchmark_merges_per_algorithm_params(tmp_path):
     }
 
     assert params_by_algorithm["Core-Greedy-Routing"] == {"time_limit_seconds": 3}
-    assert params_by_algorithm["Core-TwoOpt-TSP"] == {
+    assert params_by_algorithm["Matrix-TwoOpt-TSP-legacy"] == {
         "time_limit_seconds": 5,
         "max_passes": 2,
     }

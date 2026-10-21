@@ -469,7 +469,7 @@ def test_memetic_routing_call_builds_the_ga_engine_not_the_greedy_default(monkey
 
     monkeypatch.setattr(registry_setup, "create_matrix_engine", recording_create)
     result = _executor()(TINY_CVRP, {}, 42, 0)
-    assert built == [("Core-GA-TSP", "TSPMetaMatrixEngine")]
+    assert built == [("Matrix-GA-TSP-legacy", "TSPMetaMatrixEngine")]
     assert result.algorithm == MEMETIC_ID
     assert result.routes
 

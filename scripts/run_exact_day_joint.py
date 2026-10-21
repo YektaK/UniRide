@@ -206,6 +206,12 @@ class Config:
     aggregate: bool = True
     wave_values: str = "sp"  # "sp" (wave SP through AMPL) or "trivial" (arithmetic floors only, development)
     run_label: str = ""
+    dirty: bool = False  # a dirty working tree (E06), set by ``main`` once the git state is known
+
+    @property
+    def development_run(self) -> bool:
+        """The one definition of a development run (manifest ``development_run`` and the proof claims of every cell)."""
+        return bool(self.dirty) or not self.crosscheck or self.wave_values != "sp"
 
 
 @dataclasses.dataclass
@@ -285,6 +291,10 @@ def label_day_cell(facts: dict) -> dict:
             "unverified_bounds": ";".join(f"{name}:{wave}" for name, wave in cell.unverified_bounds),
             "certificate_tier": cell.certificate_tier, "proof_claim_allowed": cell.proof_claim_allowed,
             "proof_claim_reason": cell.proof_claim_reason}
+
+
+PROOF_LABELS = (day_labels.LABEL_OPTIMAL, day_labels.LABEL_OPTIMAL_STAGE1_BY_BOUND, day_labels.LABEL_INFEASIBLE_CERTIFIED,
+                day_labels.LABEL_INFEASIBLE_SOLVER_PROVEN)  # the labels a paper table may present as proven
 
 
 def settle_label(label: dict, forced: Optional[str] = None, reason: str = "") -> dict:
@@ -577,6 +587,7 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
     t0 = time.perf_counter()
     tag = f"{fleet.name}|{date}|R{ride}|L{limit if limit is not None else '-'}"
     errors: list = []
+    state = {"ts_missing": False}
     base = {"fleet": fleet.name, "date": date, "R": ride, "L": limit}
     row = dict(base, waves="", legs="", columns="", columns_outside_day="", day_status="", K_or_S="", large_peak="", total_minutes="",
                car_minutes="", routes="", lb0="", lb0w="", lb_L="", lb_S="", bound_used="", bound_source="", bound_proof="",
@@ -600,12 +611,24 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
             return {"day_status": "rejected", "reason": f"label_cell refused: {exc}", "proof_claim_allowed": False,
                     "proof_claim_reason": "rejected"}
 
-    def apply_label(label):
+    def apply_label(label, *, clip_flag=False):
+        """Write the label into the row. The claim is withheld (the label itself stays) for a development run, a missing TS
+        confirmation, a clip note the label did not see and any label that is not a proof label."""
+        label = dict(label)
+        claim = bool(label.get("proof_claim_allowed", False))
+        for withhold, why in ((label.get("day_status") not in PROOF_LABELS, "not_a_proof_label"),
+                              (cfg.development_run, "development_run"),
+                              (state["ts_missing"], "ts_confirmation_missing"),
+                              (clip_flag and not str(label.get("flags") or "").startswith(hb.BOUND_ABOVE_INCUMBENT),
+                               hb.BOUND_ABOVE_INCUMBENT)):
+            if claim and withhold:
+                claim, label["proof_claim_reason"] = False, why
+        label["proof_claim_allowed"] = claim
         row.update(bound_used="" if label.get("bound_used") is None else label["bound_used"], bound_source=label.get("bound_source") or "",
                    bound_proof=label.get("bound_proof") or "", flags=label.get("flags") or "",
                    unverified_bounds=label.get("unverified_bounds") or "", reason=label.get("reason") or "",
-                   proof_claim_allowed=bool(label.get("proof_claim_allowed", False)),
-                   proof_claim_reason=label.get("proof_claim_reason") or "")
+                   proof_claim_allowed=label["proof_claim_allowed"], proof_claim_reason=label.get("proof_claim_reason") or "")
+        return label
 
     try:
         waves = tuple(w for w in fleet.campaign.waves_for(ride) if w.service_date == date)
@@ -670,7 +693,7 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
         if label["day_status"] == "rejected":  # a blocking wave verdict or an inconsistent certificate: nothing more to solve
             apply_label(label)
             return finish("rejected", label.get("reason", ""))
-        if label["day_status"] == "infeasible_certified" and label["proof_claim_allowed"]:
+        if label["day_status"] == "infeasible_certified" and label["proof_claim_allowed"]:  # decided before any development-run withholding
             apply_label(label)
             return finish("infeasible_certified", f"{c.kind}: LB_L {c.lower_bound} > L {c.large_limit}")
         # an unclaimed (tier-2 without two-solver wave agreement) certificate: the day MIP is still solved below
@@ -731,6 +754,7 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
             errors.append(f"{tag}: TypeScript confirmation failed: {detail}")
             notes.append(f"ts: {detail}")
         elif ts == "missing":
+            state["ts_missing"] = True  # a blocking check (design 5.3) that did not run: the label stays, the claim is withheld
             errors.append(f"{tag}: TypeScript confirmation missing: {detail}")
         out["plan"] = {"routes": [
             {"wave_id": dw.wave_id, "type_id": r.type_id, "occurrence_ids": list(r.occurrence_ids), "tour": r.tour,
@@ -750,10 +774,12 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
                  certificate_tier=None if certificate is None else certificate["tier"],
                  enumeration_complete=True, result=highs, day_bounds=bnds, checker_ok=plan_ok)
     label = settle_label(labelled(facts), forced=status_override)  # the runner's own rejection is final
-    apply_label(label)
-    note = " | ".join(x for x in (out.get("note_prefix"), " | ".join(notes), label.get("reason"), highs.note) if x)
+    # the label sees the clip note of the HiGHS stages only (no Gurobi stage carries it today); the runner's flag covers both
+    label = apply_label(label, clip_flag=facts["bound_above_incumbent"])
     if status_override is not None:
-        note = " | ".join(notes) or "solver disagreement or rejected stage"
+        note = " | ".join(x for x in (out.get("note_prefix"), " | ".join(notes) or "solver disagreement or rejected stage") if x)
+    else:
+        note = " | ".join(x for x in (out.get("note_prefix"), " | ".join(notes), label.get("reason"), highs.note) if x)
     return finish(label["day_status"], note)
 
 
@@ -851,6 +877,7 @@ def main(argv=None, deps: Optional[Deps] = None) -> int:
         print(f"refused: {refusal}", file=sys.stderr)
         return 2
     commit, dirty = git_state(out)
+    cfg = dataclasses.replace(cfg, dirty=bool(dirty))
     if dirty and not args.allow_dirty:
         print("refused: the working tree is dirty (E06: clean serial runs); commit first or pass --allow-dirty for a development run",
               file=sys.stderr)
@@ -909,7 +936,7 @@ def main(argv=None, deps: Optional[Deps] = None) -> int:
                              "seed": gs.seed, "time_limit_seconds": cfg.time_limit, "work_limit": cfg.work_limit}
     manifest = {
         "protocol": protocol.DAY_JOINT_PROTOCOL_ID, "schema_version": protocol.DAY_JOINT_MANIFEST_SCHEMA_VERSION,
-        "work_package": WORK_PACKAGE, "git_commit": commit, "dirty_working_tree": bool(dirty), "development_run": bool(dirty) or not cfg.crosscheck or cfg.wave_values != "sp",
+        "work_package": WORK_PACKAGE, "git_commit": commit, "dirty_working_tree": bool(dirty), "development_run": cfg.development_run,
         "python_provenance": provenance, "python_version": platform.python_version(), "host_os": ab.host_description(),
         "run_label": cfg.run_label, "sensitivity_run": sensitivity,
         "source_manifests": {f.name: {"path": wg._rel(f.path), "manifest_sha256": sha256_file(f.path / "run_manifest.json"),

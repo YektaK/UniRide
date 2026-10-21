@@ -1,0 +1,13 @@
+fleet,date,R,L,solver,stage,status,stop_reason,objective,bound,bound_ceil,bound_source,timing_dependent,non_lexicographic,wall_seconds,work_units,solve_result,mps_sha256
+single_4sw5so,2026-10-08,50,,highs,1,optimal,optimal,4,4.0,4,solver,False,False,0.08025970000016969,,kOptimal,1d51cf5ef8c1f18cbf725a38826e5425398f9004809a1428b612a2645c5247ff
+single_4sw5so,2026-10-08,50,,highs,2,optimal,optimal,1499,1498.99998601,1499,solver,False,False,0.12919739999961166,,kOptimal,01cbe1ff4305680c6e5b249edb738ee734151e1b07b31055fe2bb3362f62ba48
+single_4sw5so,2026-10-08,50,,gurobi,1,optimal,optimal,4,4.0,4,solver,False,False,0.27,0.01,solved,1d51cf5ef8c1f18cbf725a38826e5425398f9004809a1428b612a2645c5247ff
+single_4sw5so,2026-10-08,50,,gurobi,2,optimal,optimal,1499,1499.0,1499,solver,False,False,0.4153,0.01,solved,01cbe1ff4305680c6e5b249edb738ee734151e1b07b31055fe2bb3362f62ba48
+single_4sw5so,2026-10-08,60,,highs,1,optimal,optimal,4,4.0,4,solver,False,False,0.21762179999859654,,kOptimal,3a0dafd9f36fea379e2dc871ebc70399a539a426471290fd826d386d73868b06
+single_4sw5so,2026-10-08,60,,highs,2,optimal,optimal,1370,1369.9999873,1370,solver,False,False,0.23443500000030326,,kOptimal,8e93a57d71b39c803128875f16f0f3b52485cb1919e1eb3ad865df5f39dda96f
+single_4sw5so,2026-10-08,60,,gurobi,1,optimal,optimal,4,4.0,4,solver,False,False,0.3983,0.01,solved,3a0dafd9f36fea379e2dc871ebc70399a539a426471290fd826d386d73868b06
+single_4sw5so,2026-10-08,60,,gurobi,2,optimal,optimal,1370,1370.0,1370,solver,False,False,0.3001,0.01,solved,8e93a57d71b39c803128875f16f0f3b52485cb1919e1eb3ad865df5f39dda96f
+single_4sw5so,2026-10-08,90,,highs,1,optimal,optimal,3,3.0,3,solver,False,False,0.6416554000006727,,kOptimal,5fb168f1ae92df2d2bf5c3d5b211d603aa6b537171e71acdecb5d06ce8272cfe
+single_4sw5so,2026-10-08,90,,highs,2,optimal,optimal,1313,1312.99998787,1313,solver,False,False,0.7356893000014679,,kOptimal,e0b22de389499c5aeeb8db5c9bff26f2d59e875c2ffc07ff8332f95228a76782
+single_4sw5so,2026-10-08,90,,gurobi,1,optimal,optimal,3,3.0,3,solver,False,False,0.3195,0.03,solved,5fb168f1ae92df2d2bf5c3d5b211d603aa6b537171e71acdecb5d06ce8272cfe
+single_4sw5so,2026-10-08,90,,gurobi,2,optimal,optimal,1313,1313.0,1313,solver,False,False,0.3092,0.04,solved,e0b22de389499c5aeeb8db5c9bff26f2d59e875c2ffc07ff8332f95228a76782

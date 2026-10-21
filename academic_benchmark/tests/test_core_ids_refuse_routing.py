@@ -7,8 +7,12 @@ evaluation, and the legacy engines stay reachable only under the CVRP-* / CVRPTW
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import inspect
 import json
+import math
+import random
 import re
 import sys
 import types
@@ -33,7 +37,8 @@ from uniride_core.algorithms.capabilities import (
 CATALOG_IDS = [capability.canonical_id for capability in list_algorithm_capabilities()]
 ROUTING_TYPES = ("cvrp", "cvrptw")
 
-# The CVRP-* / CVRPTW-* names that keep the engines the Core-* names used to delegate to.
+# Routing variants offered by the refusal message. They are NOT claimed to run the same
+# engine the Core-* ID ran before (Core-TwoOpt-TSP used the greedy router there).
 EXPECTED_ALTERNATIVES = {
     "Core-TwoOpt-TSP": "Core-TwoOpt-TSP",
     "Core-GA-TSP": "Core-GA-TSP",
@@ -58,6 +63,7 @@ REMOVED_ALIAS_ENTRIES = (
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "cvrp_alias_golden_pre_core_refusal.json"
+FIXTURE25 = Path(__file__).parent / "fixtures" / "cvrp_alias_golden25_pre_core_refusal.json"
 
 
 def _spy_problem(problem_type: str):
@@ -149,6 +155,21 @@ def test_every_catalog_executor_is_marked_as_refusing_routing() -> None:
         assert getattr(AlgorithmRegistry.get_executor(canonical_id), "refuses_routing", False), canonical_id
 
 
+@pytest.mark.parametrize("problem_type", ROUTING_TYPES)
+@pytest.mark.parametrize("canonical_id", CATALOG_IDS)
+def test_raw_factory_executor_behind_the_wrapper_also_refuses_routing(
+    canonical_id, problem_type, evaluation_spies
+) -> None:
+    """The refusal must not live only in the registry wrapper: unwrap to the factory executor."""
+    wrapped = AlgorithmRegistry.get_executor(canonical_id)
+    raw = inspect.unwrap(wrapped)
+    assert raw is not wrapped
+    with pytest.raises(rs.CoreRoutingRefusedError) as excinfo:
+        raw(_spy_problem(problem_type), {"max_iterations": 5}, 42, 1)
+    assert canonical_id in str(excinfo.value)
+    assert evaluation_spies == []
+
+
 def test_core_greedy_routing_is_a_routing_id_and_still_runs_routing() -> None:
     result = AlgorithmRegistry.get_executor("Core-Greedy-Routing")(_cvrp(), {}, 42, 1)
     assert result.routes and result.problem_type == "cvrp"
@@ -174,6 +195,60 @@ def test_routing_aliases_reproduce_the_pre_refusal_results(alias) -> None:
     problem = _cvrp() if alias.startswith("CVRP-") else _cvrptw()
     result = AlgorithmRegistry.get_executor(alias)(problem, {"max_iterations": 5}, 42, 1)
     expected = _GOLDEN[alias]
+    assert result.algorithm == expected["algorithm"] == alias
+    assert round(float(result.objective_cost), 9) == expected["cost"]
+    assert [list(r) for r in result.routes] == expected["routes"]
+    assert result.num_vehicles == expected["veh"]
+
+
+# 25-node seeded instances (the tiny 4-5 node golden above gives every engine the same cost, so
+# an engine swap such as GWO -> HHO would survive). Captured on 276f234f, before the refusal.
+_GOLDEN25 = json.loads(FIXTURE25.read_text(encoding="utf-8"))
+
+
+def _matrix25():
+    rng = random.Random(14)
+    pts = [(rng.randint(0, 100), rng.randint(0, 100)) for _ in range(25)]
+    matrix = [[math.hypot(a[0] - b[0], a[1] - b[1]) for b in pts] for a in pts]
+    demands = [0] + [rng.randint(1, 4) for _ in range(24)]
+    return matrix, demands
+
+
+def _cvrp25() -> ProblemInstance:
+    matrix, demands = _matrix25()
+    return ProblemInstance(
+        name="golden-cvrp25", dimension=25, coordinates=[], problem_type="cvrp",
+        dist_matrix=matrix, demands=demands, capacities=[12], capacity=12,
+    )
+
+
+def _cvrptw25() -> ProblemInstance:
+    matrix, demands = _matrix25()
+    return ProblemInstance(
+        name="golden-cvrptw25", dimension=25, coordinates=[], problem_type="cvrptw",
+        dist_matrix=matrix, demands=demands, capacities=[12], capacity=12,
+        time_windows=[(0, 100000)] + [(0, 2000)] * 24, service_times=[0] + [5] * 24,
+        direction="dropoff",
+    )
+
+
+def test_golden25_instance_is_the_one_that_was_captured() -> None:
+    digest = hashlib.sha256(json.dumps(list(_matrix25())).encode()).hexdigest()
+    assert digest == _GOLDEN25["matrix_sha256"]
+    results = _GOLDEN25["results"]
+    assert len(results) == 38
+    # the instance separates the engines: GA, PSO, TwoOpt, GWO, HHO and greedy all differ
+    costs = {results[f"CVRP-{base}"]["cost"] for base in (
+        "Core-GA-TSP", "Core-PSO-TSP", "Core-TwoOpt-TSP", "Core-GWO-TSP", "Core-HHO-TSP",
+        "Core-Greedy-Routing")}
+    assert len(costs) == 6
+
+
+@pytest.mark.parametrize("alias", sorted(_GOLDEN25["results"]))
+def test_routing_aliases_reproduce_the_25_node_pre_refusal_results(alias) -> None:
+    problem = _cvrp25() if alias.startswith("CVRP-") else _cvrptw25()
+    result = AlgorithmRegistry.get_executor(alias)(problem, {"max_iterations": 3}, 42, 1)
+    expected = _GOLDEN25["results"][alias]
     assert result.algorithm == expected["algorithm"] == alias
     assert round(float(result.objective_cost), 9) == expected["cost"]
     assert [list(r) for r in result.routes] == expected["routes"]

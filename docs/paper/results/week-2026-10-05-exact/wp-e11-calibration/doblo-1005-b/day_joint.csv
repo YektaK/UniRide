@@ -1,0 +1,3 @@
+fleet,date,R,L,waves,legs,columns,columns_outside_day,day_status,K_or_S,large_peak,total_minutes,car_minutes,routes,lb0,lb0w,lb_L,lb_S,bound_used,bound_source,bound_proof,proof_claim_allowed,proof_claim_reason,reason,flags,unverified_bounds,certificate_tier,timing_dependent,non_lexicographic,crosscheck_solver,crosscheck_status,wave_values_status,checker_ok,ts_confirmation,wall_seconds,note
+large+doblo_cap3,2026-10-05,70,1,12,54,15835,0,optimal,4,1,1394,943,18,,,0,3,4,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,confirmed,136.73,
+large+doblo_cap3,2026-10-05,90,1,12,54,46571,0,optimal,4,1,1360,907,18,,,0,2,4,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,confirmed,787.16,

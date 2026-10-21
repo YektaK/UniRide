@@ -105,7 +105,7 @@ def _time_limited_stage1(result):
     return dataclasses.replace(result, status="feasible_with_gap", stages=tuple(stages))
 
 
-def _lb0_equal_to_stage1(monkeypatch, tmp_path):
+def _lb0_equal_to_stage1(monkeypatch, tmp_path, proof=None):
     """The committed days never give LB0 == the fake stage-1 value on a day that runs in seconds (only 2026-10-05, minutes of
     fake DP), so the cell is built on DATE: a first run reads the stage-1 value K, the second run's J2 bounds carry an LB0
     equal to K (same contributions, solver-proven wave values) - a valid bound, because K is the optimum of that cell."""
@@ -118,7 +118,8 @@ def _lb0_equal_to_stage1(monkeypatch, tmp_path):
 
     def tightened(instance, fleet, limit, deps, cfg, errors, tag):
         b, records = real(instance, fleet, limit, deps, cfg, errors, tag)
-        lb0 = bm.BoundResult(k, b.lb0.point, b.lb0.contributions)
+        contributions = b.lb0.contributions if proof is None else tuple(dataclasses.replace(c, proof=proof) for c in b.lb0.contributions)
+        lb0 = bm.BoundResult(k, b.lb0.point, contributions)
         return dataclasses.replace(b, lb0=lb0), records
 
     monkeypatch.setattr(rj, "day_bounds", tightened)
@@ -252,3 +253,88 @@ def test_the_bounds_receive_exactly_the_values_lb0_csv_reports(tmp_path, monkeyp
         assert kw["large_limit"] == 10
     if wave_solver and wave_solver[1] == "l":
         assert {v.value for v in kw["l"].values()} == {0} and {v.proof for v in kw["l"].values()} == {"arithmetic_floor"}
+
+
+# ---------------------------------------------------------------- J9c review round 1 (DUZELT)
+def _missing_cli(cases):
+    return None, "node is not installed (planted)"
+
+
+def test_a_missing_ts_confirmation_withholds_the_proof_claim(tmp_path):
+    rc, row, _ = one_row(tmp_path, deps=make_deps(cli=_missing_cli), fleets="large+sedan")
+    assert rc == 1 and row["ts_confirmation"] == "missing"  # a blocking error (design 5.3), not a rejection
+    assert row["day_status"] == "optimal" and row["proof_claim_allowed"] == "False"
+    assert row["proof_claim_reason"] == "ts_confirmation_missing"
+
+
+def test_a_development_run_claims_nothing_even_for_a_tier1_certificate(tmp_path, monkeypatch):
+    rc, row, seen, calls = base._certificate_cell(tmp_path, monkeypatch, "not_run", 1, args=("--no-crosscheck",),
+                                                  deps_kw={"crosscheck": False})
+    assert row["day_status"] == "infeasible_certified" and calls == []  # the label stays, the MIP is not solved
+    assert row["proof_claim_allowed"] == "False" and row["proof_claim_reason"] == "development_run"
+
+
+def test_a_tier1_certificate_of_a_full_run_still_claims(tmp_path, monkeypatch):
+    rc, row, seen, calls = base._certificate_cell(tmp_path, monkeypatch, "not_run", 1)
+    assert row["proof_claim_allowed"] == "True"
+
+
+def test_trivial_wave_values_claim_nothing(tmp_path):
+    rc, row, out = one_row(tmp_path, "--wave-values", "trivial")
+    assert row["day_status"] == "optimal" and row["crosscheck_status"] == "agree"
+    assert row["proof_claim_allowed"] == "False" and row["proof_claim_reason"] == "development_run"
+    assert json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))["development_run"] is True
+
+
+def test_an_arithmetic_only_by_bound_cell_claims_in_a_full_run_but_not_in_a_development_run(tmp_path, monkeypatch):
+    _lb0_equal_to_stage1(monkeypatch, tmp_path, proof="arithmetic_floor")
+    rc, row, _ = one_row(tmp_path / "full", deps=make_deps(highs_hook=_time_limited_stage1))
+    assert row["day_status"] == "optimal_stage1_by_bound" and row["bound_proof"] == "arithmetic_floor"
+    assert row["proof_claim_allowed"] == "True" and row["proof_claim_reason"] == "arithmetic_bound"
+    rc, row, _ = one_row(tmp_path / "dev", "--wave-values", "trivial", deps=make_deps(highs_hook=_time_limited_stage1))
+    assert row["day_status"] == "optimal_stage1_by_bound" and row["proof_claim_allowed"] == "False"
+    assert row["proof_claim_reason"] == "development_run"
+
+
+def test_a_dirty_tree_run_claims_nothing(tmp_path, monkeypatch):
+    monkeypatch.setattr(rj, "git_state", lambda out: (base.COMMIT, True))
+    rc, row, out = one_row(tmp_path, "--allow-dirty")
+    assert json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))["development_run"] is True
+    assert row["day_status"] == "optimal" and row["proof_claim_allowed"] == "False" and row["proof_claim_reason"] == "development_run"
+
+
+def test_label_cell_refusing_the_facts_gives_a_rejected_cell_without_a_claim(tmp_path, monkeypatch):
+    def refuse(**kw):
+        raise ValueError("planted inconsistency")
+
+    monkeypatch.setattr(rj.day_labels, "label_cell", refuse)
+    rc, row, out = one_row(tmp_path)
+    assert rc == 1 and row["day_status"] == "rejected" and row["proof_claim_allowed"] == "False"
+    assert "planted inconsistency" in row["reason"]
+    assert any("label_cell refused" in e for e in json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))["blocking_errors"])
+
+
+def test_a_hook_that_claims_a_proof_for_a_non_proof_label_is_overruled(tmp_path, monkeypatch):
+    monkeypatch.setattr(rj, "label_day_cell", lambda facts: {"day_status": "feasible_with_gap", "proof_claim_allowed": True,
+                                                              "proof_claim_reason": "planted"})
+    rc, row, _ = one_row(tmp_path)
+    assert row["day_status"] == "feasible_with_gap" and row["proof_claim_allowed"] == "False"
+
+
+def test_a_clip_note_on_a_gurobi_stage_withholds_the_claim(tmp_path):
+    def clipped(instance, **kw):
+        res = make_fake_day_solver("gurobi")(instance, **kw)
+        s1 = res.stages[0]
+        r1 = dataclasses.replace(s1.result, solver_message=hb.BOUND_ABOVE_INCUMBENT + " (planted)")
+        return dataclasses.replace(res, stages=(dataclasses.replace(s1, result=r1), *res.stages[1:]))
+
+    deps = rj.Deps(highs_run=make_fake_day_solver("highs"), gurobi_run=clipped, wave_solver=base.make_fake_wave_solver(), cli=base.fake_cli)
+    rc, row, _ = one_row(tmp_path, deps=deps)
+    assert row["day_status"] == "optimal" and row["proof_claim_allowed"] == "False"
+    assert row["proof_claim_reason"] == hb.BOUND_ABOVE_INCUMBENT
+
+
+def test_a_runner_rejection_keeps_the_withheld_certificate_note(tmp_path, monkeypatch):
+    rc, row, seen, calls = base._certificate_cell(tmp_path, monkeypatch, "inconclusive", 2, deps_kw={"cli": _failing_cli})
+    assert row["day_status"] == "rejected" and row["ts_confirmation"] == "failed"
+    assert "withheld" in row["note"] and "ts:" in row["note"]

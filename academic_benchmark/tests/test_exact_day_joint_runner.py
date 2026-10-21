@@ -508,7 +508,7 @@ def test_menu_that_differs_from_the_loader_refuses_the_cell(tmp_path, monkeypatc
 
 
 # the certificate cell goes through the hook (a tier-2 certificate can be withheld)
-def _certificate_cell(tmp_path, monkeypatch, wave_status, tier):
+def _certificate_cell(tmp_path, monkeypatch, wave_status, tier, args=(), deps_kw=None):
     bm = rj.bounds_mod
     kind = "certificate_wave_min_large" if tier == 2 else "certificate_capacity_floor"
     proof = "solver_proven" if tier == 2 else "arithmetic_floor"  # label_cell: tier 1 rests on arithmetic contributions only
@@ -525,7 +525,7 @@ def _certificate_cell(tmp_path, monkeypatch, wave_status, tier):
     monkeypatch.setattr(rj, "day_bounds", fake_bounds)
     monkeypatch.setattr(rj, "label_day_cell", lambda facts: (seen.append(facts), real_hook(facts))[1])
     calls: list = []
-    rc, out = run(tmp_path, "--fleets", "large+sedan", *SUBSET, deps=make_deps(highs_calls=calls))
+    rc, out = run(tmp_path, "--fleets", "large+sedan", *SUBSET, *args, deps=make_deps(highs_calls=calls, **(deps_kw or {})))
     return rc, read_csv(out / "day_joint.csv")[0], seen, calls
 
 

@@ -1,0 +1,719 @@
+{
+ "large+doblo_cap3|2026-10-08|R50|L1": {
+  "routes": [
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw5~1",
+     "2026-10-08:pickup:So9~1",
+     "2026-10-08:pickup:So1~1"
+    ],
+    "start": 441,
+    "tour": 84,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So14~1",
+     "2026-10-08:pickup:So12~1",
+     "2026-10-08:pickup:Sw9~1"
+    ],
+    "start": 469,
+    "tour": 56,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw4~1",
+     "2026-10-08:pickup:So4~1",
+     "2026-10-08:pickup:Sw7~1",
+     "2026-10-08:pickup:Sw2~1"
+    ],
+    "start": 446,
+    "tour": 79,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 1101,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw5~1"
+    ],
+    "start": 1035,
+    "tour": 66,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:1035"
+   },
+   {
+    "end": 1078,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So7~1",
+     "2026-10-08:dropoff:Sw9~1"
+    ],
+    "start": 1035,
+    "tour": 43,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:1035"
+   },
+   {
+    "end": 790,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw4~1"
+    ],
+    "start": 735,
+    "tour": 55,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:735"
+   },
+   {
+    "end": 796,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So1~1",
+     "2026-10-08:dropoff:So4~1",
+     "2026-10-08:dropoff:Sw7~1",
+     "2026-10-08:dropoff:Sw2~1"
+    ],
+    "start": 735,
+    "tour": 61,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:735"
+   },
+   {
+    "end": 942,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So6~1"
+    ],
+    "start": 855,
+    "tour": 87,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:855"
+   },
+   {
+    "end": 898,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So14~1",
+     "2026-10-08:dropoff:So12~1"
+    ],
+    "start": 855,
+    "tour": 43,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:855"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw8~1"
+    ],
+    "start": 675,
+    "tour": 30,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:705"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So17~1",
+     "2026-10-08:pickup:So11~1"
+    ],
+    "start": 617,
+    "tour": 88,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:705"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw6~1",
+     "2026-10-08:pickup:So18~1"
+    ],
+    "start": 643,
+    "tour": 62,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:705"
+   },
+   {
+    "end": 1009,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So2~1"
+    ],
+    "start": 975,
+    "tour": 34,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 1058,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So11~1",
+     "2026-10-08:dropoff:So17~1"
+    ],
+    "start": 975,
+    "tour": 83,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 1061,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So15~1",
+     "2026-10-08:dropoff:Sw1~1"
+    ],
+    "start": 975,
+    "tour": 86,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 765,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So2~1"
+    ],
+    "start": 731,
+    "tour": 34,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:765"
+   },
+   {
+    "end": 765,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw1~1"
+    ],
+    "start": 688,
+    "tour": 77,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:765"
+   },
+   {
+    "end": 945,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw8~1"
+    ],
+    "start": 915,
+    "tour": 30,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:915"
+   },
+   {
+    "end": 977,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw6~1",
+     "2026-10-08:dropoff:So18~1"
+    ],
+    "start": 915,
+    "tour": 62,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:915"
+   },
+   {
+    "end": 885,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So16~1",
+     "2026-10-08:pickup:So13~1"
+    ],
+    "start": 815,
+    "tour": 70,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:885"
+   },
+   {
+    "end": 1167,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So13~1",
+     "2026-10-08:dropoff:So16~1"
+    ],
+    "start": 1095,
+    "tour": 72,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:1095"
+   },
+   {
+    "end": 825,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So15~1"
+    ],
+    "start": 775,
+    "tour": 50,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:825"
+   },
+   {
+    "end": 825,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So7~1"
+    ],
+    "start": 804,
+    "tour": 21,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:825"
+   },
+   {
+    "end": 836,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So9~1",
+     "2026-10-08:dropoff:So8~1"
+    ],
+    "start": 795,
+    "tour": 41,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:795"
+   },
+   {
+    "end": 645,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So6~1",
+     "2026-10-08:pickup:So8~1"
+    ],
+    "start": 551,
+    "tour": 94,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:645"
+   }
+  ]
+ },
+ "large+doblo_cap3|2026-10-08|R60|L1": {
+  "routes": [
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw4~1",
+     "2026-10-08:pickup:So14~1",
+     "2026-10-08:pickup:So12~1"
+    ],
+    "start": 455,
+    "tour": 70,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So9~1",
+     "2026-10-08:pickup:Sw9~1",
+     "2026-10-08:pickup:So1~1"
+    ],
+    "start": 476,
+    "tour": 49,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw5~1",
+     "2026-10-08:pickup:So4~1",
+     "2026-10-08:pickup:Sw7~1",
+     "2026-10-08:pickup:Sw2~1"
+    ],
+    "start": 437,
+    "tour": 88,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 1126,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So7~1",
+     "2026-10-08:dropoff:Sw9~1",
+     "2026-10-08:dropoff:Sw5~1"
+    ],
+    "start": 1035,
+    "tour": 91,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:1035"
+   },
+   {
+    "end": 748,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So1~1"
+    ],
+    "start": 735,
+    "tour": 13,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:735"
+   },
+   {
+    "end": 814,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw4~1",
+     "2026-10-08:dropoff:So4~1",
+     "2026-10-08:dropoff:Sw7~1",
+     "2026-10-08:dropoff:Sw2~1"
+    ],
+    "start": 735,
+    "tour": 79,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:735"
+   },
+   {
+    "end": 892,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So12~1"
+    ],
+    "start": 855,
+    "tour": 37,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:855"
+   },
+   {
+    "end": 945,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So14~1",
+     "2026-10-08:dropoff:So6~1"
+    ],
+    "start": 855,
+    "tour": 90,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:855"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So17~1",
+     "2026-10-08:pickup:Sw8~1"
+    ],
+    "start": 608,
+    "tour": 97,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:705"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So11~1",
+     "2026-10-08:pickup:So18~1",
+     "2026-10-08:pickup:Sw6~1"
+    ],
+    "start": 638,
+    "tour": 67,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:705"
+   },
+   {
+    "end": 1009,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So2~1"
+    ],
+    "start": 975,
+    "tour": 34,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 1058,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So11~1",
+     "2026-10-08:dropoff:So17~1"
+    ],
+    "start": 975,
+    "tour": 83,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 1061,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So15~1",
+     "2026-10-08:dropoff:Sw1~1"
+    ],
+    "start": 975,
+    "tour": 86,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 765,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw1~1",
+     "2026-10-08:pickup:So2~1"
+    ],
+    "start": 674,
+    "tour": 91,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:765"
+   },
+   {
+    "end": 992,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw8~1",
+     "2026-10-08:dropoff:Sw6~1",
+     "2026-10-08:dropoff:So18~1"
+    ],
+    "start": 915,
+    "tour": 77,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:915"
+   },
+   {
+    "end": 885,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So16~1",
+     "2026-10-08:pickup:So13~1"
+    ],
+    "start": 815,
+    "tour": 70,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:885"
+   },
+   {
+    "end": 1165,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So16~1",
+     "2026-10-08:dropoff:So13~1"
+    ],
+    "start": 1095,
+    "tour": 70,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:1095"
+   },
+   {
+    "end": 825,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So7~1",
+     "2026-10-08:pickup:So15~1"
+    ],
+    "start": 764,
+    "tour": 61,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:825"
+   },
+   {
+    "end": 836,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So9~1",
+     "2026-10-08:dropoff:So8~1"
+    ],
+    "start": 795,
+    "tour": 41,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:795"
+   },
+   {
+    "end": 645,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So6~1",
+     "2026-10-08:pickup:So8~1"
+    ],
+    "start": 551,
+    "tour": 94,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:645"
+   }
+  ]
+ },
+ "large+doblo_cap3|2026-10-08|R90|L1": {
+  "routes": [
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So9~1",
+     "2026-10-08:pickup:Sw4~1"
+    ],
+    "start": 465,
+    "tour": 60,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw5~1",
+     "2026-10-08:pickup:So4~1",
+     "2026-10-08:pickup:Sw7~1",
+     "2026-10-08:pickup:Sw2~1",
+     "2026-10-08:pickup:So14~1",
+     "2026-10-08:pickup:So12~1",
+     "2026-10-08:pickup:Sw9~1",
+     "2026-10-08:pickup:So1~1"
+    ],
+    "start": 401,
+    "tour": 124,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:525"
+   },
+   {
+    "end": 1126,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So7~1",
+     "2026-10-08:dropoff:Sw9~1",
+     "2026-10-08:dropoff:Sw5~1"
+    ],
+    "start": 1035,
+    "tour": 91,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:1035"
+   },
+   {
+    "end": 748,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So1~1"
+    ],
+    "start": 735,
+    "tour": 13,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:735"
+   },
+   {
+    "end": 814,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw4~1",
+     "2026-10-08:dropoff:So4~1",
+     "2026-10-08:dropoff:Sw7~1",
+     "2026-10-08:dropoff:Sw2~1"
+    ],
+    "start": 735,
+    "tour": 79,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:735"
+   },
+   {
+    "end": 953,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So14~1",
+     "2026-10-08:dropoff:So12~1",
+     "2026-10-08:dropoff:So6~1"
+    ],
+    "start": 855,
+    "tour": 98,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:855"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw8~1",
+     "2026-10-08:pickup:So17~1"
+    ],
+    "start": 622,
+    "tour": 83,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:705"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So11~1",
+     "2026-10-08:pickup:So18~1",
+     "2026-10-08:pickup:Sw6~1"
+    ],
+    "start": 638,
+    "tour": 67,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:705"
+   },
+   {
+    "end": 1058,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So11~1",
+     "2026-10-08:dropoff:So17~1"
+    ],
+    "start": 975,
+    "tour": 83,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 1074,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So2~1",
+     "2026-10-08:dropoff:So15~1",
+     "2026-10-08:dropoff:Sw1~1"
+    ],
+    "start": 975,
+    "tour": 99,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:975"
+   },
+   {
+    "end": 765,
+    "occurrence_ids": [
+     "2026-10-08:pickup:Sw1~1",
+     "2026-10-08:pickup:So2~1"
+    ],
+    "start": 674,
+    "tour": 91,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:765"
+   },
+   {
+    "end": 992,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:Sw8~1",
+     "2026-10-08:dropoff:Sw6~1",
+     "2026-10-08:dropoff:So18~1"
+    ],
+    "start": 915,
+    "tour": 77,
+    "type_id": "large",
+    "wave_id": "2026-10-08:dropoff:915"
+   },
+   {
+    "end": 885,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So13~1"
+    ],
+    "start": 845,
+    "tour": 40,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:885"
+   },
+   {
+    "end": 885,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So16~1"
+    ],
+    "start": 831,
+    "tour": 54,
+    "type_id": "large",
+    "wave_id": "2026-10-08:pickup:885"
+   },
+   {
+    "end": 1165,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So16~1",
+     "2026-10-08:dropoff:So13~1"
+    ],
+    "start": 1095,
+    "tour": 70,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:1095"
+   },
+   {
+    "end": 825,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So7~1",
+     "2026-10-08:pickup:So15~1"
+    ],
+    "start": 764,
+    "tour": 61,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:825"
+   },
+   {
+    "end": 836,
+    "occurrence_ids": [
+     "2026-10-08:dropoff:So9~1",
+     "2026-10-08:dropoff:So8~1"
+    ],
+    "start": 795,
+    "tour": 41,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:dropoff:795"
+   },
+   {
+    "end": 645,
+    "occurrence_ids": [
+     "2026-10-08:pickup:So8~1",
+     "2026-10-08:pickup:So6~1"
+    ],
+    "start": 555,
+    "tour": 90,
+    "type_id": "minivan",
+    "wave_id": "2026-10-08:pickup:645"
+   }
+  ]
+ }
+}

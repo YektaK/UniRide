@@ -1,0 +1,4 @@
+fleet,date,R,L,waves,legs,columns,columns_outside_day,day_status,K_or_S,large_peak,total_minutes,car_minutes,routes,lb0,lb0w,lb_L,lb_S,bound_used,bound_source,bound_proof,proof_claim_allowed,proof_claim_reason,reason,flags,unverified_bounds,certificate_tier,timing_dependent,non_lexicographic,crosscheck_solver,crosscheck_status,wave_values_status,checker_ok,ts_confirmation,wall_seconds,note
+large+doblo_cap3,2026-10-08,50,1,13,46,425,0,optimal,3,1,1508,986,25,,,0,2,3,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,confirmed,64.97,
+large+doblo_cap3,2026-10-08,60,1,13,46,619,0,optimal,3,1,1388,919,20,,,0,2,3,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,confirmed,65.28,
+large+doblo_cap3,2026-10-08,90,1,13,46,1147,0,optimal,2,1,1321,813,18,,,0,1,2,solver,solver_proven,True,crosscheck_agree,,,,,False,False,gurobi,agree,agree,True,confirmed,66.83,

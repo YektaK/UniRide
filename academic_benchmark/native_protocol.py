@@ -5,6 +5,13 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from academic_benchmark.composite_protocol import (
+    COMPOSITE_ALGORITHMS,
+    COMPOSITE_COMPLETE_REASON,
+    COMPOSITE_VARIANT,
+    validate_composite_policy,
+    validate_composite_result,
+)
 from academic_benchmark.engine_core import RunResult
 from academic_benchmark.fairness import FairRunResult, FairnessValidationError, normalize_problem
 
@@ -33,6 +40,8 @@ class NativeComparisonManifest:
     ALGORITHM_FAMILIES = {
         "Core-GWO-TSP-Pure": "GWO",
         "Core-HHO-TSP-Pure": "HHO",
+        "Core-GWO-TSP-Memetic-3opt": "GWO",
+        "Core-HHO-TSP-Memetic-3opt": "HHO",
         "Core-TwoOpt-TSP": "2-opt",
         "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
@@ -45,6 +54,9 @@ class NativeComparisonManifest:
         "max_iterations",
         "no_improving_move",
         "stagnation_limit",
+        # only composite rows (global_then_final_3opt) may carry it; validate_result
+        # refuses it on every other row
+        COMPOSITE_COMPLETE_REASON,
     })
     REQUIRED_RESULT_FIELDS = (
         "algorithm_id",
@@ -126,7 +138,8 @@ class NativeComparisonManifest:
             errors.append("unsupported native algorithm_id")
         elif family != expected_family:
             errors.append("algorithm_family does not match algorithm_id")
-        if getattr(result, "variant", None) != "pure":
+        composite_row = getattr(result, "variant", None) == COMPOSITE_VARIANT
+        if getattr(result, "variant", None) != "pure" and not composite_row:
             errors.append("native comparison accepts only pure variants")
         if getattr(result, "objective_evaluations", None) != result.evaluations:
             errors.append("objective_evaluations must equal evaluations")
@@ -152,10 +165,13 @@ class NativeComparisonManifest:
                 errors.append("polish_policy missing fields: " + ", ".join(missing))
             else:
                 phases = ("enabled", "initial", "periodic", "final")
-                if any(polish_policy[name] is not False for name in phases):
-                    errors.append("native pure variants cannot enable polishing")
-                if polish_policy["operator"] is not None:
-                    errors.append("native pure variants cannot declare a polish operator")
+                if composite_row:
+                    errors.extend(validate_composite_policy(polish_policy, result))
+                else:
+                    if any(polish_policy[name] is not False for name in phases):
+                        errors.append("native pure variants cannot enable polishing")
+                    if polish_policy["operator"] is not None:
+                        errors.append("native pure variants cannot declare a polish operator")
 
         acceptance = getattr(result, "acceptance_policy", None)
         window = getattr(result, "neighborhood_window", None)
@@ -165,7 +181,11 @@ class NativeComparisonManifest:
                 errors.append("GWO/HHO acceptance_policy must be population_evolution")
             if window is not None:
                 errors.append("GWO/HHO neighborhood_window must be null")
-            if reason not in {"max_iterations", "stagnation_limit"}:
+            expected_reasons = (
+                {COMPOSITE_COMPLETE_REASON}
+                if composite_row else {"max_iterations", "stagnation_limit"}
+            )
+            if reason not in expected_reasons:
                 errors.append("GWO/HHO native termination_reason is invalid")
         elif family == "2-opt":
             if acceptance not in {"best_improvement", "first_improvement"}:
@@ -206,6 +226,10 @@ class NativeComparisonManifest:
                 errors.append("PSO native termination_reason is invalid")
         if reason not in self.TERMINATION_REASONS:
             errors.append("unsupported native termination_reason")
+        if composite_row or algorithm_id in COMPOSITE_ALGORITHMS:
+            errors.extend(validate_composite_result(result, fixed_budget=None))
+        elif reason == COMPOSITE_COMPLETE_REASON:
+            errors.append("composite_complete is reserved for composite rows")
         if getattr(result, "execution_backend", None) in {None, "", "unknown"}:
             errors.append("execution backend must be known")
 

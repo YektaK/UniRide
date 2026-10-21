@@ -62,11 +62,11 @@ _PYTHON = RuntimeBackendAvailability(
             CandidateAlgorithmError,
         ),
         (
-            "Core-GWO-TSP-Memetic-3opt",
+            "Core-GWO-TSP-Memetic-ALNS",
             _Problem(),
             ExecutionProtocol.FIXED_BUDGET,
             10,
-            frozenset({"Core-GWO-TSP-Memetic-3opt"}),
+            frozenset({"Core-GWO-TSP-Memetic-ALNS"}),
             _PYTHON,
             PlannedAlgorithmError,
         ),

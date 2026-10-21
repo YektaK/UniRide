@@ -15,8 +15,8 @@ OFFLINE, read only. Inputs (all committed):
   can never raise the disagreement defect of design 6.3 and is reported with ``prototype_plan_not_verified``.
 
 Outputs, next to the J11 files: ``comparison.csv`` (descriptive, one row per cell, never ``min(...)``) and
-``reproduction_check.csv`` (one row per cell that has a prototype target: the 20 single-type and 60 large+sedan cells;
-large+Doblo cap3 has no external reproduction target, E14 Q1).
+``reproduction_check.csv`` (one row per cell, 140: the 20 single-type and 60 large+sedan cells carry a prototype target;
+the 60 large+Doblo cap3 cells have no external reproduction target, E14 Q1, and get the category ``no_external_target``).
 
 Proof gate (J9c note): a cell counts as proven only with a proof label AND ``proof_claim_allowed == True``. An unclaimed
 value is compared with no proven prefix (it can never raise a defect); an unclaimed infeasibility is open.
@@ -202,6 +202,10 @@ def prototype_claim_typed(row: Mapping) -> PrototypeInput:
     raise ValueError(f"unknown prototype status {status!r}")
 
 
+NO_TARGET_STATUS = dc.CATEGORY_NO_EXTERNAL_TARGET
+NO_TARGET_INPUT = PrototypeInput(dc.PrototypeClaim.no_target(), 0, "", NO_TARGET_STATUS)  # fleets outside PROTOTYPE_FLEETS
+
+
 def _production(row: Mapping):
     """(effective label, objective, proven prefix override). Unclaimed: a value with no proven prefix, else open."""
     status = row.get("day_status")
@@ -227,8 +231,12 @@ def reproduction_row(row: Mapping, proto: PrototypeInput, stage_statuses: Option
     if claim.kind == "value":
         out["prototype_value"] = claim.objective[0]
         out["prototype_minutes"] = claim.objective[1] if len(claim.objective) > 1 else ""
+    if claim.kind == "no_target":
+        out["category"] = out["fleet_category"] = dc.CATEGORY_NO_EXTERNAL_TARGET
     if row.get("day_status") == "rejected":
         out["note"] = "production_rejected"
+        return out
+    if claim.kind == "no_target":
         return out
     if claim.kind == "value" and label in INFEASIBLE_LABELS and claim.plan_checked is None:
         out["note"] = NOTE_NEEDS_PROTOTYPE_PLAN_CHECK  # design 6.3: the checker must run on that prototype plan
@@ -340,6 +348,8 @@ def build(j11_dir: Path, results_root: Path, prototype_dir: Path) -> Built:
                 cell.append((exc.code, exc.message))
                 reproduction.append(dict(reproduction_row(dict(row, proof_claim_allowed="False"), proto),
                                          category="", note=f"BLOCKING {exc.code}"))
+        else:  # owner rule: every cell gets a reproduction row
+            reproduction.append(reproduction_row(row, NO_TARGET_INPUT))
         value = to_int(row["K_or_S"])
         cmp_row = {"fleet": row["fleet"], "date": row["date"], "R": row["R"], "L": row["L"], "day_status": row["day_status"],
                    "proof_claim_allowed": row["proof_claim_allowed"], "joint_K_or_S": row["K_or_S"],

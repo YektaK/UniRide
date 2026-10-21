@@ -263,10 +263,10 @@ def test_c3_a_production_value_against_an_open_prototype_stays_prototype_open():
                                  production_objective=(2, 100)).category == "prototype_open"
 
 
-def test_c3_not_comparable_is_gone_and_the_vocabulary_has_seven_categories():
+def test_c3_not_comparable_is_gone_and_the_vocabulary_has_eight_categories():  # seven of J9b plus no_external_target (2026-10-21)
     assert not hasattr(dc, "NotComparable")
     assert set(dc.REPRODUCTION_CATEGORIES) == {"equal", "production_better", "production_worse", "production_open",
-                                               "prototype_open", "co_optimal_alternative", "both_open"}
+                                               "prototype_open", "co_optimal_alternative", "both_open", "no_external_target"}
 
 
 # ------------------------------------------------------------------ no_external_target (lead decision 2026-10-21, owner Q1)

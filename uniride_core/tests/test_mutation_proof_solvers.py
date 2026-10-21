@@ -56,10 +56,10 @@ def _problem():
 # Every canonical core engine surface that solves CVRP.
 ENGINE_KEYS = [
     "Core-Greedy-Routing",
-    "Core-GA-TSP",
-    "Core-PSO-TSP",
-    "Core-GWO-TSP",
-    "Core-HHO-TSP",
+    "Matrix-GA-TSP-legacy",
+    "Matrix-PSO-TSP-legacy",
+    "Matrix-GWO-TSP-legacy",
+    "Matrix-HHO-TSP-legacy",
     "OR-Tools",
 ]
 

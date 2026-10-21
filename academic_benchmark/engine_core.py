@@ -18,6 +18,9 @@ _UNCATALOGED_TSP_ATSP_IDS = frozenset({
     "SOTA-E2BSO-TSP", "SOTA-R2DMA-TSP", "SOTA-P-AOEA-TSP",
     "SOTA-CGO-TSP", "SOTA-RUN-TSP", "SOTA-ALNS-TSP",
     "FCM-GA-TSP", "FCM-PSO-TSP", "FCM-GWO-TSP", "FCM-HHO-TSP",
+    # C-14: truthful names of the string-waypoint matrix engines (never canonical IDs).
+    "Matrix-TwoOpt-TSP-legacy", "Matrix-GA-TSP-legacy", "Matrix-PSO-TSP-legacy",
+    "Matrix-GWO-TSP-legacy", "Matrix-HHO-TSP-legacy",
 })
 _ROUTING_IDS = frozenset({"Core-Greedy-Routing"})
 _ROUTING_PREFIXES = ("CVRP-", "CVRPTW-")
@@ -180,6 +183,10 @@ class AlgorithmRegistry:
     @classmethod
     def register(cls, name: str):
         def wrapper(func: Callable):
+            if name in cls._registry:
+                raise ValueError(
+                    f"Algorithm '{name}' is already registered; one ID names exactly one callable"
+                )
             cls._registry[name] = func
             return func
         return wrapper

@@ -15,7 +15,7 @@ from uniride_core.benchmark_runner import MatrixAlgorithmConfig, MatrixBenchmark
 from uniride_core.models import CostMatrix, RoutingProblem
 
 
-DEFAULT_ALGORITHMS = ("Core-GA-TSP", "FCM-GA-TSP", "Core-PSO-TSP", "FCM-PSO-TSP")
+DEFAULT_ALGORITHMS = ("Matrix-GA-TSP-legacy", "FCM-GA-TSP", "Matrix-PSO-TSP-legacy", "FCM-PSO-TSP")
 
 
 def run_fcm_srs_comparison(

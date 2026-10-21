@@ -339,9 +339,9 @@ def test_matrix_native_result_records_real_promoted_file_digest(monkeypatch, tmp
 @pytest.mark.parametrize(
     ("algorithm", "params"),
     [
-        ("Core-TwoOpt-TSP", {"max_iterations": 12}),
+        ("Matrix-TwoOpt-TSP-legacy", {"max_iterations": 12}),
         (
-            "Core-GA-TSP",
+            "Matrix-GA-TSP-legacy",
             {
                 "population_size": 8,
                 "max_iterations": 5,
@@ -353,7 +353,7 @@ def test_matrix_native_result_records_real_promoted_file_digest(monkeypatch, tmp
             },
         ),
         (
-            "Core-PSO-TSP",
+            "Matrix-PSO-TSP-legacy",
             {
                 "num_particles": 8,
                 "max_iterations": 5,
@@ -365,7 +365,7 @@ def test_matrix_native_result_records_real_promoted_file_digest(monkeypatch, tmp
             },
         ),
         (
-            "Core-GWO-TSP",
+            "Matrix-GWO-TSP-legacy",
             {
                 "num_wolves": 8,
                 "max_iterations": 5,
@@ -374,7 +374,7 @@ def test_matrix_native_result_records_real_promoted_file_digest(monkeypatch, tmp
             },
         ),
         (
-            "Core-HHO-TSP",
+            "Matrix-HHO-TSP-legacy",
             {
                 "num_hawks": 8,
                 "max_iterations": 5,
@@ -386,7 +386,7 @@ def test_matrix_native_result_records_real_promoted_file_digest(monkeypatch, tmp
         ),
     ],
 )
-def test_matrix_native_benchmark_run_accepts_core_tsp_engines(monkeypatch, algorithm, params):
+def test_matrix_native_benchmark_run_accepts_matrix_legacy_tsp_engines(monkeypatch, algorithm, params):
     class ImmediateThread:
         def __init__(self, target, daemon=True, name=None):
             self.target = target

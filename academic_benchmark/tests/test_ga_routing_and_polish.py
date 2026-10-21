@@ -65,7 +65,7 @@ def test_core_ga_routing_call_builds_the_ga_engine_not_the_greedy_default(monkey
     monkeypatch.setattr(registry_setup, "create_matrix_engine", recording_create)
     result = AlgorithmRegistry.get_executor("Core-GA-TSP")(problem, {}, 42, 0)
 
-    assert built == [("Core-GA-TSP", "TSPMetaMatrixEngine")]
+    assert built == [("Matrix-GA-TSP-legacy", "TSPMetaMatrixEngine")]
     assert result.algorithm == "Core-GA-TSP"
     assert result.routes
 

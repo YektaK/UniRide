@@ -92,6 +92,45 @@ class ALNS_TSP(BaseTSPSolver):
         self._set_problem([(0.0, 0.0)] * len(matrix))
         return self._solve_accounted(budget)
 
+    def solve_accounted_from_tour(
+        self,
+        matrix: list[list[float]],
+        tour: list[int],
+        cost: float,
+        budget: ObjectiveEvaluationBudget,
+    ) -> AccountedALNSResult:
+        """ALNS polish entry: start from a supplied complete tour (C-07).
+
+        ``tour`` is a permutation of the matrix nodes and ``cost`` its known
+        closed-cycle cost, which the caller already counted: the starting tour is
+        NOT evaluated again, so ``budget.used`` grows only by the candidate
+        evaluations of this search. ``budget`` is the stage counter or a stage
+        view over the shared counter. The nearest-neighbour construction of the
+        standalone path is not used.
+
+        The returned route is the best tour found. The search starts with the
+        supplied tour as its best, so the result is never worse than the input
+        (the walk may accept worse tours; the returned tour is the best-found one,
+        not the last one).
+        """
+        n = len(matrix)
+        nodes = list(tour)
+        if (
+            len(nodes) != n
+            or any(isinstance(node, bool) or not isinstance(node, int) for node in nodes)
+            or sorted(nodes) != list(range(n))
+        ):
+            raise ValueError(
+                "ALNS polish needs a complete tour: a permutation of the matrix nodes"
+            )
+        if isinstance(cost, bool) or not isinstance(cost, (int, float)) or not math.isfinite(cost):
+            raise ValueError("ALNS polish needs the finite known cost of the supplied tour")
+        self.set_dist_matrix(matrix)
+        self._set_problem([(0.0, 0.0)] * n)
+        return self._solve_accounted(
+            budget, initial_tour=nodes, initial_cost=float(cost)
+        )
+
 
     def _init_weights(self):
         n_scores = 3
@@ -200,6 +239,8 @@ class ALNS_TSP(BaseTSPSolver):
         budget: ObjectiveEvaluationBudget,
         *,
         on_initialized: Callable[[], None] | None = None,
+        initial_tour: List[int] | None = None,
+        initial_cost: float | None = None,
     ) -> AccountedALNSResult:
         cfg = self.config
         self.rng = random.Random(cfg.seed)
@@ -207,8 +248,13 @@ class ALNS_TSP(BaseTSPSolver):
         n = self._n
         start_evaluations = budget.used
 
-        current = self._nearest_neighbor_tour()
-        current_cost = budget.evaluate(current, self._dist_matrix)
+        if initial_tour is None:
+            current = self._nearest_neighbor_tour()
+            current_cost = budget.evaluate(current, self._dist_matrix)
+        else:
+            # Polish entry: the supplied tour and its known cost are the start.
+            current = list(initial_tour)
+            current_cost = float(initial_cost)
         best = list(current)
         best_cost = current_cost
         temp = cfg.sa_start_temp if cfg.use_sa else 0.0

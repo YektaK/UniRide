@@ -1,0 +1,81 @@
+fleet,date,R,L,prototype_status,prototype_value,prototype_minutes,prototype_plan_checked,production_status,proof_claim_allowed,production_value,production_minutes,components_compared,category,fleet_category,note
+single_4sw5so,2026-10-05,50,,joint MIP optimal,6,1597,not_run,optimal,True,6,1597,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-06,50,,joint MIP optimal,4,1346,not_run,optimal,True,4,1346,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-07,50,,joint MIP optimal,5,1323,not_run,optimal,True,5,1323,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-08,50,,joint MIP optimal,4,1499,not_run,optimal,True,4,1499,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-09,50,,joint MIP optimal,6,1085,not_run,optimal,True,6,1085,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-05,60,,joint MIP optimal,4,1449,not_run,optimal,True,4,1449,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-06,60,,joint MIP optimal,4,1298,not_run,optimal,True,4,1298,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-07,60,,joint MIP optimal,5,1278,not_run,optimal,True,5,1278,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-08,60,,joint MIP optimal,4,1370,not_run,optimal,True,4,1370,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-09,60,,joint MIP optimal,5,1004,not_run,optimal,True,5,1004,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-05,70,,joint MIP optimal,4,1348,not_run,optimal,True,4,1348,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-06,70,,joint MIP optimal,4,1237,not_run,optimal,True,4,1237,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-07,70,,joint MIP optimal,5,1228,not_run,optimal,True,5,1228,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-08,70,,joint MIP optimal,3,1317,not_run,optimal,True,3,1317,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-09,70,,joint MIP optimal,4,984,not_run,optimal,True,4,984,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-05,90,,seq plan = LB0 (MIP status -9),3,,not_run,optimal,True,3,1303,1,equal,equal,"prototype K = LB0 by its sequential plan; no joint MIP plan, minutes not compared; prototype_plan_not_verified"
+single_4sw5so,2026-10-06,90,,joint MIP optimal,3,1164,not_run,optimal,True,3,1164,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-07,90,,joint MIP optimal,4,1134,not_run,optimal,True,4,1134,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-08,90,,joint MIP optimal,3,1313,not_run,optimal,True,3,1313,2,equal,equal,prototype_plan_not_verified
+single_4sw5so,2026-10-09,90,,joint MIP optimal,3,930,not_run,optimal,True,3,930,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-05,50,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-05,50,2,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-05,50,3,ok,3,1599,not_run,optimal,True,3,1599,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-06,50,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-06,50,2,ok,2,1346,not_run,optimal,True,2,1346,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-06,50,3,ok,1,1346,not_run,optimal,True,1,1346,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-07,50,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-07,50,2,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-07,50,3,ok,3,1372,not_run,optimal,True,3,1372,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-08,50,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-08,50,2,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-08,50,3,ok,1,1499,not_run,optimal,True,1,1499,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,50,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-09,50,2,ok,4,1122,not_run,optimal,True,4,1122,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,50,3,ok,3,1085,not_run,optimal,True,3,1085,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-05,60,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-05,60,2,ok,3,1491,not_run,optimal,True,3,1491,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-05,60,3,ok,1,1449,not_run,optimal,True,1,1449,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-06,60,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-06,60,2,ok,2,1305,not_run,optimal,True,2,1305,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-06,60,3,ok,1,1298,not_run,optimal,True,1,1298,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-07,60,1,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-07,60,2,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-07,60,3,ok,2,1288,not_run,optimal,True,2,1288,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-08,60,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-08,60,2,ok,2,1378,not_run,optimal,True,2,1378,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-08,60,3,ok,1,1370,not_run,optimal,True,1,1370,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,60,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-09,60,2,ok,3,1004,not_run,optimal,True,3,1004,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,60,3,ok,2,1004,not_run,optimal,True,2,1004,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-05,70,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-05,70,2,ok,2,1349,not_run,optimal,True,2,1349,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-05,70,3,ok,1,1348,not_run,optimal,True,1,1348,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-06,70,1,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-06,70,2,ok,2,1244,not_run,optimal,True,2,1244,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-06,70,3,ok,1,1237,not_run,optimal,True,1,1237,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-07,70,1,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-07,70,2,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-07,70,3,ok,2,1240,not_run,optimal,True,2,1240,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-08,70,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-08,70,2,ok,1,1327,not_run,optimal,True,1,1327,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-08,70,3,ok,0,1317,not_run,optimal,True,0,1317,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,70,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-09,70,2,ok,2,984,not_run,optimal,True,2,984,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,70,3,ok,1,984,not_run,optimal,True,1,984,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-05,90,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-05,90,2,"acik: S in {1,2}",,,not_run,optimal,True,2,1308,,prototype_open,prototype_open,
+large+sedan,2026-10-05,90,3,ok (homojen K=3=LB0 planı),0,,not_run,optimal,True,0,1303,1,equal,equal,prototype reports no minutes; prototype_plan_not_verified
+large+sedan,2026-10-06,90,1,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-06,90,2,ok,2,1186,not_run,optimal,True,2,1186,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-06,90,3,ok,0,1164,not_run,optimal,True,0,1164,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-07,90,1,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-07,90,2,infeasible,,,not_run,infeasible_solver_proven,True,,,,equal,equal,
+large+sedan,2026-10-07,90,3,ok,1,1134,not_run,optimal,True,1,1134,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-08,90,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-08,90,2,ok,1,1323,not_run,optimal,True,1,1323,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-08,90,3,ok,0,1313,not_run,optimal,True,0,1313,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,90,1,infeasible,,,not_run,infeasible_certified,True,,,,equal,equal,
+large+sedan,2026-10-09,90,2,ok,2,931,not_run,optimal,True,2,931,2,equal,equal,prototype_plan_not_verified
+large+sedan,2026-10-09,90,3,ok,0,930,not_run,optimal,True,0,930,2,equal,equal,prototype_plan_not_verified

@@ -405,6 +405,21 @@ def markdown_tables(b: Built) -> str:
         [(r["fleet"], r["date"], r["R"], r["L"], r["day_status"], r["K_or_S"], r["total_minutes"], r["car_minutes"],
           r["proof_claim_reason"], r["crosscheck_status"]) for r in unclaimed]) + "\n\nStage rows of these cells:\n\n" +
         _table(("solver", "stage", "status", "stop_reason", "objective", "bound", "solve_result"), st_rows))
+    run_rows = []
+    for fleet in sorted({r["fleet"] for r in b.joint}):
+        st = [s for s in b.stages if s["fleet"] == fleet]
+        hi = [float(s["wall_seconds"]) for s in st if s["solver"] == "highs" and s["wall_seconds"]]
+        gu = [float(s["wall_seconds"]) for s in st if s["solver"] == "gurobi" and s["wall_seconds"]]
+        wk = [float(s["work_units"]) for s in st if s["solver"] == "gurobi" and s["work_units"]]
+        cells = [float(r["wall_seconds"]) for r in b.joint if r["fleet"] == fleet]
+        run_rows.append((fleet, len(cells), len(st), f"{max(hi):.2f}" if hi else "", f"{max(gu):.2f}" if gu else "",
+                         f"{max(wk):.2f}" if wk else "", sum(1 for s in st if s["timing_dependent"] == "True"),
+                         f"{max(cells):.2f}", f"{sum(cells):.1f}"))
+    parts.append("### Runtimes and Gurobi work (day_joint_stages.csv, day_joint.csv)\n\n" + _table(
+        ("fleet", "cells", "stage rows", "longest HiGHS call s", "longest Gurobi call s", "largest Gurobi work",
+         "timing_dependent stage rows", "longest cell s", "sum of cell s"), run_rows) +
+        "\n\nStage statuses:\n\n" + _table(("solver", "status", "stop_reason", "rows"),
+                                           _count(b.stages, ("solver", "status", "stop_reason"))))
     check_rows = []
     for col in _CHECK_CODES:
         vals = [r[col] for r in b.comparison]

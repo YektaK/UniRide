@@ -1302,6 +1302,10 @@ def _make_hybrid_3opt_executor(algorithm_name):
     return executor
 
 
+for _hybrid_3opt_id in ("Core-GWO-TSP-Memetic-3opt", "Core-HHO-TSP-Memetic-3opt"):
+    AlgorithmRegistry.register(_hybrid_3opt_id)(_make_hybrid_3opt_executor(_hybrid_3opt_id))
+
+
 # Override Core-GWO-TSP, Core-HHO-TSP, Numba-GWO, Numba-HHO with
 # Numba-accelerated Bildiri2026 solvers. Both Core-* and Numba-* entry
 # points now resolve to GWOOptimizer / HHOOptimizer which use the cached

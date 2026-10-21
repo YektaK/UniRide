@@ -39,7 +39,7 @@ def _base_payload() -> dict:
     return payload
 
 
-def _scaled(table: dict, multipliers=(20, 100)) -> dict:
+def _scaled(table: dict, multipliers=(50, 250)) -> dict:
     return {
         "rule": "two_opt_scan_multiples_v1",
         "scan_multipliers": list(multipliers),
@@ -59,9 +59,9 @@ def _contract(scaled=None, levels=None) -> dict:
 # ---------------------------------------------------------------- contract (no file access)
 
 def test_scaled_levels_are_accepted_and_fixed_levels_stay_valid():
-    study = StudyManifestV1.model_validate(_contract(_scaled({"tsplib-ft53": [27560, 137800]})))
+    study = StudyManifestV1.model_validate(_contract(_scaled({"tsplib-ft53": [68900, 344500]})))
     assert study.fixed_budget_levels is None
-    assert study.scaled_fixed_budget_levels.levels_by_dataset == {"tsplib-ft53": [27560, 137800]}
+    assert study.scaled_fixed_budget_levels.levels_by_dataset == {"tsplib-ft53": [68900, 344500]}
     legacy = StudyManifestV1.model_validate(_contract(levels=[10000, 50000]))
     assert legacy.fixed_budget_levels == [10000, 50000]
     assert legacy.scaled_fixed_budget_levels is None
@@ -70,13 +70,13 @@ def test_scaled_levels_are_accepted_and_fixed_levels_stay_valid():
 @pytest.mark.parametrize(
     "payload,match",
     [
-        (_contract(_scaled({"tsplib-ft53": [27560, 137800]}), [100]), "exactly one"),
+        (_contract(_scaled({"tsplib-ft53": [68900, 344500]}), [100]), "exactly one"),
         (_contract(), "exactly one"),
-        (_contract(_scaled({"tsplib-ft53": [137800, 27560]}, (100, 20))), "increasing"),
-        (_contract(_scaled({"tsplib-ft53": [27560, 27560]}, (20, 20))), "increasing"),
-        (_contract(_scaled({"tsplib-ft53": [27560]})), "one level per multiplier"),
-        (_contract(_scaled({"tsplib-ft53": [27560, 137801]})), "multiplier x n\\(n-1\\)/2"),
-        (_contract(_scaled({"tsplib-ft53": [27560, 140000]})), "multiplier x n\\(n-1\\)/2"),
+        (_contract(_scaled({"tsplib-ft53": [344500, 68900]}, (250, 50))), "increasing"),
+        (_contract(_scaled({"tsplib-ft53": [68900, 68900]}, (50, 50))), "increasing"),
+        (_contract(_scaled({"tsplib-ft53": [68900]})), "one level per multiplier"),
+        (_contract(_scaled({"tsplib-ft53": [68900, 344501]})), "multiplier x n\\(n-1\\)/2"),
+        (_contract(_scaled({"tsplib-ft53": [68900, 350000]})), "multiplier x n\\(n-1\\)/2"),
         (_contract(_scaled({"x": [80, 400]})), "n\\(n-1\\)/2"),  # k = 4 is not n(n-1)/2
         (_contract(_scaled({})), "levels_by_dataset"),
     ],
@@ -87,7 +87,7 @@ def test_inconsistent_scaled_tables_are_refused_by_the_contract(payload, match):
 
 
 def test_unknown_rule_is_refused():
-    scaled = _scaled({"tsplib-ft53": [27560, 137800]})
+    scaled = _scaled({"tsplib-ft53": [68900, 344500]})
     scaled["rule"] = "something_else"
     with pytest.raises(ValidationError):
         StudyManifestV1.model_validate(_contract(scaled))
@@ -177,14 +177,14 @@ def test_live_profile_levels_are_20_and_100_scans_of_every_instance():
     plan = build_study_plan(BILDIRI_STUDY, repository_root=REPOSITORY_ROOT)
     scaled = plan.study.scaled_fixed_budget_levels
     assert plan.study.fixed_budget_levels is None
-    assert scaled.rule == "two_opt_scan_multiples_v1" and scaled.scan_multipliers == [20, 100]
+    assert scaled.rule == "two_opt_scan_multiples_v1" and scaled.scan_multipliers == [50, 250]
     for dataset in plan.datasets:
         k = EXPECTED_SCANS[dataset.dataset_id]
-        assert fixed_budget_levels_for(plan.study, dataset) == (20 * k, 100 * k)
+        assert fixed_budget_levels_for(plan.study, dataset) == (50 * k, 250 * k)
         rows = [r for r in plan.rows if r.dataset_id == dataset.dataset_id
                 and r.protocol is ExecutionProtocol.FIXED_BUDGET]
-        assert {r.budget_level for r in rows} == {20 * k, 100 * k}
-        for level in (20 * k, 100 * k):  # every algorithm gets the same budget on the instance
+        assert {r.budget_level for r in rows} == {50 * k, 250 * k}
+        for level in (50 * k, 250 * k):  # every algorithm gets the same budget on the instance
             assert {r.algorithm_id for r in rows if r.budget_level == level} == set(plan.study.algorithm_ids)
 
 
@@ -195,10 +195,10 @@ def test_live_profile_smoke_slice_takes_the_lowest_level_per_dataset():
     for row in rows:
         if row.protocol is ExecutionProtocol.FIXED_BUDGET:
             by_dataset.setdefault(row.dataset_id, set()).add(row.budget_level)
-    assert by_dataset == {d: {20 * k} for d, k in EXPECTED_SCANS.items()}
-    one = select_smoke_rows(plan, replicates=1, budget_level=100 * 1378)
+    assert by_dataset == {d: {50 * k} for d, k in EXPECTED_SCANS.items()}
+    one = select_smoke_rows(plan, replicates=1, budget_level=250 * 1378)
     assert {(r.dataset_id, r.budget_level) for r in one if r.protocol is ExecutionProtocol.FIXED_BUDGET} == {
-        ("tsplib-ft53", 137800)
+        ("tsplib-ft53", 344500)
     }
     with pytest.raises(StudySmokeError, match="budget level"):
         select_smoke_rows(plan, replicates=1, budget_level=10000)
@@ -215,19 +215,23 @@ def test_profile_ga_entries_really_run_with_population_20_on_ft53():
     matrix = parse_atsp_text(text, "ft53")["explicit_matrix"]
     problem = ProblemInstance(name="ft53", dimension=53, coordinates=[], problem_type="atsp",
                               dist_matrix=matrix, optimal=6905.0)
-    budget = 20 * 1378
+    budget = 50 * 1378
     results = {}
     for algorithm_id in ("Core-GA-TSP", "Core-GA-TSP-Memetic-2opt"):
         params = dict(payload["algorithm_parameters"][algorithm_id])
         params["fair_comparison"] = {"evaluation_budget": budget, "base_seed": payload["base_seed"]}
         results[algorithm_id] = AlgorithmRegistry.get_executor(algorithm_id)(problem, params, seed=1, run_idx=0)
     pure = results["Core-GA-TSP"]
-    # 20 initial evaluations + 500 generations x (20 - 2 elites) children; population 100 would need 49100
-    assert (pure.objective_evaluations, pure.termination_reason) == (20 + 500 * 18, "max_iterations")
+    # 20 initial evaluations, then generations of 20 - 2 elites = 18 children until the next one does
+    # not fit; population 100 would give 100 + 98 g instead
+    assert pure.termination_reason == "evaluation_budget_exhausted"
+    assert pure.objective_evaluations == 20 + 18 * ((budget - 20) // 18)
     memetic = results["Core-GA-TSP-Memetic-2opt"]
-    # the initial 2-opt starts after the 20 initial evaluations and takes the rest of the budget
-    assert memetic.polish_policy["evaluations"]["initial"] == budget - 20
-    assert memetic.objective_evaluations == budget
+    # one full 2-opt scan (1378 candidates) on each of the 20 initial chromosomes; population 100
+    # would need 137800 > budget
+    assert memetic.polish_policy["evaluations"]["initial"] == 20 * 1378
+    assert memetic.termination_reason == "evaluation_budget_exhausted"
+    assert budget - memetic.objective_evaluations < 20
 
 
 def test_rows_file_allows_one_level_per_dataset_only_when_asked(tmp_path):

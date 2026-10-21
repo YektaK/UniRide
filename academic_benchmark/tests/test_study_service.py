@@ -71,7 +71,7 @@ def _tmp_study(root: Path, mutate=None, *, dataset: dict | None = None) -> Path:
     payload = _bildiri_payload()
     payload["dataset_manifest_refs"] = ["datasets/tiny.json"]
     # C-19: the profile's levels are scaled per dataset; the tiny dataset (n = 3) gets its own
-    payload["scaled_fixed_budget_levels"]["levels_by_dataset"] = {"tiny": [60, 300]}
+    payload["scaled_fixed_budget_levels"]["levels_by_dataset"] = {"tiny": [150, 750]}
     if mutate is not None:
         mutate(payload)
     (root / "studies" / "study.json").write_text(json.dumps(payload), encoding="utf-8")
@@ -205,7 +205,7 @@ def test_alias_algorithm_id_is_rejected(tmp_path, alias):
 
 def test_every_row_carries_its_budget_level_and_levels_are_never_merged(tmp_path):
     plan = _plan(_tmp_study(tmp_path))
-    levels = [60, 300]  # 20 and 100 scans of the tiny n = 3 dataset (C-19 scaled levels)
+    levels = [150, 750]  # 50 and 250 scans of the tiny n = 3 dataset (C-19 scaled levels)
     fixed = [row for row in plan.rows if row.protocol is ExecutionProtocol.FIXED_BUDGET]
     assert {row.budget_level for row in fixed} == set(levels)
     for level in levels:

@@ -48,14 +48,17 @@ DATASET_REFS = [
     "academic_benchmark/datasets/eil76.json",
     "academic_benchmark/datasets/ft53.json",
 ]
-# n(n-1)/2 (one full 2-opt scan) per dataset; levels are 20 and 100 scans (owner 2026-10-21)
+# n(n-1)/2 (one full 2-opt scan) per dataset; levels are 50 and 250 scans (owner 2026-10-21, revised)
 SCAN_SIZES = {
     "tsplib-berlin52": 1326, "tsplib-eil51": 1275, "tsplib-st70": 2415, "tsplib-kroa100": 4950,
     "tsplib-rd100": 4950, "tsplib-eil76": 2850, "tsplib-ft53": 1378,
 }
+# The budget is the stopping rule (owner 2026-10-21): iteration and stagnation limits of the
+# non-memetic-swarm entries equal the largest level of the profile (250 x 4950, kroA100/rd100).
+LARGEST_LEVEL = 1237500
 GA_C16A_DEFAULTS = {
-    "max_iterations": 500, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2,
-    "tournament_size": 3, "max_no_improvement": 100,
+    "max_iterations": LARGEST_LEVEL, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2,
+    "tournament_size": 3, "max_no_improvement": LARGEST_LEVEL,
 }
 SECONDARY_ALGORITHM_IDS = ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"]
 
@@ -140,9 +143,9 @@ class TestStudyManifest:
         assert study_manifest.fixed_budget_levels is None
         scaled = study_manifest.scaled_fixed_budget_levels
         assert scaled.rule == "two_opt_scan_multiples_v1"
-        assert scaled.scan_multipliers == [20, 100]
+        assert scaled.scan_multipliers == [50, 250]
         assert scaled.levels_by_dataset == {
-            dataset_id: [20 * k, 100 * k] for dataset_id, k in SCAN_SIZES.items()
+            dataset_id: [50 * k, 250 * k] for dataset_id, k in SCAN_SIZES.items()
         }
 
     def test_ga_entries_use_population_20_and_explicit_c16a_defaults(

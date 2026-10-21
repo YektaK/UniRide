@@ -60,7 +60,7 @@ def _loader(**kwargs):
     return lambda name: problem
 
 
-FT53_LEVELS = (20 * 1378, 100 * 1378)  # C-19: 20 and 100 full 2-opt scans of ft53
+FT53_LEVELS = (50 * 1378, 250 * 1378)  # C-19: 50 and 250 full 2-opt scans of ft53
 
 
 @pytest.fixture(scope="module")

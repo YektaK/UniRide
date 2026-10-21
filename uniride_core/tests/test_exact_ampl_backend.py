@@ -626,3 +626,49 @@ def test_same_archived_waves_twice_give_identical_results():
                                                              peak=w.wave_id in peaks, session=s)) for w in waves])
     assert runs[0] == runs[1]
     assert all(fp[0] == "optimal" for fp in runs[0])
+
+
+# ---------- integrality is a test of the VALUES, not of the raw objective (J11 finding) ----------
+def _wave_stage_call(stage, objective, lam_of, *, bound=None):
+    """Run the real ``AmplSession._call`` of ``stage`` on a mocked AMPL session that returns ``objective`` and ``lam_of(r)``."""
+    from unittest import mock
+
+    from uniride_core.exact import ampl_backend as ab
+
+    inst = dict(direction="pickup", matrix=_loc_matrix([[0, 7, 7], [7, 0, 7], [7, 7, 0]], (1, 2)), location_codes=("A", "B"),
+                classes=("Sw", "Sw"), types=_single(sw=2, so=0), ride=50, tour=150)
+    res = _enum(inst)
+    ncols = len(res.columns)
+    ampl = mock.MagicMock()
+    ampl.solve_result = "solved"
+    ampl.get_value.side_effect = lambda name: {"solve_result_num": 0, "solve_message": "Gurobi: optimal solution"}.get(
+        name, ab._BOUND_SENTINEL if bound is None else bound)
+    ampl.get_objective.return_value.value.return_value = objective
+    ampl.var.__getitem__.return_value.get_values.return_value.to_dict.return_value = {r: lam_of(r) for r in range(ncols)}
+    s = ab.AmplSession(ab.SolverSettings())
+    s._ampl = ampl
+    s._load(res, None, None, 2)
+    return res, s._call(stage, None, False, ncols)
+
+
+def test_a_wave_duration_with_near_integral_lam_and_a_raw_objective_beyond_the_old_tolerance_is_accepted():
+    # one selected column of cost c is taken as 1 - 1.2e-5 / c: each value is inside the 1e-5 tolerance, the raw
+    # objective is 1.2e-5 below the integer c (more than the old 1e-5 test on the objective allowed)
+    inst_cols = _wave_stage_call("stage2", 0.0, lambda r: 0.0)[0].columns
+    r_best = max(range(len(inst_cols)), key=lambda r: inst_cols[r].cost)
+    cost = inst_cols[r_best].cost
+    assert cost >= 4
+    lam = lambda r: 1 - 1.2e-5 / cost if r == r_best else 0.0  # noqa: E731
+    _, out = _wave_stage_call("stage2", cost - 1.2e-5, lam, bound=cost - 1.2e-5)
+    assert out.status == "optimal" and out.objective == cost and out.selection == ((r_best, 1),)
+
+
+def test_a_wave_stage_with_a_real_objective_mismatch_or_a_fractional_lam_is_still_rejected():
+    cols = _wave_stage_call("stage2", 0.0, lambda r: 0.0)[0].columns
+    r_best = max(range(len(cols)), key=lambda r: cols[r].cost)
+    cost = cols[r_best].cost
+    one = lambda r: 1.0 if r == r_best else 0.0  # noqa: E731
+    half = lambda r: 1.0 + 3e-5 if r == r_best else 0.0  # noqa: E731
+    assert _wave_stage_call("stage2", cost - 0.3, one)[1].status == "rejected"  # solver objective is not the values' objective
+    assert _wave_stage_call("stage2", cost + 1.0, one)[1].objective == cost + 1  # existing behaviour: no recheck of equal integers
+    assert _wave_stage_call("stage2", cost - 1.2e-5, half)[1].status == "rejected"  # lam outside the variable tolerance

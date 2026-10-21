@@ -564,3 +564,82 @@ def test_an_infeasible_typed_cell_is_infeasible_proven_from_both_and_the_raw_sta
     assert raw_gurobi.solve_result_num is not None and 200 <= raw_gurobi.solve_result_num < 300
     assert raw_gurobi.bound_source != "ampl_presolve", raw_gurobi.solver_message  # Gurobi itself proved it
     assert crosscheck_day_results(h, g).verdict == "agree"
+
+
+# ------------------------------------------------------------------ 6. integrality is a test of the VALUES, not of the raw objective
+# J11 (large+doblo_cap3 2026-10-08 R50 L2, stage 3): Gurobi returned objective 539.9999877 with every integer variable
+# inside its integrality tolerance (largest deviation 1.28e-6). Several small deviations add up through the tour
+# coefficients (66, 72, 81), so the RAW objective sat 1.23e-5 from 540, beyond the old 1e-5 test on the objective.
+_NOISY_OBJECTIVE = 539.9999877
+_NOISY_BOUND = 539.9999877417731
+
+
+def _noise_model():
+    """Three integer variables with the J11 tour coefficients; x0 = 4, x1 = 3, x2 = 0 gives 81*4 + 72*3 = 540."""
+    from uniride_core.exact.day_joint import JointModel, MipRow, MipVariable
+
+    variables = (MipVariable("x0", 0, 10, 81, "column"), MipVariable("x1", 0, 10, 72, "column"),
+                 MipVariable("x2", 0, 10, 66, "column"))
+    rows = (MipRow("r0", "E", 4, ((0, 1),), "cover"), MipRow("r1", "E", 3, ((1, 1),), "cover"),
+            MipRow("r2", "E", 0, ((2, 1),), "cover"))
+    return JointModel("noise", "homogeneous", 3, "Obj", variables, rows, {})
+
+
+def _noisy_values():
+    """Values 4, 3, 0 pulled off the integers so that the objective computed from them is 539.9999877 (each deviation below 1e-6)."""
+    dev0 = -1e-7
+    dev1 = (_NOISY_OBJECTIVE - 540 - 81 * dev0) / 72
+    assert abs(dev1) < 1e-6
+    return [4 + dev0, 3 + dev1, 0.0]
+
+
+class _ValueAmpl(_FakeAmpl):
+    """A fake AMPL session that returns an incumbent: objective, best bound and the values of the variable ``x``."""
+
+    def __init__(self, objective, values, bound=_NOISY_BOUND, message="Gurobi 13.0.3: optimal solution; objective 540"):
+        super().__init__(num=0, message=message)
+        self.objective, self.values, self.bound = objective, values, bound
+        self.solve_result = "solved"
+        self.var = {"x": type("V", (), {"get_values": staticmethod(
+            lambda: type("D", (), {"to_dict": staticmethod(lambda: dict(enumerate(self.values)))})())})()}
+
+    def get_value(self, name):
+        if name.endswith(".bestbound"):
+            return self.bound
+        return super().get_value(name)
+
+    def get_objective(self, name):
+        return type("O", (), {"value": staticmethod(lambda: self.objective)})()
+
+
+def _solve_noise_stage(monkeypatch, objective, values, **kwargs):
+    monkeypatch.setattr(gb, "load_day_model", lambda ampl, model: None)
+    session = _FakeSession(_ValueAmpl(objective, values, **kwargs))
+    return gb.gurobi_solve_stage(session, _noise_model(), GurobiSettings())
+
+
+def test_the_j11_stage_with_a_raw_objective_539_9999877_and_near_integral_values_is_accepted_as_540(monkeypatch):
+    values = _noisy_values()
+    assert abs(sum(c * x for c, x in zip((81, 72, 66), values)) - _NOISY_OBJECTIVE) < 1e-9  # the numbers are the J11 ones
+    solved = _solve_noise_stage(monkeypatch, _NOISY_OBJECTIVE, values)
+    assert (solved.result.status, solved.result.stop_reason, solved.result.objective) == ("optimal", "optimal", 540)
+    assert solved.values == {"x0": 4, "x1": 3, "x2": 0}
+
+
+@pytest.mark.parametrize("objective,values", [
+    # a genuinely fractional value: beyond the variable tolerance, whatever the objective says
+    (540.0, [4.0, 3.0 + 3e-5, 0.0]),
+    # integral values (objective 540) but the solver reports 539.9: a real mismatch, not rounding noise
+    (539.9, [4.0, 3.0, 0.0]),
+    (540.3, [4.0, 3.0, 0.0]),
+    # a near-integral objective that belongs to other integer values (these give 606, the solver says ~540)
+    (_NOISY_OBJECTIVE, [4.0, 3.0, 1.0]),
+    # exactly integral but different objective: the recomputed value (540) does not match the solver's 541
+    (541.0, [4.0, 3.0, 0.0]),
+    # a row violated by the rounded values (x0 must be 4)
+    (_NOISY_OBJECTIVE, [3.0 - 1e-6, 3.0, 0.0]),
+])
+def test_a_fractional_value_or_an_objective_that_disagrees_after_rounding_is_still_rejected(monkeypatch, objective, values):
+    solved = _solve_noise_stage(monkeypatch, objective, values)
+    assert solved.result.status == "rejected" and solved.result.stop_reason == "solver_failure"
+    assert solved.values is None  # a rejected stage carries no values

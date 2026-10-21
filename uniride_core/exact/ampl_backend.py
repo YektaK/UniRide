@@ -87,6 +87,47 @@ def snap_to_integer_data(objective: Optional[float], bound: Optional[float], rel
     return obj, b
 
 
+_OBJECTIVE_ALLOWANCE_CAP = 0.25  # below one half: an accepted objective is always the integer nearest to the solver's
+
+
+def reconcile_objective(objective: Optional[float], coefficients: Sequence[float], values: Sequence[float]) -> Optional[float]:
+    """Return the integer objective of the ROUNDED variable values when it explains the solver's raw objective, else ``objective``.
+
+    A MIP solver keeps every integer variable within its integrality tolerance, not at an integer, so the objective it
+    reports is the objective of slightly off-integer values. Several small deviations add up through large integer
+    coefficients: J11 stage 3 (Gurobi) returned 539.9999877 with every value within 1.3e-6 of an integer, which is
+    1.2e-5 from 540. Integrality is therefore a test of the VALUES; the raw objective is never required to be integral.
+
+    The values pass when each is finite and within ``_INT_TOL`` of an integer. The objective is then recomputed from the
+    rounded values (an integer, with integer coefficients). It replaces the solver's objective only when the two agree
+    within the amount the deviations explain: the objective of the raw values and that of the rounded values differ by
+    exactly ``sum(c_j * (x_j - round(x_j)))``, so the allowance is ``sum(|c_j| * |x_j - round(x_j)|)`` plus a floating-
+    point margin (``_BOUND_TOL`` plus 1e-9 relative), capped at 0.25 so that it can never reach another integer. A real
+    mismatch (a deviation beyond the variable tolerance, or an objective that the values do not produce) returns the raw
+    objective unchanged, so the existing rejection (non-integral objective in ``classify_outcome``, the runner's
+    recomputed-objective check) still applies. Whenever the objective is accepted here it equals ``round(objective)``,
+    so a result that was accepted before is accepted with the same value.
+    """
+    if objective is None or not math.isfinite(float(objective)) or abs(float(objective)) >= _HUGE:
+        return objective
+    if len(coefficients) != len(values):
+        raise ValueError("coefficients and values differ in length")
+    recomputed, explained = 0, 0.0
+    for c, x in zip(coefficients, values):
+        x = float(x)
+        if not math.isfinite(x) or abs(x - round(x)) > _INT_TOL:
+            return objective
+        recomputed += int(round(c)) * int(round(x))
+        explained += abs(float(c)) * abs(x - round(x))
+    allowance = min(explained + _BOUND_TOL + 1e-9 * abs(float(objective)), _OBJECTIVE_ALLOWANCE_CAP)
+    return float(recomputed) if abs(float(objective) - recomputed) <= allowance else objective
+
+
+def has_incumbent(num: int) -> bool:
+    """True when AMPL ``solve_result_num`` means the solver returned a solution (solved, solved?, or a limit with one)."""
+    return num < 200 or 400 <= num < 450
+
+
 class ExactBackendUnavailable(RuntimeError):
     """amplpy, AMPL or a solver license is missing (status ``backend_unavailable``)."""
 
@@ -220,9 +261,8 @@ def classify_outcome(num: int, message: str, objective: Optional[float], bound: 
         # the feasible set is that single point and its value is exact
         b = float(objective)
         b_ceil, source = math.ceil(b - _BOUND_TOL), "ampl_presolve"
-    has_incumbent = num < 200 or 400 <= num < 450
     inc = None
-    if has_incumbent:
+    if has_incumbent(num):
         if objective is None or not math.isfinite(float(objective)) or abs(objective - round(objective)) > _INT_TOL:
             return StageResult(status="rejected", stop_reason="solver_failure", bound=b)
         inc = int(round(objective))
@@ -403,6 +443,7 @@ class AmplSession:
         self.settings = settings or SolverSettings()
         self._environ = environ
         self._ampl = None
+        self._objective_coefficients: dict = {}  # set by _load
         self._log: list = []
         self.ampl_version = self.amplpy_version = self.location = self.solver_version = None
 
@@ -541,9 +582,12 @@ class AmplSession:
         if nz:
             a.param["a"] = nz
         a.param["demand"] = {i: it.multiplicity for i, it in enumerate(enumeration.items)}
+        counted = [int(minimize_type is None or c.type_id == minimize_type) for c in cols]
+        # objective coefficient of every column, per objective: kept for the integrality check of the values (_call)
+        self._objective_coefficients = {"RouteCount": counted, "Duration": [c.cost for c in cols]}
         if cols:
             a.param["cost"] = {r: c.cost for r, c in enumerate(cols)}
-            a.param["counted"] = {r: int(minimize_type is None or c.type_id == minimize_type) for r, c in enumerate(cols)}
+            a.param["counted"] = {r: counted[r] for r in range(len(cols))}
         if quota is not None:
             qtype, q = quota
             a.param["quota_on"] = 1
@@ -587,10 +631,18 @@ class AmplSession:
         self._log.clear()
         objective = a.get_objective(name).value()
         bound = self._read_bound(name)
+        values = None
+        if (has_incumbent(num) and ncols and objective is not None and math.isfinite(float(objective))
+                and name in self._objective_coefficients):
+            values = a.var["lam"].get_values().to_dict()
+            # integrality is a test of the values: the objective of near-integral values is not itself integral
+            objective = reconcile_objective(objective, self._objective_coefficients[name],
+                                            [values[r] for r in range(ncols)])
         out = classify_outcome(num, msg, objective, bound)
         selection = ()
         if out.objective is not None and ncols:
-            values = a.var["lam"].get_values().to_dict()
+            if values is None:
+                values = a.var["lam"].get_values().to_dict()
             sel = []
             for r in range(ncols):
                 v = values[r]

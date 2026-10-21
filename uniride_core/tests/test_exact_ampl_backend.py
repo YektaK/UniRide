@@ -672,3 +672,39 @@ def test_a_wave_stage_with_a_real_objective_mismatch_or_a_fractional_lam_is_stil
     assert _wave_stage_call("stage2", cost - 0.3, one)[1].status == "rejected"  # solver objective is not the values' objective
     assert _wave_stage_call("stage2", cost + 1.0, one)[1].objective == cost + 1  # existing behaviour: no recheck of equal integers
     assert _wave_stage_call("stage2", cost - 1.2e-5, half)[1].status == "rejected"  # lam outside the variable tolerance
+
+
+@pytest.mark.parametrize("objective,coefficients,values,want", [
+    # J11: 81*4 + 72*3 with deviations adding up to 1.23e-5 below 540 -> the integer objective of the rounded values
+    (539.9999877, (81, 72, 66), (4 - 1e-7, 3 - 5.8333333e-8, 0.0), 540.0),
+    (540.0000123, (81, 72), (4 + 1e-7, 3 + 5.8333333e-8), 540.0),
+    # already integral: unchanged value
+    (540.0, (81, 72), (4.0, 3.0), 540.0),
+    # a value beyond the variable tolerance: the objective is returned unchanged (the caller rejects it)
+    (540.0, (81, 72), (4.0, 3.0 + 3e-5), 540.0),
+    (539.9999877, (81, 72), (4.0, 3.0 + 3e-5), 539.9999877),
+    # the values do not produce the objective: unchanged
+    (539.9999877, (81, 72, 66), (4.0, 3.0, 1.0), 539.9999877),
+    (539.6, (81, 72), (4.0, 3.0), 539.6),
+    (540.3, (81, 72), (4.0, 3.0), 540.3),
+    # non-finite or missing objective: unchanged
+    (None, (1,), (1.0,), None),
+    (float("inf"), (1,), (1.0,), float("inf")),
+])
+def test_reconcile_objective(objective, coefficients, values, want):
+    from uniride_core.exact.ampl_backend import reconcile_objective
+
+    got = reconcile_objective(objective, coefficients, values)
+    assert got == want if want is None or want == float("inf") else got == pytest.approx(want, abs=1e-12)
+
+
+def test_reconcile_objective_never_moves_to_another_integer():
+    """Huge coefficients: the deviations of 1e-5 each could 'explain' a whole unit, so the allowance is capped below 1/2."""
+    from uniride_core.exact.ampl_backend import reconcile_objective
+
+    assert reconcile_objective(1_000_010.0, (1_000_000,), (1 + 1e-5,)) == 1_000_010.0  # 10 away from the integer 1000000
+    # whenever it accepts, the answer is the integer nearest to the raw objective (so earlier accepted results keep their value)
+    for raw, coef, val in ((539.9999877, (81, 72), (4 - 1e-7, 3 - 5.8e-8)), (28.000005, (1, 1), (14.0, 14.0)),
+                           (6.0, (2, 2), (2.0, 1.0))):
+        got = reconcile_objective(raw, coef, val)
+        assert got == round(raw) or got == raw

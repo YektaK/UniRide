@@ -45,6 +45,8 @@ from .ampl_backend import (
     _scrub,
     backend_absent,
     classify_outcome,
+    has_incumbent,
+    reconcile_objective,
 )
 from .day_instance import READY, DayInstance
 from .day_joint import JointModel
@@ -279,11 +281,16 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     objective = ampl.get_objective(OBJECTIVE).value()
     bound_value = float(ampl.get_value(f"{OBJECTIVE}.bestbound"))
     bound = None if bound_value <= _BOUND_SENTINEL / 10 else bound_value
-    out = classify_gurobi_outcome(num, message, objective, bound)
     raw = None
-    if out.objective is not None:
+    if has_incumbent(num) and objective is not None and math.isfinite(float(objective)):
         values = ampl.var["x"].get_values().to_dict()
         raw = {v.name: float(values[i]) for i, v in enumerate(model.variables)}
+        # integrality is a test of the values (J11): the raw objective of near-integral values need not be integral
+        objective = reconcile_objective(objective, [v.objective for v in model.variables],
+                                        [raw[v.name] for v in model.variables])
+    out = classify_gurobi_outcome(num, message, objective, bound)
+    if out.objective is None:
+        raw = None
     work = None
     found = re.findall(r"\(([\d.]+) work units\)", log)
     if found:

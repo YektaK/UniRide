@@ -309,6 +309,42 @@ def _ga_claims() -> tuple[CapabilityClaim, ...]:
     )
 
 
+def _ga_memetic_claims() -> tuple[CapabilityClaim, ...]:
+    """Counted memetic GA (C-16c): Numba objective, counted Python 2-opt polish.
+
+    The 2-opt runs on every initial chromosome and once on the best chromosome (no periodic
+    polish); every polish candidate goes through the shared objective counter.
+    """
+    evidence_by_contract = (
+        (ProblemContract.TSP, ExecutionProtocol.FIXED_BUDGET,
+         "test_core_ga_memetic_2opt_fixed_tsp_evidence"),
+        (ProblemContract.ATSP, ExecutionProtocol.FIXED_BUDGET,
+         "test_core_ga_memetic_2opt_fixed_atsp_evidence"),
+        (ProblemContract.TSP, ExecutionProtocol.NATIVE_TERMINATION,
+         "test_core_ga_memetic_2opt_native_tsp_evidence"),
+        (ProblemContract.ATSP, ExecutionProtocol.NATIVE_TERMINATION,
+         "test_core_ga_memetic_2opt_native_atsp_evidence"),
+    )
+    return tuple(
+        CapabilityClaim(
+            problem=problem,
+            protocol=protocol,
+            backend_profile=ExecutionBackendProfile(
+                BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON
+            ),
+            composition=CompositionKind.MEMETIC_2OPT,
+            directed_cost_preserved=problem is ProblemContract.ATSP,
+            exact_objective_accounting=True,
+            fixed_seed_deterministic=True,
+            truthful_result_reporting=True,
+            evidence_ids=(
+                "academic_benchmark/tests/test_ga_memetic_evidence.py::" + evidence_function,
+            ),
+        )
+        for problem, protocol, evidence_function in evidence_by_contract
+    )
+
+
 def _pso_claims() -> tuple[CapabilityClaim, ...]:
     """Pure canonical PSO (C-16b): Numba objective, no polish, exact accounting."""
     evidence_by_contract = (
@@ -356,6 +392,7 @@ _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
     ),
     AlgorithmCapability("Core-OrOpt-TSP", "OrOpt", "Or-opt", LifecycleStatus.CANDIDATE),
     AlgorithmCapability("Core-GA-TSP", "GA", "Genetic Algorithm", LifecycleStatus.VERIFIED, claims=_ga_claims()),
+    AlgorithmCapability("Core-GA-TSP-Memetic-2opt", "GA", "Genetic Algorithm (memetic 2-opt: initial and final)", LifecycleStatus.VERIFIED, claims=_ga_memetic_claims()),
     AlgorithmCapability(
         "Core-PSO-TSP", "PSO", "Particle Swarm Optimization", LifecycleStatus.VERIFIED,
         claims=_pso_claims(),

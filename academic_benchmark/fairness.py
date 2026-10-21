@@ -80,6 +80,9 @@ GA_REQUIRED_PARAMS = frozenset({
     "mutation_rate", "elite_count", "tournament_size",
 })
 GA_OPTIONAL_PARAMS = frozenset()
+GA_MEMETIC_ID = "Core-GA-TSP-Memetic-2opt"  # C-16c
+GA_MEMETIC_POLISH_PARAMS = frozenset({"initial_polish_iters", "final_polish_iters"})
+GA_MEMETIC_REQUIRED_PARAMS = GA_REQUIRED_PARAMS | GA_MEMETIC_POLISH_PARAMS
 
 
 def validate_scientific_ga_params(params: Mapping[str, Any]) -> dict[str, Any]:
@@ -109,6 +112,30 @@ def validate_scientific_ga_params(params: Mapping[str, Any]) -> dict[str, Any]:
         value = params[field]
         if not _is_finite_alns_number(value) or not 0 <= value <= 1:
             raise ValueError(f"invalid GA parameter: {field}")
+    return dict(params)
+
+
+def validate_scientific_ga_memetic_params(params: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the exact scientific memetic GA schema (C-16c).
+
+    The C-16a GA keys plus ``initial_polish_iters`` and ``final_polish_iters``, all required
+    and at least 1 (C-04: a memetic configuration that executes no polish is a pure GA under
+    a false name). Unknown keys, including a periodic ``polish_interval``, are rejected.
+    """
+    missing = GA_MEMETIC_REQUIRED_PARAMS - params.keys()
+    unknown = params.keys() - GA_MEMETIC_REQUIRED_PARAMS
+    if missing or unknown:
+        raise ValueError(
+            "GA memetic parameter schema mismatch; "
+            f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
+    for field in sorted(GA_MEMETIC_POLISH_PARAMS):
+        value = params[field]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"invalid GA memetic parameter: {field} must be an integer >= 1")
+    validate_scientific_ga_params(
+        {key: value for key, value in params.items() if key not in GA_MEMETIC_POLISH_PARAMS}
+    )
     return dict(params)
 
 
@@ -335,6 +362,7 @@ class FairComparisonManifest:
         "Numba-HHO": "HHO",
         "ALNS-TSP": "ALNS",
         "Core-GA-TSP": "GA",
+        "Core-GA-TSP-Memetic-2opt": "GA",
         "Core-PSO-TSP": "PSO",
     }
     POLISH_POLICY_FIELDS = ("enabled", "initial", "periodic", "final", "operator")
@@ -596,8 +624,11 @@ class FairComparisonManifest:
                 }:
                     errors.append("ALNS fixed termination_reason is invalid")
             elif family == "GA":
-                if getattr(result, "variant", None) != "pure":
-                    errors.append("GA comparison accepts only pure variants")
+                expected_variant = (
+                    "memetic_2opt" if algorithm_id == GA_MEMETIC_ID else "pure"
+                )
+                if getattr(result, "variant", None) != expected_variant:
+                    errors.append(f"GA comparison accepts only {expected_variant} variants")
                 if acceptance_policy != "population_evolution":
                     errors.append("GA acceptance_policy must be population_evolution")
                 if neighborhood_window is not None:

@@ -36,6 +36,7 @@ APPROVED_NATIVE_ALGORITHMS = frozenset({
 NATIVE_MEMETIC_2OPT_ALGORITHMS = frozenset({
     "Core-GWO-TSP-Memetic-2opt",
     "Core-HHO-TSP-Memetic-2opt",
+    "Core-GA-TSP-Memetic-2opt",
 })
 OPTIONAL_NATIVE_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP"}) | NATIVE_MEMETIC_2OPT_ALGORITHMS
 
@@ -61,6 +62,7 @@ class NativeComparisonManifest:
         "Numba-3-opt-bounded": "3-opt",
         "ALNS-TSP": "ALNS",
         "Core-GA-TSP": "GA",
+        "Core-GA-TSP-Memetic-2opt": "GA",
         "Core-PSO-TSP": "PSO",
         "Core-GWO-TSP-Memetic-2opt": "GWO",
         "Core-HHO-TSP-Memetic-2opt": "HHO",
@@ -256,7 +258,7 @@ class NativeComparisonManifest:
             if reason not in {"max_iterations", "stagnation_limit"}:
                 errors.append("ALNS native termination_reason is invalid")
         elif family == "GA":
-            if getattr(result, "variant", None) != "pure":
+            if not memetic and getattr(result, "variant", None) != "pure":
                 errors.append("GA comparison accepts only pure variants")
             if acceptance != "population_evolution":
                 errors.append("GA acceptance_policy must be population_evolution")

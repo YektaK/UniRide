@@ -22,11 +22,14 @@ from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtoco
 from academic_benchmark.fairness import (
     ALNS_OPTIONAL_PARAMS,
     ALNS_REQUIRED_PARAMS,
+    GA_MEMETIC_ID,
+    GA_MEMETIC_REQUIRED_PARAMS,
     GA_OPTIONAL_PARAMS,
     GA_REQUIRED_PARAMS,
     PSO_OPTIONAL_PARAMS,
     PSO_REQUIRED_PARAMS,
     validate_scientific_alns_params,
+    validate_scientific_ga_memetic_params,
     validate_scientific_ga_params,
     validate_scientific_pso_params,
 )
@@ -96,6 +99,7 @@ _ALLOWED_ALGORITHM_KEYS = {
     }) | _POLISH_KEYS,
     "ALNS-TSP": ALNS_REQUIRED_PARAMS | ALNS_OPTIONAL_PARAMS,
     "Core-GA-TSP": GA_REQUIRED_PARAMS | GA_OPTIONAL_PARAMS,
+    "Core-GA-TSP-Memetic-2opt": GA_MEMETIC_REQUIRED_PARAMS,
     "Core-PSO-TSP": PSO_REQUIRED_PARAMS | PSO_OPTIONAL_PARAMS,
 }
 _REQUIRED_ALGORITHM_KEYS = {
@@ -123,6 +127,7 @@ _REQUIRED_ALGORITHM_KEYS = {
     }),
     "ALNS-TSP": ALNS_REQUIRED_PARAMS,
     "Core-GA-TSP": GA_REQUIRED_PARAMS,
+    "Core-GA-TSP-Memetic-2opt": GA_MEMETIC_REQUIRED_PARAMS,
     "Core-PSO-TSP": PSO_REQUIRED_PARAMS,
 }
 _REPLAY_FIELDS = (
@@ -224,6 +229,12 @@ def _validate_algorithm_parameters(
                 validate_scientific_ga_params(block)
             except ValueError as exc:
                 raise NativePilotError(f"Core-GA-TSP: {exc}") from exc
+            continue
+        if algorithm_id == GA_MEMETIC_ID:
+            try:
+                validate_scientific_ga_memetic_params(block)
+            except ValueError as exc:
+                raise NativePilotError(f"{GA_MEMETIC_ID}: {exc}") from exc
             continue
         if algorithm_id == "Core-PSO-TSP":
             try:

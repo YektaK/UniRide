@@ -434,7 +434,14 @@ def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(
         *verified_ids,
         "Core-Greedy-Routing",
     ]
-    assert len(verified_ids) == len(CAPABILITY_CATALOG) - 1
+    # Independent of the catalog size: no catalog ID that is not VERIFIED is selectable.
+    not_verified = [
+        algorithm_id
+        for algorithm_id, capability in CAPABILITY_CATALOG.items()
+        if capability.lifecycle is not LifecycleStatus.VERIFIED
+    ]
+    assert not_verified, "the synthetic CANDIDATE override must leave a non-VERIFIED ID"
+    assert not set(not_verified) & set(selectable)
 
 
 @pytest.mark.parametrize("algorithm_id", ["Core-GA-TSP", "Numba-GA"])

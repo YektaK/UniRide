@@ -164,8 +164,34 @@ def test_production_infeasible_against_an_unchecked_prototype_value_is_reported_
 def test_committed_campaign_has_no_blocking_defect():
     built = rep.build(J11, REPO / "docs" / "paper" / "results", rep.DEFAULT_PROTOTYPE_DIR)
     assert len(built.comparison) == 140
-    assert len(built.reproduction) == 80  # single type + large+sedan; Doblo has no external target (E14 Q1)
+    assert len(built.reproduction) == 140  # one row per cell (owner rule); Doblo rows are no_external_target (E14 Q1)
+    doblo = [r for r in built.reproduction if r["fleet"] == "large+doblo_cap3"]
+    assert len(doblo) == 60 and {r["category"] for r in doblo} == {"no_external_target"}
+    assert all(r["category"] != "no_external_target" for r in built.reproduction if r["fleet"] != "large+doblo_cap3")
     assert built.defects == []
     for row in built.comparison:
         if row["fleet"] == rep.HOMOGENEOUS:
             assert row["ga_archive_checker_violations"] == 0 and row["wp_e3_checker_violations"] == 0
+
+
+# ------------------------------------------------------------------ Doblo: one reproduction row per cell, no_external_target
+def test_a_doblo_cell_gets_a_no_external_target_reproduction_row():
+    doblo = dict(fleet="large+doblo_cap3")
+    for kw in (dict(), dict(day_status="infeasible_certified", K_or_S="", total_minutes=""),
+               dict(day_status="bound_only", K_or_S="", total_minutes="", proof_claim_allowed="False"),
+               dict(day_status="feasible_with_gap", proof_claim_allowed="False")):
+        r = rep.reproduction_row(joint(**doblo, **kw), rep.NO_TARGET_INPUT)
+        assert r["category"] == "no_external_target" and r["fleet_category"] == "no_external_target"
+        assert r["prototype_status"] == "no_external_target" and r["prototype_value"] == "" and r["note"] == ""
+        assert r["fleet"] == "large+doblo_cap3" and r["production_status"] == kw.get("day_status", "optimal")
+
+
+def test_a_rejected_doblo_cell_keeps_its_rejection_note_and_the_category():
+    r = rep.reproduction_row(joint(fleet="large+doblo_cap3", day_status="rejected", K_or_S="", total_minutes=""), rep.NO_TARGET_INPUT)
+    assert r["category"] == "no_external_target" and r["note"] == "production_rejected"
+
+
+def test_prototype_fleets_keep_their_categories():
+    proto = rep.prototype_claim_typed(dict(cs_durum="ok", cs_sedan="2", cs_dakika="1510"))
+    assert rep.reproduction_row(joint(K_or_S="2", total_minutes="1510"), proto)["category"] == "equal"
+    assert rep.PROTOTYPE_FLEETS == (rep.HOMOGENEOUS, "large+sedan")

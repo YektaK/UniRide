@@ -12,13 +12,12 @@ from uniride_core.algorithms.objective_budget import (
     BudgetedSearchResult,
     EvaluationBudgetExhausted,
     ObjectiveEvaluationBudget,
+    # C-06: the budgeted 3-opt controller now lives next to the budgeted 2-opt and
+    # Or-opt in uniride_core; this import keeps every ``academic_benchmark.fairness``
+    # import working.
+    improve_three_opt_budgeted,
     improve_two_opt_budgeted,
     two_opt_evaluation_upper_bound,
-)
-from uniride_core.algorithms.three_opt import (
-    generate_three_opt_candidates,
-    is_symmetric_matrix,
-    iter_three_opt_cuts,
 )
 
 
@@ -529,74 +528,6 @@ def normalize_problem(problem: str) -> str:
 
 def fair_manifest_from_params(params: Dict[str, Any]) -> Optional[FairComparisonManifest]:
     return FairComparisonManifest.from_value(params.get("fair_comparison"))
-
-
-def improve_three_opt_budgeted(
-    route: Sequence[int],
-    matrix: Sequence[Sequence[float]],
-    budget: ObjectiveEvaluationBudget,
-    *,
-    max_iterations: int,
-    first_improvement: bool = False,
-    window: Optional[int] = 12,
-    directed: Optional[bool] = None,
-) -> BudgetedSearchResult:
-    """Budgeted controller over the canonical TSP/ATSP 3-opt neighborhood."""
-    current = list(route)
-    symmetric = is_symmetric_matrix(matrix)
-    if directed is None:
-        directed = not symmetric
-    elif not directed and not symmetric:
-        raise ValueError("symmetric 3-opt cannot be used with an asymmetric matrix")
-
-    start_evaluations = budget.used
-    current_cost = budget.evaluate(current, matrix)
-    iterations = 0
-    exhausted = False
-    termination_reason = "max_iterations"
-
-    while iterations < max_iterations:
-        iterations += 1
-        selected_route: Optional[List[int]] = None
-        selected_cost = current_cost
-        stop_scan = False
-        for i, j, k in iter_three_opt_cuts(len(current), window):
-            candidates = generate_three_opt_candidates(current, i, j, k, directed=bool(directed))
-            for candidate in candidates:
-                if not budget.can_spend():
-                    exhausted = True
-                    stop_scan = True
-                    break
-                candidate_cost = budget.evaluate(candidate, matrix)
-                if candidate_cost < selected_cost:
-                    selected_route = candidate
-                    selected_cost = candidate_cost
-                    if first_improvement:
-                        stop_scan = True
-                        break
-            if stop_scan:
-                break
-
-        if selected_route is None:
-            termination_reason = (
-                "evaluation_budget_exhausted" if exhausted else "no_improving_move"
-            )
-            break
-        current = selected_route
-        current_cost = selected_cost
-        if exhausted:
-            termination_reason = "evaluation_budget_exhausted"
-            break
-
-    return BudgetedSearchResult(
-        route=current,
-        cost=current_cost,
-        iterations=iterations,
-        evaluations=budget.used - start_evaluations,
-        budget_exhausted=exhausted,
-        mode="directed_atsp" if directed else "symmetric_tsp",
-        termination_reason=termination_reason,
-    )
 
 
 __all__ = [

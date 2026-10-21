@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 from academic_benchmark.composite_protocol import (
     COMPOSITE_ALGORITHMS,
     COMPOSITE_COMPLETE_REASON,
-    COMPOSITE_VARIANT,
+    is_composite_variant,
     validate_composite_policy,
     validate_composite_result,
 )
@@ -53,6 +53,8 @@ class NativeComparisonManifest:
         "Core-HHO-TSP-Pure": "HHO",
         "Core-GWO-TSP-Memetic-3opt": "GWO",
         "Core-HHO-TSP-Memetic-3opt": "HHO",
+        "Core-GWO-TSP-Memetic-ALNS": "GWO",
+        "Core-HHO-TSP-Memetic-ALNS": "HHO",
         "Core-TwoOpt-TSP": "2-opt",
         "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
@@ -152,10 +154,10 @@ class NativeComparisonManifest:
         elif family != expected_family:
             errors.append("algorithm_family does not match algorithm_id")
         variant = getattr(result, "variant", None)
-        # Memetic-2opt IDs (C-10) accept only memetic_2opt; the composite variant (C-08)
-        # belongs to the 3-opt hybrid IDs; every other ID is pure-only.
+        # Memetic-2opt IDs (C-10) accept only memetic_2opt; the composite variants (C-08, C-09)
+        # belong to the 3-opt and ALNS hybrid IDs; every other ID is pure-only.
         memetic = algorithm_id in NATIVE_MEMETIC_2OPT_ALGORITHMS
-        composite_row = variant == COMPOSITE_VARIANT and not memetic
+        composite_row = is_composite_variant(variant) and not memetic
         if memetic:
             if variant != "memetic_2opt":
                 errors.append(
@@ -272,7 +274,11 @@ class NativeComparisonManifest:
         if reason not in self.TERMINATION_REASONS:
             errors.append("unsupported native termination_reason")
         if composite_row or algorithm_id in COMPOSITE_ALGORITHMS:
-            errors.extend(validate_composite_result(result, fixed_budget=None))
+            errors.extend(
+                validate_composite_result(
+                    result, fixed_budget=None, protocol_version=self.protocol_version
+                )
+            )
         elif reason == COMPOSITE_COMPLETE_REASON:
             errors.append("composite_complete is reserved for composite rows")
         if getattr(result, "execution_backend", None) in {None, "", "unknown"}:

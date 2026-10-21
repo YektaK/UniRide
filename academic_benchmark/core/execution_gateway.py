@@ -20,8 +20,8 @@ from academic_benchmark.core.preflight import (
 )
 from academic_benchmark.composite_protocol import (
     COMPOSITE_COMPLETE_REASON,
-    COMPOSITE_VARIANT,
     is_composite_algorithm,
+    is_composite_variant,
     validate_composite_result,
 )
 from academic_benchmark.engine_core import RunResult
@@ -126,9 +126,13 @@ def _positive_count(value: object) -> bool:
     return not isinstance(value, bool) and isinstance(value, int) and value > 0
 
 
-def _require_composite(result: RunResult, fixed_budget: int | None) -> None:
-    """Postflight of a composite row: stage record, sums and the shared cap rule."""
-    errors = validate_composite_result(result, fixed_budget=fixed_budget)
+def _require_composite(
+    result: RunResult, fixed_budget: int | None, protocol_version: str
+) -> None:
+    """Postflight of a composite row: stage record, sums, the shared cap rule and the seed."""
+    errors = validate_composite_result(
+        result, fixed_budget=fixed_budget, protocol_version=protocol_version
+    )
     if errors:
         raise _violation("composite result contract violated: " + "; ".join(errors))
 
@@ -149,7 +153,7 @@ def _validate_protocol(result: RunResult, decision: PreflightDecision) -> None:
         raise _violation("budget_terminated must be a boolean")
 
     composite_row = is_composite_algorithm(getattr(result, "algorithm_id", None))
-    if (getattr(result, "variant", None) == COMPOSITE_VARIANT) is not composite_row:
+    if is_composite_variant(getattr(result, "variant", None)) is not composite_row:
         raise _violation("the composite variant belongs to the composite algorithm IDs and to no other")
     if reason == COMPOSITE_COMPLETE_REASON and not composite_row:
         raise _violation("composite_complete is reserved for composite rows")
@@ -171,7 +175,7 @@ def _validate_protocol(result: RunResult, decision: PreflightDecision) -> None:
         if budget_terminated != (reason == "evaluation_budget_exhausted"):
             raise _violation("budget_terminated and termination_reason are inconsistent")
         if composite_row:
-            _require_composite(result, budget)
+            _require_composite(result, budget, GOVERNED_FAIR_PROTOCOL_VERSION)
         return
 
     if decision.protocol is ExecutionProtocol.NATIVE_TERMINATION:
@@ -184,7 +188,7 @@ def _validate_protocol(result: RunResult, decision: PreflightDecision) -> None:
         if composite_row:
             if reason != COMPOSITE_COMPLETE_REASON:
                 raise _violation("a native composite row must end with composite_complete")
-            _require_composite(result, None)
+            _require_composite(result, None, NativeComparisonManifest.protocol_version)
         return
 
     raise _violation("result protocol does not match a supported preflight protocol")

@@ -672,3 +672,39 @@ def test_both_stages_must_share_the_composition_matrix():
         evaluation_budget=100, global_fraction=0.5,
     )
     assert result.evaluations <= 100
+
+
+# ---- per-stage wall time (design native rule 4, C-09) --------------------------
+
+def _sleeping(stage: StageSpec, seconds: float) -> StageSpec:
+    """The same stage with a known wall-clock cost, so a measured time must be visible."""
+    import time as _time
+
+    inner = stage.run
+
+    def run(*args):
+        _time.sleep(seconds)
+        return inner(*args)
+
+    return StageSpec(stage.stage_id, run, stage.params, seed=stage.seed, matrix=stage.matrix)
+
+
+@pytest.mark.parametrize("budget,fraction", [(1000, 0.5), (None, None)])
+def test_each_stage_record_carries_its_own_non_negative_wall_time(budget, fraction):
+    result = run_composition(
+        SYM9,
+        global_stage=_sleeping(stub_global(SYM9, 20), 0.05),
+        polish_stage=_sleeping(three_opt_polish_stage(SYM9, THREE_OPT_PARAMS), 0.4),
+        evaluation_budget=budget,
+        global_fraction=fraction,
+    )
+    g, p = result.global_stage, result.polish_stage
+    for stage in (g, p):
+        assert isinstance(stage.elapsed_sec, float) and stage.elapsed_sec >= 0
+    # measured separately: each stage owns the time of its own run and nothing else
+    # the sleeps are lower bounds that a loaded machine can only lengthen; only the
+    # separation of the two stages is asserted, with no tight upper bound
+    assert g.elapsed_sec >= 0.045
+    assert p.elapsed_sec >= 0.395
+    assert g.elapsed_sec < p.elapsed_sec
+    assert [s["elapsed_sec"] for s in result.to_dict()["stages"]] == [g.elapsed_sec, p.elapsed_sec]

@@ -9,11 +9,19 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from academic_benchmark.composite_protocol import (
     COMPOSITE_ALGORITHMS,
-    COMPOSITE_VARIANT,
+    POLISH_OPERATORS,
+    is_composite_variant,
     validate_composite_policy,
     validate_composite_result,
 )
 from academic_benchmark.engine_core import RunResult
+from uniride_core.algorithms.composition import (
+    ALNS_OPTIONAL_PARAMS,
+    ALNS_REQUIRED_PARAMS,
+    SWARM_REQUIRED_PARAMS,
+    CompositionError,
+    validate_alns_polish_params,
+)
 from uniride_core.algorithms.objective_budget import (
     BudgetedSearchResult,
     EvaluationBudgetExhausted,
@@ -31,11 +39,8 @@ class FairnessValidationError(ValueError):
     """Raised when a result violates the fair-comparison contract."""
 
 
-ALNS_REQUIRED_PARAMS = frozenset({
-    "max_iterations", "max_no_improvement", "remove_ratio", "min_remove",
-    "segment_length", "weight_update_factor", "use_sa",
-})
-ALNS_OPTIONAL_PARAMS = frozenset({"sa_start_temp", "sa_cooling_rate"})
+# ALNS_REQUIRED_PARAMS / ALNS_OPTIONAL_PARAMS are the composition engine's: the ALNS rules
+# live in one place (``uniride_core.algorithms.composition``), standalone ALNS included.
 
 
 def _is_finite_alns_number(value: Any) -> bool:
@@ -45,6 +50,14 @@ def _is_finite_alns_number(value: Any) -> bool:
         return math.isfinite(value)
     except OverflowError:
         return False
+
+
+def _delegate_alns_values(params: Mapping[str, Any], label: str) -> None:
+    """Value rules of the ALNS parameters: the composition engine's validator, as ValueError."""
+    try:
+        validate_alns_polish_params(params, strict=True)
+    except CompositionError as exc:
+        raise ValueError(str(exc).replace("ALNS polish parameter", label)) from exc
 
 
 def validate_scientific_alns_params(params: Mapping[str, Any]) -> dict[str, Any]:
@@ -57,46 +70,7 @@ def validate_scientific_alns_params(params: Mapping[str, Any]) -> dict[str, Any]
             f"missing={sorted(missing)}, unknown={sorted(unknown)}"
         )
 
-    for field in (
-        "max_iterations", "max_no_improvement", "min_remove", "segment_length",
-    ):
-        value = params[field]
-        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-            raise ValueError(f"invalid ALNS parameter: {field}")
-
-    remove_ratio = params["remove_ratio"]
-    if (
-        not _is_finite_alns_number(remove_ratio)
-        or not 0 < remove_ratio <= 1
-    ):
-        raise ValueError("invalid ALNS parameter: remove_ratio")
-
-    weight_update_factor = params["weight_update_factor"]
-    if (
-        not _is_finite_alns_number(weight_update_factor)
-        or not 0 <= weight_update_factor <= 1
-    ):
-        raise ValueError("invalid ALNS parameter: weight_update_factor")
-
-    use_sa = params["use_sa"]
-    if not isinstance(use_sa, bool):
-        raise ValueError("invalid ALNS parameter: use_sa")
-
-    start_temp = params.get("sa_start_temp")
-    if start_temp is not None and (
-        not _is_finite_alns_number(start_temp)
-        or start_temp < 0
-    ):
-        raise ValueError("invalid ALNS parameter: sa_start_temp")
-    if use_sa and start_temp is not None and start_temp <= 0:
-        raise ValueError("invalid ALNS parameter: sa_start_temp")
-
-    cooling_rate = params.get("sa_cooling_rate")
-    if cooling_rate is not None and (
-        not _is_finite_alns_number(cooling_rate)
-        or not 0 < cooling_rate <= 1
-    ):
-        raise ValueError("invalid ALNS parameter: sa_cooling_rate")
+    _delegate_alns_values(params, "ALNS parameter")
 
     return dict(params)
 
@@ -180,6 +154,18 @@ def validate_scientific_pso_params(params: Mapping[str, Any]) -> dict[str, Any]:
 HYBRID_3OPT_POLISH_REQUIRED = frozenset({"max_iterations", "first_improvement", "window"})
 
 
+def validate_scientific_hybrid_alns_params(
+    family: str, params: Mapping[str, Any], *, fixed_budget: bool
+) -> dict[str, Any]:
+    """Strict parameter schema of a ``global_then_final_alns`` run (C-09).
+
+    Same ``global`` namespace and ``global_fraction`` rules as the 3-opt hybrid; the
+    ``polish`` namespace is the strict ALNS schema, whose value rules are the composition
+    engine's ``validate_alns_polish_params`` (the one rule set also behind standalone ALNS).
+    """
+    return _validate_hybrid(family, params, fixed_budget=fixed_budget, polish_kind="ALNS")
+
+
 def validate_scientific_hybrid_3opt_params(
     family: str, params: Mapping[str, Any], *, fixed_budget: bool
 ) -> dict[str, Any]:
@@ -191,9 +177,12 @@ def validate_scientific_hybrid_3opt_params(
     from a configuration the solver silently ignored. A fixed-budget run also needs an
     explicit ``global_fraction`` in (0, 1); a native run has none.
     """
-    # The names of the swarm hyperparameters are owned by the composition engine.
-    from uniride_core.algorithms.composition import _SWARM_REQUIRED
+    return _validate_hybrid(family, params, fixed_budget=fixed_budget, polish_kind="3-opt")
 
+
+def _validate_hybrid(
+    family: str, params: Mapping[str, Any], *, fixed_budget: bool, polish_kind: str
+) -> dict[str, Any]:
     top_required = {"global", "polish"} | ({"global_fraction"} if fixed_budget else set())
     missing = top_required - params.keys()
     unknown = params.keys() - top_required
@@ -206,7 +195,7 @@ def validate_scientific_hybrid_3opt_params(
     global_params, polish_params = params["global"], params["polish"]
     if not isinstance(global_params, Mapping) or not isinstance(polish_params, Mapping):
         raise ValueError("hybrid global and polish parameters must be mappings")
-    required = set(_SWARM_REQUIRED[family])
+    required = set(SWARM_REQUIRED_PARAMS[family])
     missing = required - global_params.keys()
     unknown = global_params.keys() - required
     if missing or unknown:
@@ -214,11 +203,15 @@ def validate_scientific_hybrid_3opt_params(
             f"hybrid global ({family}) parameter schema mismatch; "
             f"missing={sorted(missing)}, unknown={sorted(unknown)}"
         )
-    missing = HYBRID_3OPT_POLISH_REQUIRED - polish_params.keys()
-    unknown = polish_params.keys() - HYBRID_3OPT_POLISH_REQUIRED
+    if polish_kind == "ALNS":
+        missing = ALNS_REQUIRED_PARAMS - polish_params.keys()
+        unknown = polish_params.keys() - ALNS_REQUIRED_PARAMS - ALNS_OPTIONAL_PARAMS
+    else:
+        missing = HYBRID_3OPT_POLISH_REQUIRED - polish_params.keys()
+        unknown = polish_params.keys() - HYBRID_3OPT_POLISH_REQUIRED
     if missing or unknown:
         raise ValueError(
-            "hybrid polish (3-opt) parameter schema mismatch; "
+            f"hybrid polish ({polish_kind}) parameter schema mismatch; "
             f"missing={sorted(missing)}, unknown={sorted(unknown)}"
         )
     counts = ("pack_size", "hawks", "max_iterations", "max_no_improvement")
@@ -235,14 +228,17 @@ def validate_scientific_hybrid_3opt_params(
     for field in required - set(counts) - {"dive_count"}:
         if not _is_finite_alns_number(global_params[field]):
             raise ValueError(f"invalid hybrid global parameter: {field}")
-    value = polish_params["max_iterations"]
-    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-        raise ValueError("invalid hybrid polish parameter: max_iterations")
-    if not isinstance(polish_params["first_improvement"], bool):
-        raise ValueError("invalid hybrid polish parameter: first_improvement")
-    value = polish_params["window"]
-    if isinstance(value, bool) or not isinstance(value, int) or value < 2:
-        raise ValueError("invalid hybrid polish parameter: window")
+    if polish_kind == "ALNS":
+        _delegate_alns_values(polish_params, "hybrid polish (ALNS) parameter")
+    else:
+        value = polish_params["max_iterations"]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError("invalid hybrid polish parameter: max_iterations")
+        if not isinstance(polish_params["first_improvement"], bool):
+            raise ValueError("invalid hybrid polish parameter: first_improvement")
+        value = polish_params["window"]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 2:
+            raise ValueError("invalid hybrid polish parameter: window")
     if fixed_budget:
         fraction = params["global_fraction"]
         if not _is_finite_alns_number(fraction) or not 0 < fraction < 1:
@@ -327,6 +323,8 @@ class FairComparisonManifest:
         "Core-HHO-TSP-Memetic-2opt": "HHO",
         "Core-GWO-TSP-Memetic-3opt": "GWO",
         "Core-HHO-TSP-Memetic-3opt": "HHO",
+        "Core-GWO-TSP-Memetic-ALNS": "GWO",
+        "Core-HHO-TSP-Memetic-ALNS": "HHO",
         "Core-TwoOpt-TSP": "2-opt",
         "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
@@ -501,12 +499,14 @@ class FairComparisonManifest:
                 bool_fields = ("enabled", "initial", "periodic", "final")
                 if any(not isinstance(polish_policy[field], bool) for field in bool_fields):
                     errors.append("polish_policy phase fields must be booleans")
-                composite_row = getattr(result, "variant", None) == COMPOSITE_VARIANT
-                allowed_operators = (None, "3-opt") if composite_row else (None, "2-opt")
+                composite_row = is_composite_variant(getattr(result, "variant", None))
+                allowed_operators = (
+                    (None, POLISH_OPERATORS[result.variant]) if composite_row else (None, "2-opt")
+                )
                 if polish_policy["operator"] not in allowed_operators:
                     errors.append(
                         "polish_policy operator must be None or "
-                        + ("'3-opt'" if composite_row else "'2-opt'")
+                        + (f"'{POLISH_OPERATORS[result.variant]}'" if composite_row else "'2-opt'")
                     )
 
                 variant = getattr(result, "variant", None)
@@ -538,17 +538,20 @@ class FairComparisonManifest:
                             "memetic_2opt variant must declare operator '2-opt'"
                         )
                     errors.extend(self._memetic_polish_count_errors(polish_policy, result))
-                elif variant == COMPOSITE_VARIANT:
+                elif is_composite_variant(variant):
                     errors.extend(validate_composite_policy(polish_policy, result))
                 else:
                     errors.append("unsupported fair variant")
-        if getattr(result, "variant", None) == COMPOSITE_VARIANT or (
+        if is_composite_variant(getattr(result, "variant", None)) or (
             algorithm_id in COMPOSITE_ALGORITHMS
         ):
             if self.protocol_version != self.V2_PROTOCOL:
                 errors.append("composite rows need protocol v2 (explicit termination_reason)")
             errors.extend(
-                validate_composite_result(result, fixed_budget=self.evaluation_budget)
+                validate_composite_result(
+                    result, fixed_budget=self.evaluation_budget,
+                    protocol_version=self.protocol_version,
+                )
             )
         elif getattr(result, "termination_reason", None) == "composite_complete":
             errors.append("composite_complete is reserved for composite rows")

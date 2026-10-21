@@ -1151,34 +1151,43 @@ def _make_canonical_pso_executor(algorithm_name="Core-PSO-TSP"):
 AlgorithmRegistry.register("Core-PSO-TSP")(_make_canonical_pso_executor("Core-PSO-TSP"))
 
 
-def _make_hybrid_3opt_executor(algorithm_name):
-    """Manifest-aware executor of ``Core-GWO/HHO-TSP-Memetic-3opt`` (C-08).
+def _make_hybrid_executor(algorithm_name):
+    """Manifest-aware executor of ``Core-GWO/HHO-TSP-Memetic-3opt`` (C-08) and ``-ALNS`` (C-09).
 
-    A pure GWO/HHO global stage and ONE canonical 3-opt polish on the best validated global
-    tour, run by ``run_composition`` on one shared objective counter. Fixed-budget runs cap
+    A pure GWO/HHO global stage and ONE canonical polish (3-opt, or ALNS with the derived
+    polish seed) on the best validated global tour, run by ``run_composition`` on one
+    shared objective counter. Fixed-budget runs cap
     the global stage at ``global_stage_cap(B, global_fraction)`` and give the polish the
     rest; native runs have no budget and count each stage separately. The result row is the
     polish stage's tour and cost and carries the stage record in ``composition``. The two
     protocols are the only way to run it: there is no unaccounted legacy path.
     """
-    from academic_benchmark.composite_protocol import COMPOSITE_ALGORITHMS
+    from academic_benchmark.composite_protocol import (
+        COMPOSITE_ALGORITHMS,
+        COMPOSITE_KIND_OF,
+        KIND_ALNS,
+        POLISH_OPERATORS,
+    )
 
     family, _global_stage_id = COMPOSITE_ALGORITHMS[algorithm_name]
+    kind = COMPOSITE_KIND_OF[algorithm_name]
+    is_alns = kind == KIND_ALNS
 
     def executor(problem, params, seed, run_idx):
         import time as _time
         from academic_benchmark.composite_protocol import (
             COMPOSITE_COMPLETE_REASON,
-            COMPOSITE_VARIANT,
             composition_record,
         )
         from academic_benchmark.fairness import (
             FairRunResult,
             fair_manifest_from_params,
             validate_scientific_hybrid_3opt_params,
+            validate_scientific_hybrid_alns_params,
         )
         from academic_benchmark.native_protocol import native_manifest_from_params
         from uniride_core.algorithms.composition import (
+            alns_polish_stage,
             global_stage_cap,
             run_composition,
             swarm_global_stage,
@@ -1198,18 +1207,31 @@ def _make_hybrid_3opt_executor(algorithm_name):
         if _is_routing_problem(problem):
             raise ValueError("academic TSP comparison mode does not accept routing problems")
         seed = protocol_manifest.paired_seed(problem.name, run_idx)
-        cfg = validate_scientific_hybrid_3opt_params(
+        validate_params = (
+            validate_scientific_hybrid_alns_params if is_alns
+            else validate_scientific_hybrid_3opt_params
+        )
+        cfg = validate_params(
             family,
             {k: v for k, v in params.items() if k not in {"fair_comparison", "native_comparison"}},
             fixed_budget=manifest is not None,
         )
 
         matrix, matrix_kind = _problem_matrix(problem)
+        if is_alns:
+            # the polish seed comes from the manifest's OWN protocol version and the
+            # per-run paired seed (never the base seed)
+            polish_stage = alns_polish_stage(
+                matrix, cfg["polish"],
+                protocol_version=protocol_manifest.protocol_version, run_seed=seed,
+            )
+        else:
+            polish_stage = three_opt_polish_stage(matrix, cfg["polish"])
         start_time = _time.perf_counter()
         composed = run_composition(
             matrix,
             global_stage=swarm_global_stage(family, matrix, cfg["global"], seed=seed),
-            polish_stage=three_opt_polish_stage(matrix, cfg["polish"]),
+            polish_stage=polish_stage,
             evaluation_budget=manifest.evaluation_budget if manifest is not None else None,
             global_fraction=cfg.get("global_fraction"),
         )
@@ -1218,7 +1240,7 @@ def _make_hybrid_3opt_executor(algorithm_name):
         cost = float(composed.cost)
         optimal = getattr(problem, "optimal", None)
         gap = ((cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None
-        record = composition_record(composed)
+        record = composition_record(composed, kind)
         global_record, polish_record = record["stages"]
         polish_ran = polish_record["consumed_evaluations"] > 0
         # Stage-aware backend label: the objective backend the global stage really used
@@ -1231,8 +1253,20 @@ def _make_hybrid_3opt_executor(algorithm_name):
             f"{objective_part};polish=python" if objective_part else "unknown"
         )
         global_cfg, polish_cfg = cfg["global"], cfg["polish"]
+        if is_alns:
+            polish_detail = (
+                "polish_alns_params="
+                + ",".join(f"{key}={polish_cfg[key]}" for key in sorted(polish_cfg))
+                + f";polish_derived_seed={polish_record['seed']};polish_incoming_cost_reused=True"
+            )
+        else:
+            polish_detail = (
+                f"polish_max_iterations={polish_cfg['max_iterations']};"
+                f"polish_first_improvement={polish_cfg['first_improvement']};"
+                f"polish_window={polish_cfg['window']};polish_incoming_cost_reused=True"
+            )
         detail = (
-            f"composition={COMPOSITE_VARIANT};"
+            f"composition={kind};"
             + (
                 f"global_fraction={cfg['global_fraction']};"
                 f"global_cap={global_stage_cap(manifest.evaluation_budget, cfg['global_fraction'])};"
@@ -1240,9 +1274,7 @@ def _make_hybrid_3opt_executor(algorithm_name):
             )
             + f"global_max_iterations={global_cfg['max_iterations']};"
             f"global_max_no_improvement={global_cfg['max_no_improvement']};"
-            f"polish_max_iterations={polish_cfg['max_iterations']};"
-            f"polish_first_improvement={polish_cfg['first_improvement']};"
-            f"polish_window={polish_cfg['window']};polish_incoming_cost_reused=True"
+            + polish_detail
         )
         common_kwargs = dict(
             problem=problem.name,
@@ -1264,7 +1296,7 @@ def _make_hybrid_3opt_executor(algorithm_name):
         protocol_kwargs = dict(
             algorithm_id=algorithm_name,
             algorithm_family=family,
-            variant=COMPOSITE_VARIANT,
+            variant=kind,
             objective_evaluations=int(composed.evaluations),
             acceptance_policy="population_evolution",
             neighborhood_window=None,
@@ -1272,7 +1304,8 @@ def _make_hybrid_3opt_executor(algorithm_name):
             execution_backend=execution_backend,
             polish_policy={
                 "enabled": polish_ran, "initial": False, "periodic": False,
-                "final": polish_ran, "operator": "3-opt" if polish_ran else None,
+                "final": polish_ran,
+                "operator": POLISH_OPERATORS[kind] if polish_ran else None,
             },
             composition=record,
         )
@@ -1309,8 +1342,12 @@ def _make_hybrid_3opt_executor(algorithm_name):
     return executor
 
 
-for _hybrid_3opt_id in ("Core-GWO-TSP-Memetic-3opt", "Core-HHO-TSP-Memetic-3opt"):
-    AlgorithmRegistry.register(_hybrid_3opt_id)(_make_hybrid_3opt_executor(_hybrid_3opt_id))
+_make_hybrid_3opt_executor = _make_hybrid_executor  # the C-08 name, kept as an alias
+
+for _hybrid_id in (
+    "Core-GWO-TSP-Memetic-3opt", "Core-HHO-TSP-Memetic-3opt",
+):
+    AlgorithmRegistry.register(_hybrid_id)(_make_hybrid_executor(_hybrid_id))
 
 
 # Override Core-GWO-TSP, Core-HHO-TSP, Numba-GWO, Numba-HHO with

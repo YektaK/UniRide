@@ -70,7 +70,7 @@ def test_unclaimed_optimal_does_not_raise_against_a_better_checked_prototype():
 def test_joint_above_proven_union_blocks():
     union = dict(union_status="optimal", union_cars="1", label="proven_over_union_menu")
     assert codes(rep.blocking_defects(joint(K_or_S="2"), union_row=union)) == [rep.dc.BLOCKING_JOINT_ABOVE_UNION]
-    assert rep.blocking_defects(joint(K_or_S="1"), union_row=union) == []
+    assert rep.blocking_defects(joint(K_or_S="1", bound_used="1"), union_row=union) == []
 
 
 def test_union_menu_infeasible_does_not_block():

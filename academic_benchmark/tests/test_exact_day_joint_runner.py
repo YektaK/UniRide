@@ -397,3 +397,182 @@ def test_real_ts_cli_confirms_a_typed_cell_and_refuses_a_single_type(tmp_path):
             "limits": {"maxRideTimeMinutes": 50, "maxTourMinutes": 150}, "maxLarge": 1, "waves": []}
     results, error = rj.ud.run_cli([case])
     assert results is None and "exit 2" in error
+
+
+# ---------------------------------------------------------------- J9a review round 1 (DUZELT): wave-value verdicts, hook, flags
+def skewed_wave_solver(mode, calls=None):
+    """The fake wave solver, but Gurobi answers differently: plus1 (proven +1), bound (only a bound), bound_above (a bound above
+    the HiGHS optimum) or refused (a status that gives no value)."""
+    base = make_fake_wave_solver(calls)
+
+    def solve(wave, enumeration, minimize_type, solver, peak):
+        sp = base(wave, enumeration, minimize_type, solver, peak)
+        if solver != "gurobi":
+            return sp
+        v = sp.stage1.objective
+        if mode == "plus1":
+            return ab.SPSolveResult(wave.wave_id, "optimal", stage1=_fake_stage_result(v + 1))
+        if mode in ("bound", "bound_above"):
+            lb = v if mode == "bound" else v + 1
+            s1 = ab.StageResult(status="feasible_with_gap", stop_reason="wall_limit", objective=v + 5, bound_ceil=lb)
+            return ab.SPSolveResult(wave.wave_id, "feasible_with_gap", stage1=s1, k_lb=lb)
+        return ab.SPSolveResult(wave.wave_id, "rejected", note="planted refusal")
+
+    return solve
+
+
+def deps_with_waves(wave_solver, **kw):
+    deps = make_deps(**kw)
+    deps.wave_solver = wave_solver
+    return deps
+
+
+def test_wave_disagreement_is_blocking_unverified_and_not_a_proof_label(tmp_path, monkeypatch):
+    seen: list = []
+    real_hook = rj.label_day_cell
+    monkeypatch.setattr(rj, "label_day_cell", lambda facts: (seen.append(facts), real_hook(facts))[1])
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, "--rides", "50", "--dates", f"{DATE},2026-10-07",
+                  deps=deps_with_waves(skewed_wave_solver("plus1")))
+    assert rc == 1  # blocking error, the run goes on and no cell is dropped
+    rows = read_csv(out / "day_joint.csv")
+    assert len(rows) == 2 and all(r["wave_values_status"] == "blocking" for r in rows)
+    assert all(r["day_status"] != "optimal" for r in rows) and all("wave values contradicted" in r["note"] for r in rows)
+    assert all(f["wave_values_status"] == "blocking" for f in seen)
+    lb = read_csv(out / "lb0.csv")
+    waves = [r for r in lb if r["bound"] == "wave_k_any"]
+    assert waves and all(r["contributions"].endswith(":unverified") and "verdict=blocking" in r["wave_value_source"] for r in waves)
+    assert all("gurobi=" in r["wave_value_source"] and "highs=" in r["wave_value_source"] for r in waves)  # both values kept
+    assert any(":unverified" in r["contributions"] for r in lb if r["bound"] == "lb0w")
+    manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert any("contradict" in e for e in manifest["blocking_errors"])
+
+
+@pytest.mark.parametrize("mode,verdict,blocking_error", [("bound", "inconclusive", False), ("refused", "inconclusive", False),
+                                                          ("bound_above", "blocking", True)])
+def test_wave_value_from_a_bound_or_a_refusal_is_inconclusive(tmp_path, mode, verdict, blocking_error):
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET, deps=deps_with_waves(skewed_wave_solver(mode)))
+    row = read_csv(out / "day_joint.csv")[0]
+    assert row["wave_values_status"] == verdict
+    assert rc == (1 if blocking_error else 0)
+    if verdict == "inconclusive":
+        assert row["day_status"] == "optimal"  # a plain optimal does not depend on a wave value
+
+
+def test_agreeing_wave_values_are_marked_agree(tmp_path):
+    rc, out = run(tmp_path, "--fleets", f"{rj.HOMOGENEOUS},large+sedan", *SUBSET)
+    assert rc == 0 and {r["wave_values_status"] for r in read_csv(out / "day_joint.csv")} == {"agree"}
+
+
+def test_no_crosscheck_wave_path_is_not_run_and_a_development_run(tmp_path):
+    calls: list = []
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET, "--no-crosscheck",
+                  deps=make_deps(crosscheck=False, wave_calls=calls))
+    assert rc == 0 and {c[2] for c in calls} == {"highs"}
+    row = read_csv(out / "day_joint.csv")[0]
+    assert row["wave_values_status"] == "not_run" and row["day_status"] == "feasible_with_gap"  # no proof label without the check
+    assert json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))["development_run"] is True
+
+
+def test_trivial_wave_values_are_not_run_and_a_development_run(tmp_path):
+    calls: list = []
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET, "--wave-values", "trivial", deps=make_deps(wave_calls=calls))
+    assert rc == 0 and calls == []
+    assert read_csv(out / "day_joint.csv")[0]["wave_values_status"] == "not_run"
+    assert json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))["development_run"] is True
+
+
+def test_a_full_crosschecked_run_is_not_a_development_run(tmp_path):
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET)
+    manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert rc == 0 and manifest["development_run"] is False
+    assert manifest["solvers"]["highs"]["version"] == "fake" and manifest["solvers"]["gurobi"]["version"] == "fake"
+    assert "stopped_on_backend_unavailable" not in manifest["run_history"]
+
+
+def test_menu_that_differs_from_the_loader_refuses_the_cell(tmp_path, monkeypatch):
+    real = rj.read_json
+
+    def altered(path):
+        doc = real(path)
+        if str(path).endswith(".menu_options.json"):
+            doc = json.loads(json.dumps(doc))
+            doc["waves"][0]["anchorMinutes"] += 1
+        return doc
+
+    monkeypatch.setattr(rj, "read_json", altered)
+    rc, out = run(tmp_path, "--fleets", "large+sedan", *SUBSET)
+    row = read_csv(out / "day_joint.csv")[0]
+    assert rc == 1 and row["day_status"] == "input_rejected" and "menu demand differs" in row["note"]
+
+
+# the certificate cell goes through the hook (a tier-2 certificate can be withheld)
+def _certificate_cell(tmp_path, monkeypatch, wave_status, tier):
+    bm = rj.bounds_mod
+    kind = "certificate_wave_min_large" if tier == 2 else "certificate_capacity_floor"
+    cert_ = bm.InfeasibilityCertificate(bm.INFEASIBLE_CERTIFIED, tier, kind, 10, 11, 525, (bm.Contribution("w1", 11, "solver_proven"),))
+    real = rj.day_bounds
+
+    def fake_bounds(instance, fleet, limit, deps, cfg, errors, tag):
+        b, records = real(instance, fleet, limit, deps, cfg, errors, tag)
+        records = [rj.WaveRecord(r.kind, r.wave_id, r.used, wave_status, r.detail) for r in records]
+        return bm.DayBounds(lb_l=b.lb_l, lb_s=b.lb_s, certificate=cert_), records
+
+    seen: list = []
+    real_hook = rj.label_day_cell
+    monkeypatch.setattr(rj, "day_bounds", fake_bounds)
+    monkeypatch.setattr(rj, "label_day_cell", lambda facts: (seen.append(facts), real_hook(facts))[1])
+    calls: list = []
+    rc, out = run(tmp_path, "--fleets", "large+sedan", *SUBSET, deps=make_deps(highs_calls=calls))
+    return rc, read_csv(out / "day_joint.csv")[0], seen, calls
+
+
+def test_tier2_certificate_is_labelled_only_when_the_wave_values_agree(tmp_path, monkeypatch):
+    rc, row, seen, calls = _certificate_cell(tmp_path, monkeypatch, "agree", 2)
+    assert row["day_status"] == "infeasible_certified" and row["certificate_tier"] == "2" and calls == []
+    assert seen[0]["certificate"]["tier"] == 2 and seen[0]["certificate_tier"] == 2 and seen[0]["wave_values_status"] == "agree"
+
+
+@pytest.mark.parametrize("wave_status", ["inconclusive", "blocking", "not_run"])
+def test_tier2_certificate_is_withheld_without_two_solver_agreement(tmp_path, monkeypatch, wave_status):
+    rc, row, seen, calls = _certificate_cell(tmp_path, monkeypatch, wave_status, 2)
+    assert row["day_status"] != "infeasible_certified" and "withheld" in row["note"]
+    assert len(calls) >= 1  # the day MIP is still solved
+    assert seen[0]["certificate"]["tier"] == 2 and seen[-1]["certificate_tier"] == 2
+
+
+def test_tier1_certificate_needs_no_wave_value(tmp_path, monkeypatch):
+    rc, row, seen, calls = _certificate_cell(tmp_path, monkeypatch, "inconclusive", 1)
+    assert row["day_status"] == "infeasible_certified" and row["certificate_tier"] == "1" and calls == []
+
+
+# the placeholder hook fails closed
+GOOD = {"fleet": "f", "date": "d", "ride": 50, "large_limit": None, "solve_status": "optimal", "objective": (3, 100),
+        "stage_statuses": ["optimal", "optimal"], "timing_dependent": False, "non_lexicographic": False,
+        "bound_above_incumbent": False, "crosscheck_status": "agree", "wave_values_status": "agree", "stage1_bound_ceil": 3,
+        "bounds": {}, "certificate": None, "certificate_tier": None}
+
+
+def test_placeholder_hook_returns_optimal_only_when_everything_agrees():
+    assert rj.label_day_cell(GOOD)["day_status"] == "optimal"
+    assert rj.label_day_cell(dict(GOOD, wave_values_status="inconclusive"))["day_status"] == "optimal"  # not needed for a plain optimal
+    for change, needle in (({"crosscheck_status": "inconclusive"}, "cross-check"), ({"crosscheck_status": "not_run"}, "cross-check"),
+                           ({"crosscheck_status": "blocking"}, "cross-check"), ({"wave_values_status": "blocking"}, "wave values"),
+                           ({"timing_dependent": True}, "timing"), ({"non_lexicographic": True}, "non_lex"),
+                           ({"bound_above_incumbent": True}, "bound_above"), ({"stage_statuses": ["optimal", "feasible_with_gap"]}, "stage")):
+        got = rj.label_day_cell(dict(GOOD, **change))
+        assert got["day_status"] == "feasible_with_gap" and needle in got["reason"], change
+    assert rj.label_day_cell(dict(GOOD, solve_status="bound_only", objective=None))["day_status"] == "bound_only"
+    assert rj.label_day_cell(dict(GOOD, solve_status="infeasible_proven", objective=None))["day_status"] == "infeasible_solver_proven"
+    assert rj.label_day_cell(dict(GOOD, solve_status="surprise"))["day_status"] == "rejected"
+
+
+def test_placeholder_hook_withholds_a_tier2_certificate_unless_the_wave_values_agree():
+    def cert_(tier):
+        return {"tier": tier, "kind": "k", "lower_bound": 4, "point": 1, "large_limit": 3, "contributions": []}
+
+    base = dict(GOOD, solve_status="certificate", objective=None)
+    assert rj.label_day_cell(dict(base, certificate=cert_(1), wave_values_status="blocking"))["day_status"] == "infeasible_certified"
+    assert rj.label_day_cell(dict(base, certificate=cert_(2), wave_values_status="agree"))["day_status"] == "infeasible_certified"
+    for status in ("inconclusive", "blocking", "not_run"):
+        got = rj.label_day_cell(dict(base, certificate=cert_(2), wave_values_status=status))
+        assert got["day_status"] == "bound_only" and "withheld" in got["reason"] and got["bound_source"].endswith("_withheld")

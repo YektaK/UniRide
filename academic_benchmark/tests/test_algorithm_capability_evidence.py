@@ -257,6 +257,73 @@ def _prove_native_metaheuristic(algorithm_id: str, expected_evaluations: int) ->
         }
 
 
+def _prove_native_memetic(algorithm_id: str) -> None:
+    """Native memetic evidence (C-10): polish is counted, kernel never used, counts independent."""
+    from academic_benchmark.native_protocol import NativeComparisonManifest as _Manifest
+    from uniride_core.algorithms import numba_accel as nb
+    from uniride_core.algorithms import objective_budget as ob
+    from uniride_core.algorithms.tsp_matrix_metaheuristics.base_solver import BaseTSPSolver
+
+    executor = AlgorithmRegistry.get_executor(algorithm_id)
+    # Case 2 lets the periodic polish fire (polish_interval 1 over 3 iterations), so the
+    # evidence covers initial, periodic and final polish all counted.
+    for problem, periodic in ((p, q) for p in PROBLEMS for q in (False, True)):
+        params = _native_params(algorithm_id)
+        params.update(polish_iters=1, final_polish_iters=2)
+        if periodic:
+            params.update(max_iterations=3, polish_interval=1)
+        manifest = _Manifest.from_value(params["native_comparison"])
+        seen = {"search": 0, "polish": 0, "kernel": 0}
+        original_fast, original_cost = BaseTSPSolver._tour_length_fast, ob.closed_tour_cost
+        original_kernel, original_nb = nb._two_opt_improve_atsp_numba, nb.nb_two_opt
+
+        def fast_spy(self, tour):
+            seen["search"] += 1
+            return original_fast(self, tour)
+
+        def cost_spy(route, matrix):
+            seen["polish"] += 1
+            return original_cost(route, matrix)
+
+        def kernel_spy(*args, **kwargs):
+            seen["kernel"] += 1
+            return original_kernel(*args, **kwargs)
+
+        def nb_spy(*args, **kwargs):
+            seen["kernel"] += 1
+            return original_nb(*args, **kwargs)
+
+        BaseTSPSolver._tour_length_fast, ob.closed_tour_cost = fast_spy, cost_spy
+        nb._two_opt_improve_atsp_numba, nb.nb_two_opt = kernel_spy, nb_spy
+        try:
+            first = executor(problem, params, seed=987_654, run_idx=0)
+        finally:
+            BaseTSPSolver._tour_length_fast, ob.closed_tour_cost = original_fast, original_cost
+            nb._two_opt_improve_atsp_numba, nb.nb_two_opt = original_kernel, original_nb
+        replay = executor(problem, params, seed=123_456, run_idx=0)
+        assert seen["kernel"] == 0 and seen["polish"] > 0
+        _assert_common_evidence(
+            first,
+            replay,
+            problem=problem,
+            algorithm_id=algorithm_id,
+            expected_seed=manifest.paired_seed(problem.name, 0),
+            expected_evaluations=seen["search"] + seen["polish"],
+            expected_backend="objective=numba;polish=python",
+            expected_termination="max_iterations",
+        )
+        assert first.evaluation_budget is None
+        assert first.budget_terminated is False
+        assert first.variant == "memetic_2opt"
+        policy = first.polish_policy
+        assert policy["enabled"] is True and policy["operator"] == "2-opt"
+        assert policy["initial"] is True and policy["final"] is True
+        assert policy["periodic"] is periodic
+        assert (policy["evaluations"]["periodic"] > 0) is periodic
+        assert sum(policy["evaluations"].values()) + policy["executed"]["initial"] == seen["polish"]
+        assert replay.polish_policy == policy
+
+
 def _assert_fixed_local_claims_published(
     algorithm_id: str, evidence_function: str
 ) -> None:
@@ -454,6 +521,18 @@ def test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence() -> None:
     _require_live_numba_objective()
     _prove_fixed("Core-HHO-TSP-Memetic-2opt", expected_backend="objective=numba;polish=python", expected_variant="memetic_2opt", polish_enabled=True)
     _assert_metaheuristic_claims_published("Core-HHO-TSP-Memetic-2opt", ExecutionProtocol.FIXED_BUDGET, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON), CompositionKind.MEMETIC_2OPT, "test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence")
+
+
+def test_core_gwo_memetic_2opt_native_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_native_memetic("Core-GWO-TSP-Memetic-2opt")
+    _assert_metaheuristic_claims_published("Core-GWO-TSP-Memetic-2opt", ExecutionProtocol.NATIVE_TERMINATION, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON), CompositionKind.MEMETIC_2OPT, "test_core_gwo_memetic_2opt_native_tsp_and_atsp_numba_evidence")
+
+
+def test_core_hho_memetic_2opt_native_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_native_memetic("Core-HHO-TSP-Memetic-2opt")
+    _assert_metaheuristic_claims_published("Core-HHO-TSP-Memetic-2opt", ExecutionProtocol.NATIVE_TERMINATION, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON), CompositionKind.MEMETIC_2OPT, "test_core_hho_memetic_2opt_native_tsp_and_atsp_numba_evidence")
 
 
 def test_core_or_opt_fixed_tsp_and_atsp_evidence() -> None:

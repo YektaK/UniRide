@@ -8,6 +8,14 @@ from academic_benchmark.core import registry_setup  # noqa: F401
 from academic_benchmark.engine_core import AlgorithmRegistry, ProblemInstance
 from academic_benchmark.native_protocol import NativeComparisonManifest
 from uniride_core.algorithms import numba_accel as _nb
+from uniride_core.algorithms.capabilities import (
+    BackendKind,
+    CompositionKind,
+    ExecutionBackendProfile,
+    ExecutionProtocol,
+    ProblemContract,
+    find_capability_claim,
+)
 from uniride_core.algorithms import objective_budget as _ob
 from uniride_core.algorithms.tsp_matrix_metaheuristics.base_solver import BaseTSPSolver
 
@@ -257,3 +265,16 @@ def test_native_manifest_checks_initialization_policy_against_initial_polish(alg
         manifest.validate_result(
             replace(plain, initialization_policy="paired_seed_random_population_all_nodes_with_initial_2opt")
         )
+
+
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
+@pytest.mark.parametrize("problem", [ProblemContract.TSP, ProblemContract.ATSP])
+def test_native_memetic_claims_are_published(algorithm_id, problem):
+    claim = find_capability_claim(
+        algorithm_id,
+        problem=problem,
+        protocol=ExecutionProtocol.NATIVE_TERMINATION,
+        backend_profile=ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON),
+        composition=CompositionKind.MEMETIC_2OPT,
+    )
+    assert claim is not None

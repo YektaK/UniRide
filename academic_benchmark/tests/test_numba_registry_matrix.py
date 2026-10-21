@@ -1,4 +1,4 @@
-"""Regression: Numba-2-opt and Numba-3-opt-bounded must execute on matrix-native inputs.
+"""Regression: Core-TwoOpt-TSP and Core-ThreeOpt-TSP (formerly Numba-2-opt and Numba-3-opt-bounded) must execute on matrix-native inputs.
 
 The legacy executor used to ignore ``problem.dist_matrix`` and fall back to
 a TSPLIB DB lookup or coordinates-only path.  For synthetic test problems
@@ -82,7 +82,7 @@ def _asymmetric_8_problem() -> ProblemInstance:
 # Tests
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("algorithm", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_numba_registry_entry_works_on_dist_matrix_problem(algorithm):
     """Executor must complete on an asymmetric dist_matrix and report a
     correct closed-cycle cost."""
@@ -95,7 +95,7 @@ def test_numba_registry_entry_works_on_dist_matrix_problem(algorithm):
     assert result.problem_type == "tsp"
 
 
-@pytest.mark.parametrize("algorithm", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_numba_registry_entry_handles_time_matrix(algorithm):
     """Executor must work on the time_matrix branch with correct cost."""
     matrix = [
@@ -121,7 +121,7 @@ def test_numba_registry_entry_handles_time_matrix(algorithm):
     _assert_closed_tour_cost(result, matrix)
 
 
-@pytest.mark.parametrize("algorithm", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_numba_registry_entry_on_coord_only_problem(algorithm):
     """Executor must still work via the coordinates fallback."""
     executor = AlgorithmRegistry.get_executor(algorithm)

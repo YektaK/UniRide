@@ -46,7 +46,7 @@ def _run(algorithm_id: str, **overrides):
     return executor(_problem(), _params(algorithm_id, **overrides), seed=1, run_idx=0)
 
 
-@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS + ("Core-GWO-TSP", "Core-HHO-TSP"))
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
 def test_memetic_with_zero_polish_is_rejected_before_execution(algorithm_id):
     with pytest.raises(ValueError, match="execute no polish"):
         _run(algorithm_id, polish_iters=0, final_polish_iters=0)

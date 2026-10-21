@@ -129,7 +129,7 @@ def test_gwo_hho_variant_and_polish_metadata_are_truthful(algorithm, variant, po
     assert result.polish_policy["final"] is polished
 
 
-@pytest.mark.parametrize("algorithm", ("Numba-2-opt", "Numba-3-opt-bounded"))
+@pytest.mark.parametrize("algorithm", ("Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"))
 def test_legacy_executor_never_emits_legacy_identity(algorithm):
     result = AlgorithmRegistry.get_executor(algorithm)(
         _symmetric_problem(),
@@ -144,8 +144,6 @@ def test_legacy_executor_never_emits_legacy_identity(algorithm):
 @pytest.mark.parametrize(
     "algorithm",
     (
-        "Numba-2-opt",
-        "Numba-3-opt-bounded",
         "Core-TwoOpt-TSP",
         "Core-ThreeOpt-TSP",
     ),

@@ -80,17 +80,20 @@ def test_canonical_local_search_executors_report_canonical_identity_and_closed_c
     assert result.tour_cost == pytest.approx(_closed_cost(result.tour, problem.dist_matrix))
 
 
-def test_sota_alns_registry_key_preserves_historical_reported_identity():
-    problem = _fractional_directed_problem()
+def test_sota_alns_has_no_registry_key_and_resolves_to_the_canonical_alns():
+    # Gate C follow-up: SOTA-ALNS-TSP is a deprecated alias; it no longer has an executor of
+    # its own (it used to report the historical identity "SOTA-ALNS-TSP").
+    from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 
-    result = AlgorithmRegistry.get_executor("SOTA-ALNS-TSP")(
-        problem,
+    assert "SOTA-ALNS-TSP" not in AlgorithmRegistry.list_algorithms()
+    assert resolve_algorithm_id("SOTA-ALNS-TSP", IdentifierSource.CLI).canonical_id == "ALNS-TSP"
+    result = AlgorithmRegistry.get_executor("ALNS-TSP")(
+        _fractional_directed_problem(),
         {"iterations": 8, "max_no_improve": 4},
         seed=123,
         run_idx=0,
     )
-
-    assert result.algorithm == "SOTA-ALNS-TSP"
+    assert result.algorithm == "ALNS-TSP"
 
 
 def test_canonical_alns_uses_explicit_fractional_directed_matrix_without_truncating_cost():

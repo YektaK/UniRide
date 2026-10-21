@@ -28,20 +28,17 @@ EVALUATION_BUDGET = 100
 MAX_ITERATIONS = 1
 
 PUBLIC_GWO_HHO_EXECUTORS = (
-    "Core-GWO-TSP",
     "Core-GWO-TSP-Pure",
     "Core-GWO-TSP-Memetic-2opt",
-    "Core-HHO-TSP",
     "Core-HHO-TSP-Pure",
     "Core-HHO-TSP-Memetic-2opt",
-    "Numba-GWO",
-    "Numba-HHO",
 )
 
 
 @pytest.mark.parametrize("algorithm_id", PUBLIC_GWO_HHO_EXECUTORS)
 def test_public_gwo_hho_executors_instantiate_canonical_classes(algorithm_id: str) -> None:
-    executor = AlgorithmRegistry.get_executor(algorithm_id)
+    # The registry hands out the routing-refusal wrapper; unwrap to the executor itself.
+    executor = inspect.unwrap(AlgorithmRegistry.get_executor(algorithm_id))
     solver_cls = inspect.getclosurevars(executor).nonlocals["solver_cls"]
     assert solver_cls.__module__.startswith(
         "uniride_core.algorithms.tsp_matrix_metaheuristics"

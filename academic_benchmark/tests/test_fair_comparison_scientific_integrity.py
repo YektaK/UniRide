@@ -4,6 +4,7 @@ import pytest
 
 from academic_benchmark.cli_engine import _evaluate_param_combo
 from academic_benchmark.core import registry_setup  # noqa: F401
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from uniride_core.algorithms.tsp_matrix_metaheuristics.gwo_solver import GWOOptimizer
 from uniride_core.algorithms.tsp_matrix_metaheuristics.hho_solver import HHOOptimizer
 from academic_benchmark.engine_core import AlgorithmRegistry, GovernedExecutionRequest
@@ -87,15 +88,24 @@ def test_every_fair_variant_reports_exact_directed_closed_tour_cost(algorithm):
 
 
 @pytest.mark.parametrize(
-    "algorithm",
-    ("Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"),
+    ("alias", "canonical"),
+    (
+        ("Core-GWO-TSP", "Core-GWO-TSP-Memetic-2opt"),
+        ("Core-HHO-TSP", "Core-HHO-TSP-Memetic-2opt"),
+        ("Numba-GWO", "Core-GWO-TSP-Memetic-2opt"),
+        ("Numba-HHO", "Core-HHO-TSP-Memetic-2opt"),
+    ),
 )
-def test_backward_compatible_gwo_hho_aliases_disclose_memetic_policy(algorithm):
-    result = AlgorithmRegistry.get_executor(algorithm)(
+def test_backward_compatible_gwo_hho_aliases_disclose_memetic_policy(alias, canonical):
+    # Gate C follow-up: the aliases have no executor of their own; the resolver sends them
+    # to the memetic-2opt canonical entry, which discloses its polish.
+    assert resolve_algorithm_id(alias, IdentifierSource.CLI).canonical_id == canonical
+    assert alias not in AlgorithmRegistry.list_algorithms()
+    result = AlgorithmRegistry.get_executor(canonical)(
         _problem(), _params(), seed=1, run_idx=1
     )
 
-    assert result.algorithm_id == algorithm
+    assert result.algorithm_id == canonical
     assert result.variant == "memetic_2opt"
     # Flags derive from executed polish (audit M19): the run has 2 iterations and the
     # default polish interval is 25, so periodic polish never executes.

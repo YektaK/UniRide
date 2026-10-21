@@ -30,8 +30,10 @@ def test_academic_registry_exposes_core_tsp_engines():
         "Core-OrOpt-TSP",
         "Core-GA-TSP",
         "Core-PSO-TSP",
-        "Core-GWO-TSP",
-        "Core-HHO-TSP",
+        "Core-GWO-TSP-Pure",
+        "Core-GWO-TSP-Memetic-2opt",
+        "Core-HHO-TSP-Pure",
+        "Core-HHO-TSP-Memetic-2opt",
         "FCM-GA-TSP",
         "FCM-PSO-TSP",
         "FCM-GWO-TSP",
@@ -72,7 +74,7 @@ def test_academic_registry_exposes_core_tsp_engines():
             },
         ),
         (
-            "Core-GWO-TSP",
+            "Core-GWO-TSP-Pure",
             {
                 "num_wolves": 8,
                 "max_iterations": 5,
@@ -81,7 +83,7 @@ def test_academic_registry_exposes_core_tsp_engines():
             },
         ),
         (
-            "Core-HHO-TSP",
+            "Core-HHO-TSP-Pure",
             {
                 "num_hawks": 8,
                 "max_iterations": 5,
@@ -152,7 +154,7 @@ def _coord_only_problem():
 
 @pytest.mark.parametrize(
     "algorithm",
-    ["Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"],
+    ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure", "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt"],
 )
 def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
     """Regression: GWO/HHO via registry must work when dist_matrix is not pre-set.
@@ -189,7 +191,7 @@ def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
 
 @pytest.mark.parametrize(
     "algorithm",
-    ["Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"],
+    ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure", "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt"],
 )
 def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
     """Regression: exercise the exact _Problem wrapper path from cli_engine.

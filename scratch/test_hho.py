@@ -9,5 +9,5 @@ class MockProblem:
     optimal = 0
 
 prob = MockProblem()
-executor = _AlgoReg.get_executor('Numba-HHO')
+executor = _AlgoReg.get_executor('Core-HHO-TSP-Memetic-2opt')
 executor(prob, {'max_iterations':10, 'population_size':10}, 42, 0)

@@ -22,10 +22,11 @@ class CoreRoutingRefusedError(ValueError):
     """A capability-catalog ID (TSP/ATSP claim) was handed a CVRP/CVRPTW problem."""
 
 
-# Catalog ID -> the CVRP-*/CVRPTW-* alias base that keeps the legacy matrix engine this ID
-# used to delegate to on routing problems. IDs without an entry have no routing alternative
-# (their old routing branch ran the greedy router under a Core-* label, or never existed).
-# The table is checked against the registered aliases at the end of this module.
+# Catalog ID -> the CVRP-*/CVRPTW-* alias base that offers a routing variant of the same
+# algorithm family. The variant is NOT claimed to run the engine the Core-* ID ran before
+# (e.g. Core-TwoOpt-TSP used the greedy router; CVRP-Core-TwoOpt-TSP runs the legacy 2-opt
+# matrix engine). IDs without an entry have no routing variant. The table is checked against
+# the registered aliases at the end of this module.
 _ROUTING_ALTERNATIVE_BASES = {
     "Core-TwoOpt-TSP": "Core-TwoOpt-TSP",
     "Core-GA-TSP": "Core-GA-TSP",
@@ -45,12 +46,24 @@ def _refuse_routing(canonical_id, problem):
         advice = "no CVRP-/CVRPTW- alternative exists for this ID."
     else:
         advice = (
-            f"use the legacy routing names CVRP-{base} (CVRP) or CVRPTW-{base} (CVRPTW) instead."
+            f"a routing variant is available under CVRP-{base} (CVRP) or CVRPTW-{base} (CVRPTW)."
         )
     raise CoreRoutingRefusedError(
         f"{canonical_id} is a TSP/ATSP algorithm and refuses {problem_type.upper()} routing "
         f"problems before any evaluation; {advice}"
     )
+
+
+def _refuse_catalog_routing(algorithm_name, problem):
+    """Guard at the top of every factory executor that serves a capability-catalog ID.
+
+    The registry wrapper (``_register_catalog_executor``) refuses too; this keeps the raw
+    executor honest when it is reached without the wrapper (``inspect.unwrap``, a factory call).
+    """
+    from uniride_core.algorithms.capabilities import get_algorithm_capability
+
+    if _is_routing_problem(problem) and get_algorithm_capability(algorithm_name) is not None:
+        _refuse_routing(algorithm_name, problem)
 
 
 def _register_catalog_executor(canonical_id, executor):
@@ -388,6 +401,9 @@ def _run_native_local_search(problem, params, run_idx, algorithm_name, strategy_
 # 1. Register Numba (Legacy) Algorithms
 def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_name: str):
     def executor(problem, params, seed, run_idx):
+        # Core-TwoOpt/ThreeOpt/OrOpt are catalog IDs and refuse routing; Numba-Swap and
+        # Numba-Hybrid (not catalog IDs) keep their own routing branch below.
+        _refuse_catalog_routing(algorithm_name, problem)
         import time
         from academic_benchmark.engine_core import RunResult
         from academic_benchmark.fairness import fair_manifest_from_params
@@ -519,6 +535,7 @@ SOTA_ALGOS = [name for name in list_algorithm_names("sota_tsp") if name in _SUPP
 def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
     public_id = reported_algorithm_id or f"SOTA-{algo}"
     def executor(problem, params, seed, run_idx):
+        _refuse_catalog_routing(public_id, problem)  # only ALNS-TSP is a catalog ID here
         import time
         import math
         from academic_benchmark.engine_core import RunResult
@@ -715,7 +732,7 @@ def _executed_polish_policy(extra_stats, polish_enabled=False):
 
 
 def _make_numba_metah_executor(
-    algorithm_name, solver_cls, default_params, routing_engine_name=None,
+    algorithm_name, solver_cls, default_params,
     variant="memetic_2opt", polish_enabled=True,
 ):
     """Executor for Numba-accelerated Bildiri2026 metaheuristics (GWO/HHO).
@@ -725,8 +742,7 @@ def _make_numba_metah_executor(
     path used by _make_core_tsp_executor. This routes Core-GWO-TSP and
     Core-HHO-TSP to the fast numba_accel pipeline.
 
-    ``routing_engine_name`` is kept for signature compatibility and is unused: the executors are
-    registered behind the catalog routing refusal and never see CVRP/CVRPTW problems.
+    Routing problems are refused at the top of the executor (catalog IDs are TSP/ATSP only).
     """
     # Legacy param aliases used by the old tsp_meta_engines executors → new
     # GWOOptimizer / HHOOptimizer constructor names.
@@ -743,6 +759,8 @@ def _make_numba_metah_executor(
     _valid_kwargs = set(_inspect.signature(solver_cls).parameters)
 
     def executor(problem, params, seed, run_idx):
+        if _is_routing_problem(problem):
+            _refuse_routing(algorithm_name, problem)
         import time as _time
         from academic_benchmark.engine_core import RunResult
         from academic_benchmark.fairness import FairRunResult, fair_manifest_from_params
@@ -919,6 +937,8 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP", memetic=False):
     }
 
     def executor(problem, params, seed, run_idx):
+        if _is_routing_problem(problem):
+            _refuse_routing(algorithm_name, problem)
         import time as _time
         from academic_benchmark.engine_core import RunResult
         from academic_benchmark.fairness import (
@@ -1100,6 +1120,8 @@ def _make_canonical_pso_executor(algorithm_name="Core-PSO-TSP"):
     aliases = {"iterations": "max_iterations", "generations": "max_iterations"}
 
     def executor(problem, params, seed, run_idx):
+        if _is_routing_problem(problem):
+            _refuse_routing(algorithm_name, problem)
         import time as _time
         from academic_benchmark.engine_core import RunResult
         from academic_benchmark.fairness import (
@@ -1249,6 +1271,8 @@ def _make_hybrid_executor(algorithm_name):
     is_alns = kind == KIND_ALNS
 
     def executor(problem, params, seed, run_idx):
+        if _is_routing_problem(problem):
+            _refuse_routing(algorithm_name, problem)
         import time as _time
         from academic_benchmark.composite_protocol import (
             COMPOSITE_COMPLETE_REASON,
@@ -1438,26 +1462,26 @@ _NUMBA_METAH_OVERRIDES = {
     "Core-GWO-TSP-Pure": (GWOOptimizer, {
         "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
         "exploration_rate": 0.4, "max_no_improvement": 75,
-    }, "Matrix-GWO-TSP-legacy", "pure", False),
+    }, "pure", False),
     "Core-GWO-TSP-Memetic-2opt": (GWOOptimizer, {
         "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
         "exploration_rate": 0.4, "max_no_improvement": 75,
-    }, "Matrix-GWO-TSP-legacy", "memetic_2opt", True),
+    }, "memetic_2opt", True),
     "Core-HHO-TSP-Pure": (HHOOptimizer, {
         "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
         "jump_probability": 0.5, "max_no_improvement": 75,
-    }, "Matrix-HHO-TSP-legacy", "pure", False),
+    }, "pure", False),
     "Core-HHO-TSP-Memetic-2opt": (HHOOptimizer, {
         "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
         "jump_probability": 0.5, "max_no_improvement": 75,
-    }, "Matrix-HHO-TSP-legacy", "memetic_2opt", True),
+    }, "memetic_2opt", True),
 }
 
-for _algo_name, (_cls, _defaults, _routing_eng, _variant, _polish_enabled) in _NUMBA_METAH_OVERRIDES.items():
+for _algo_name, (_cls, _defaults, _variant, _polish_enabled) in _NUMBA_METAH_OVERRIDES.items():
     _register_catalog_executor(
         _algo_name,
         _make_numba_metah_executor(
-            _algo_name, _cls, _defaults, _routing_eng, _variant, _polish_enabled
+            _algo_name, _cls, _defaults, _variant, _polish_enabled
         ),
     )
 

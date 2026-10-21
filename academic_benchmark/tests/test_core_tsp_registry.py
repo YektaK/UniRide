@@ -164,9 +164,8 @@ def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
     calls _problem_matrix → prepare_matrices() which was missing from _Problem.
     This test exercises the same path through the real ProblemInstance.
     """
-    algorithms = set(AlgorithmRegistry.list_algorithms())
-    if algorithm not in algorithms:
-        pytest.skip(f"{algorithm} not registered (missing bildiri2026 deps?)")
+    # The Numba import fails closed (C-14): a missing identity is a failure, not a skip.
+    assert algorithm in set(AlgorithmRegistry.list_algorithms())
 
     executor = AlgorithmRegistry.get_executor(algorithm)
     result = executor(
@@ -199,9 +198,7 @@ def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
     Simulates what _evaluate_param_combo does: build a _Problem from a dict
     with no dist_matrix, call prepare_matrices(), then pass to the registry.
     """
-    algorithms = set(AlgorithmRegistry.list_algorithms())
-    if algorithm not in algorithms:
-        pytest.skip(f"{algorithm} not registered (missing bildiri2026 deps?)")
+    assert algorithm in set(AlgorithmRegistry.list_algorithms())
 
     from academic_benchmark.cli_engine import _evaluate_param_combo
     from academic_benchmark.core.algorithm_resolution import (

@@ -148,7 +148,7 @@ def test_legacy_executor_never_emits_legacy_identity(algorithm):
         "Core-ThreeOpt-TSP",
     ),
 )
-def test_fair_validator_accepts_historical_and_canonical_local_search_ids(algorithm):
+def test_fair_validator_accepts_canonical_local_search_ids(algorithm):
     result = _run(algorithm)
 
     assert result.algorithm_id == result.algorithm == algorithm

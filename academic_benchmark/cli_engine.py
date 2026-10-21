@@ -868,8 +868,8 @@ def _evaluate_param_combo(task: Tuple[Any, ...]) -> Dict[str, Any]:
             import warnings
             warnings.warn(
                 f"Algorithm '{strategy_name}' uses the legacy Numba path. "
-                f"Use 'Numba-{strategy_name}' or 'Core-{strategy_name}-TSP' for canonical "
-                f"matrix-solver execution.",
+                f"Use 'Core-{strategy_name}-TSP-Pure' or 'Core-{strategy_name}-TSP-Memetic-2opt' "
+                f"for canonical matrix-solver execution.",
                 DeprecationWarning,
                 stacklevel=2,
             )

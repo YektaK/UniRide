@@ -16,7 +16,7 @@ class AcademicAlgorithmDomain(str, Enum):
 _UNCATALOGED_TSP_ATSP_IDS = frozenset({
     "Numba-Swap", "Numba-Hybrid",
     "SOTA-E2BSO-TSP", "SOTA-R2DMA-TSP", "SOTA-P-AOEA-TSP",
-    "SOTA-CGO-TSP", "SOTA-RUN-TSP", "SOTA-ALNS-TSP",
+    "SOTA-CGO-TSP", "SOTA-RUN-TSP",
     "FCM-GA-TSP", "FCM-PSO-TSP", "FCM-GWO-TSP", "FCM-HHO-TSP",
     # C-14: truthful names of the string-waypoint matrix engines (never canonical IDs).
     "Matrix-TwoOpt-TSP-legacy", "Matrix-GA-TSP-legacy", "Matrix-PSO-TSP-legacy",

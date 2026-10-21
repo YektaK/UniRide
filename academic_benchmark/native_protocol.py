@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from academic_benchmark.engine_core import RunResult
-from academic_benchmark.fairness import FairRunResult, FairnessValidationError, normalize_problem
+from academic_benchmark.fairness import (
+    FairComparisonManifest,
+    FairRunResult,
+    FairnessValidationError,
+    normalize_problem,
+)
 
 
 NATIVE_PROTOCOL = "uniride-native-tsp-v1"
@@ -19,7 +24,13 @@ APPROVED_NATIVE_ALGORITHMS = frozenset({
     "ALNS-TSP",
 })
 # Optional member of a native pilot configuration (not required of existing configs).
-OPTIONAL_NATIVE_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP"})
+# Memetic 2-opt members (C-10): their polish is counted, so the native contract accepts
+# the memetic variant for exactly these IDs and checks the polish counts.
+NATIVE_MEMETIC_2OPT_ALGORITHMS = frozenset({
+    "Core-GWO-TSP-Memetic-2opt",
+    "Core-HHO-TSP-Memetic-2opt",
+})
+OPTIONAL_NATIVE_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP"}) | NATIVE_MEMETIC_2OPT_ALGORITHMS
 
 
 @dataclass(frozen=True)
@@ -40,6 +51,8 @@ class NativeComparisonManifest:
         "ALNS-TSP": "ALNS",
         "Core-GA-TSP": "GA",
         "Core-PSO-TSP": "PSO",
+        "Core-GWO-TSP-Memetic-2opt": "GWO",
+        "Core-HHO-TSP-Memetic-2opt": "HHO",
     }
     TERMINATION_REASONS = frozenset({
         "max_iterations",
@@ -126,8 +139,13 @@ class NativeComparisonManifest:
             errors.append("unsupported native algorithm_id")
         elif family != expected_family:
             errors.append("algorithm_family does not match algorithm_id")
-        if getattr(result, "variant", None) != "pure":
-            errors.append("native comparison accepts only pure variants")
+        variant = getattr(result, "variant", None)
+        memetic = algorithm_id in NATIVE_MEMETIC_2OPT_ALGORITHMS
+        if variant != ("memetic_2opt" if memetic else "pure"):
+            errors.append(
+                "native comparison accepts only the memetic_2opt variant for memetic IDs"
+                if memetic else "native comparison accepts only pure variants"
+            )
         if getattr(result, "objective_evaluations", None) != result.evaluations:
             errors.append("objective_evaluations must equal evaluations")
         if result.evaluations <= 0:
@@ -152,10 +170,24 @@ class NativeComparisonManifest:
                 errors.append("polish_policy missing fields: " + ", ".join(missing))
             else:
                 phases = ("enabled", "initial", "periodic", "final")
-                if any(polish_policy[name] is not False for name in phases):
-                    errors.append("native pure variants cannot enable polishing")
-                if polish_policy["operator"] is not None:
-                    errors.append("native pure variants cannot declare a polish operator")
+                if memetic:
+                    flags = [polish_policy[name] for name in phases[1:]]
+                    if any(not isinstance(polish_policy[name], bool) for name in phases):
+                        errors.append("polish_policy phase fields must be booleans")
+                    if not any(flags):
+                        errors.append("native memetic_2opt must execute at least one polish phase")
+                    if polish_policy["enabled"] is not any(flags):
+                        errors.append("polish_policy enabled flag must match the executed phases")
+                    if polish_policy["operator"] != "2-opt":
+                        errors.append("native memetic_2opt must declare operator '2-opt'")
+                    errors.extend(
+                        FairComparisonManifest._memetic_polish_count_errors(polish_policy, result)
+                    )
+                else:
+                    if any(polish_policy[name] is not False for name in phases):
+                        errors.append("native pure variants cannot enable polishing")
+                    if polish_policy["operator"] is not None:
+                        errors.append("native pure variants cannot declare a polish operator")
 
         acceptance = getattr(result, "acceptance_policy", None)
         window = getattr(result, "neighborhood_window", None)
@@ -224,6 +256,7 @@ NativeRunResult = FairRunResult
 
 __all__ = [
     "APPROVED_NATIVE_ALGORITHMS",
+    "NATIVE_MEMETIC_2OPT_ALGORITHMS",
     "OPTIONAL_NATIVE_ALGORITHMS",
     "NATIVE_PROTOCOL",
     "NATIVE_TERMINATION_REGIME",

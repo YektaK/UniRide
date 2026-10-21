@@ -140,3 +140,44 @@ def test_native_manifest_accepts_memetic_only_with_truthful_counts():
             _problem("tsp"), _params(algorithm_id), seed=1, run_idx=0
         )
         manifest.validate_result(result)  # the executor already validated; must not raise
+
+
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
+def test_native_manifest_rejects_untruthful_memetic_records(algorithm_id):
+    from copy import deepcopy
+    from dataclasses import replace
+
+    from academic_benchmark.fairness import FairnessValidationError
+
+    manifest = NativeComparisonManifest.from_value(dict(NATIVE))
+    result = AlgorithmRegistry.get_executor(algorithm_id)(
+        _problem("tsp"), _params(algorithm_id), seed=1, run_idx=0
+    )
+    zero = deepcopy(result.polish_policy)
+    zero["evaluations"] = {"initial": 0, "periodic": 0, "final": 0}
+    with pytest.raises(FairnessValidationError, match="flag must equal"):
+        manifest.validate_result(replace(result, polish_policy=zero))
+    flags_off = {"enabled": False, "initial": False, "periodic": False, "final": False,
+                 "operator": None}
+    with pytest.raises(FairnessValidationError, match="at least one polish phase"):
+        manifest.validate_result(replace(result, polish_policy=flags_off))
+    with pytest.raises(FairnessValidationError, match="memetic_2opt variant"):
+        manifest.validate_result(replace(result, variant="pure"))
+
+
+def test_ungoverned_memetic_run_keeps_the_numba_polish_kernel(monkeypatch):
+    """Only protocol runs are counted; an ungoverned run still takes the fast kernel."""
+    calls = []
+    original = _nb._two_opt_improve_atsp_numba
+
+    def spy(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(_nb, "_two_opt_improve_atsp_numba", spy)
+    params = _params("Core-GWO-TSP-Memetic-2opt")
+    params.pop("native_comparison")
+    AlgorithmRegistry.get_executor("Core-GWO-TSP-Memetic-2opt")(
+        _problem("tsp"), params, seed=1, run_idx=0
+    )
+    assert calls

@@ -152,9 +152,14 @@ try:
     from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg
     import academic_benchmark.core.registry_setup  # Ensure registry is populated in worker processes
     _HAS_NUMBA_REGISTRY = True
-except ImportError:
-    _AlgoReg = None
-    _HAS_NUMBA_REGISTRY = False
+except ImportError as _registry_import_error:
+    # Fail closed: a swallowed import error left the CLI with a partial (or empty) academic
+    # registry, and a later import then raised a misleading "already registered" error.
+    raise ImportError(
+        "academic registry failed to load (partial registry refused): "
+        f"{_registry_import_error}"
+    ) from _registry_import_error
+_HAS_NUMBA_REGISTRY = True
 
 try:
     from academic_benchmark.tsplib_manager import (

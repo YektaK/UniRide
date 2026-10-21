@@ -841,12 +841,16 @@ def _make_numba_metah_executor(
     return executor
 
 
-def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
-    """Manifest-aware executor for the canonical pure GA (C-16a).
+def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP", memetic=False):
+    """Manifest-aware executor for the canonical GA (C-16a pure, C-16c memetic).
 
     Fixed-budget and native runs take the strict scientific parameter schema (all keys
-    required, unknown keys rejected) and the paired seed from the manifest; the GA has
-    no polish stage, so ``polish_policy`` is always the no-polish shape.
+    required, unknown keys rejected) and the paired seed from the manifest. The pure GA
+    has no polish stage, so ``polish_policy`` is always the no-polish shape. With
+    ``memetic=True`` (``Core-GA-TSP-Memetic-2opt``) the polish iteration counts are
+    required keys with no default and no zero, the polish is counted (budgeted Python
+    2-opt, also in native mode) and ``polish_policy`` is derived from the executed counts;
+    the GA has no periodic polish, so ``periodic`` is never reported true.
     """
     defaults = {
         "population_size": 100, "max_iterations": 500, "crossover_rate": 0.85,
@@ -867,10 +871,15 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
         from academic_benchmark.fairness import (
             FairRunResult,
             fair_manifest_from_params,
+            validate_scientific_ga_memetic_params,
             validate_scientific_ga_params,
         )
         from academic_benchmark.native_protocol import native_manifest_from_params
         from uniride_core.algorithms.tsp_matrix_metaheuristics import GAOptimizer
+
+        validate_params = (
+            validate_scientific_ga_memetic_params if memetic else validate_scientific_ga_params
+        )
 
         manifest = fair_manifest_from_params(params)
         native_manifest = native_manifest_from_params(params)
@@ -881,14 +890,15 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
             if _is_routing_problem(problem):
                 raise ValueError("academic TSP comparison mode does not accept routing problems")
             seed = protocol_manifest.paired_seed(problem.name, run_idx)
-            cfg = validate_scientific_ga_params({
+            cfg = validate_params({
                 key: value for key, value in params.items()
                 if key not in {"fair_comparison", "native_comparison"}
             })
         elif _is_routing_problem(problem):
+            # The memetic ID has no engine of its own: it routes through the GA engine.
             return _run_core_routing_executor(
                 problem, params, seed, run_idx, algorithm_name,
-                engine_name=algorithm_name,
+                engine_name="Core-GA-TSP",
             )
         else:
             for alias in ("pop_size", "elite_size"):
@@ -902,10 +912,19 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
                 key = aliases.get(key, key)
                 if key in defaults:
                     cfg[key] = value
+            if memetic:
+                # No defaults for the polish: a memetic run states its polish budget.
+                polish_cfg = {
+                    key: params.get(key) for key in ("initial_polish_iters", "final_polish_iters")
+                    if key in params
+                }
+                validate_scientific_ga_memetic_params({**cfg, **polish_cfg})
+                cfg.update(polish_cfg)
 
         matrix, matrix_kind = _problem_matrix(problem)
         solver = GAOptimizer(
             **cfg,
+            polish_enabled=memetic,
             random_seed=seed,
             evaluation_budget=manifest.evaluation_budget if manifest is not None else None,
         )
@@ -948,20 +967,28 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
         if protocol_manifest is None:
             return RunResult(**common_kwargs)
 
-        polish_policy = _executed_polish_policy(extra_stats, False)
+        polish_policy = _executed_polish_policy(extra_stats, memetic)
         termination_detail = (
             f"max_iterations={cfg['max_iterations']};"
             f"max_no_improvement={cfg['max_no_improvement']}"
         )
+        if memetic:
+            termination_detail += (
+                f";initial_polish_iters={cfg['initial_polish_iters']};"
+                f"final_polish_iters={cfg['final_polish_iters']}"
+            )
         protocol_kwargs = dict(
             algorithm_id=algorithm_name,
             algorithm_family="GA",
-            variant="pure",
+            variant="memetic_2opt" if memetic else "pure",
             objective_evaluations=evaluations,
             acceptance_policy="population_evolution",
             neighborhood_window=None,
             termination_reason=termination_reason,
-            initialization_policy="paired_seed_random_population_all_nodes",
+            initialization_policy=(
+                "paired_seed_random_population_all_nodes_with_initial_2opt"
+                if polish_policy["initial"] else "paired_seed_random_population_all_nodes"
+            ),
             execution_backend=str(extra_stats.get("execution_backend", "unknown")),
             polish_policy=polish_policy,
         )

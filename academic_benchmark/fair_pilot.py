@@ -23,6 +23,8 @@ from academic_benchmark.fairness import (
     FairRunResult,
     validate_evaluation_budget,
     validate_scientific_alns_params,
+    GA_MEMETIC_ID,
+    validate_scientific_ga_memetic_params,
     validate_scientific_ga_params,
     validate_scientific_pso_params,
 )
@@ -51,7 +53,7 @@ APPROVED_ALGORITHMS = frozenset({
     "ALNS-TSP",
 })
 # C-16a/C-16b: optional members; an existing configuration without them stays valid.
-OPTIONAL_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP"})
+OPTIONAL_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP", "Core-GA-TSP-Memetic-2opt"})
 _V1_ALGORITHM_ALIASES = {
     "Numba-2-opt": "Core-TwoOpt-TSP",
     "Numba-3-opt-bounded": "Core-ThreeOpt-TSP",
@@ -216,6 +218,11 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
             validate_scientific_ga_params(algorithms["Core-GA-TSP"])
         except ValueError as exc:
             raise FairPilotError(f"Core-GA-TSP: {exc}") from exc
+    if GA_MEMETIC_ID in algorithms:
+        try:
+            validate_scientific_ga_memetic_params(algorithms[GA_MEMETIC_ID])
+        except ValueError as exc:
+            raise FairPilotError(f"{GA_MEMETIC_ID}: {exc}") from exc
     if "Core-PSO-TSP" in algorithms:
         try:
             validate_scientific_pso_params(algorithms["Core-PSO-TSP"])

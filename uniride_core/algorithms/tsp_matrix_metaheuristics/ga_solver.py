@@ -9,7 +9,8 @@ Machine Learning.
 Operators (tournament selection, order crossover, swap/inversion mutation, elitism)
 follow the archived Bildiri GA as a reference only. Unlike that GA this solver has
 NO local search: there is no 2-opt on the initial population and no final 2-opt. The
-memetic variant is a separate algorithm identity (C-16c) and reuses the hooks below.
+memetic variant is a separate algorithm identity (C-16c, ``polish_enabled=True``) built on
+the same hooks; with ``polish_enabled=False`` (the default) nothing below changes.
 
 Objective accounting (fairness design, atomic phases):
 - population initialization is one atomic phase of ``population_size`` evaluations;
@@ -17,6 +18,14 @@ Objective accounting (fairness design, atomic phases):
   evaluations (the elites keep their cached cost and are not re-evaluated), started
   only when that exact upper bound fits the remaining budget;
 - native mode uses ``ObjectiveEvaluationBudget(None)`` and reports the actual count.
+
+Memetic option (C-16c, every polish evaluation goes through the same counter):
+- after the atomic population phase, each chromosome gets a budgeted 2-opt with its known
+  cost (``initial_polish_iters``), one unit per candidate tour; the polish stops without
+  overshoot when the budget ends and the run then terminates normally;
+- after the generations, the best chromosome gets one budgeted 2-opt with its known cost
+  (``final_polish_iters``), also stopping without overshoot;
+- there is no periodic polish; ``polish_executed``/``polish_evaluations`` report the work done.
 
 Termination reasons: ``evaluation_budget_exhausted``, ``max_iterations``,
 ``max_no_improvement``.
@@ -31,7 +40,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from .base_solver import BaseTSPSolver, TSPResult
-from uniride_core.algorithms.objective_budget import ObjectiveEvaluationBudget
+from uniride_core.algorithms.objective_budget import (
+    BudgetedSearchResult,
+    ObjectiveEvaluationBudget,
+    improve_two_opt_budgeted,
+)
 
 
 @dataclass
@@ -55,6 +68,9 @@ class GAOptimizer(BaseTSPSolver):
         max_no_improvement: int = 100,
         random_seed: Optional[int] = None,
         evaluation_budget: Optional[int] = None,
+        polish_enabled: bool = False,
+        initial_polish_iters: int = 0,
+        final_polish_iters: int = 0,
     ):
         super().__init__("GA", random_seed)
         if population_size < 2:
@@ -63,6 +79,15 @@ class GAOptimizer(BaseTSPSolver):
             raise ValueError("GA elite_count must satisfy 0 <= elite_count < population_size")
         if tournament_size < 1:
             raise ValueError("GA tournament_size must be at least 1")
+        if polish_enabled and initial_polish_iters <= 0 and final_polish_iters <= 0:
+            raise ValueError(
+                "a memetic GA needs a positive initial_polish_iters or final_polish_iters"
+            )
+        self.polish_enabled = bool(polish_enabled)
+        self.initial_polish_iters = int(initial_polish_iters)
+        self.final_polish_iters = int(final_polish_iters)
+        self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
+        self._polish_evaluations = {"initial": 0, "periodic": 0, "final": 0}
         self.population_size = population_size
         self.max_iterations = max_iterations
         self.crossover_rate = crossover_rate
@@ -118,6 +143,8 @@ class GAOptimizer(BaseTSPSolver):
         self._backend_observation.reset()
         self._rng = random.Random(self.random_seed)
         self._objective_budget.used = 0
+        self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
+        self._polish_evaluations = {"initial": 0, "periodic": 0, "final": 0}
         self._set_problem(coordinates)
 
     def initialization_evaluation_bound(self) -> int:
@@ -164,6 +191,57 @@ class GAOptimizer(BaseTSPSolver):
         new_pop.sort(key=lambda x: x.tour_length)
         return new_pop
 
+    def _two_opt(
+        self, route: List[int], known_cost: float, iters: int, phase: str
+    ) -> Optional[BudgetedSearchResult]:
+        """Budgeted 2-opt from a tour whose cost is already counted (not re-counted).
+
+        Returns ``None`` when the budget cannot pay for even one candidate tour, so a
+        polish that never started is not reported as executed.
+        """
+        if not self._objective_budget.can_spend():
+            return None
+        result = improve_two_opt_budgeted(
+            route, self._dist_matrix, self._objective_budget,
+            max_iterations=iters, first_improvement=False, initial_cost=known_cost,
+        )
+        self._polish_executed[phase] += 1
+        self._polish_evaluations[phase] += result.evaluations
+        self._backend_observation.polish.add("python")
+        return result
+
+    def polish_initial_population(self, population: List[Individual]) -> bool:
+        """Initial 2-opt on every chromosome (list order); True when the budget ended.
+
+        ``population`` is re-sorted by ``tour_length`` afterwards.
+        """
+        exhausted = False
+        for individual in population:
+            result = self._two_opt(
+                individual.chromosome, individual.tour_length,
+                self.initial_polish_iters, "initial",
+            )
+            if result is None:
+                exhausted = True
+                break
+            individual.chromosome = list(result.route)
+            individual.tour_length = float(result.cost)
+            individual.fitness = 1.0 / (individual.tour_length + 1e-10)
+            if result.budget_exhausted:
+                exhausted = True
+                break
+        population.sort(key=lambda x: x.tour_length)
+        return exhausted
+
+    def polish_best(
+        self, chromosome: List[int], known_cost: float
+    ) -> Tuple[List[int], float, bool]:
+        """Final 2-opt on the best chromosome with its known cost; (route, cost, exhausted)."""
+        result = self._two_opt(chromosome, known_cost, self.final_polish_iters, "final")
+        if result is None:
+            return chromosome, known_cost, True
+        return list(result.route), float(result.cost), result.budget_exhausted
+
     @staticmethod
     def best_of(population: List[Individual]) -> Individual:
         """The best individual (lowest tour length) of a population."""
@@ -184,6 +262,8 @@ class GAOptimizer(BaseTSPSolver):
                 )
 
         pop = self.initialize_population()
+        if self.polish_enabled and self.initial_polish_iters > 0:
+            self.polish_initial_population(pop)
         best = self.best_of(pop)
         best_len = best.tour_length
         best_chrom = best.chromosome[:]
@@ -209,6 +289,10 @@ class GAOptimizer(BaseTSPSolver):
             if no_improve >= self.max_no_improvement:
                 termination_reason = "max_no_improvement"
                 break
+        if self.polish_enabled and self.final_polish_iters > 0:
+            best_chrom, best_len, polish_exhausted = self.polish_best(best_chrom, best_len)
+            if polish_exhausted:
+                termination_reason = "evaluation_budget_exhausted"
         history.append(float(best_len))
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -225,17 +309,22 @@ class GAOptimizer(BaseTSPSolver):
                 "mutation_rate": self.mutation_rate,
                 "elite_count": self.elite_count,
                 "tournament_size": self.tournament_size,
-                "memetic": False,
+                "memetic": self.polish_enabled,
+                "initial_polish_iters": self.initial_polish_iters,
+                "final_polish_iters": self.final_polish_iters,
             },
             extra_stats={
                 "objective_evaluations": self._objective_budget.used,
                 "evaluation_budget": self._objective_budget.limit,
                 "budget_terminated": termination_reason == "evaluation_budget_exhausted",
                 "termination_reason": termination_reason,
-                "variant": "pure",
-                "polish_executed": {"initial": 0, "periodic": 0, "final": 0},
+                "variant": "memetic_2opt" if self.polish_enabled else "pure",
+                "polish_executed": dict(self._polish_executed),
+                # Memetic polish is always counted (budgeted Python 2-opt, also in native
+                # mode with an unlimited counter); the pure GA keeps its historical shape.
                 "polish_evaluations": (
-                    {"initial": 0, "periodic": 0, "final": 0} if self._fair_mode else None
+                    dict(self._polish_evaluations)
+                    if (self._fair_mode or self.polish_enabled) else None
                 ),
                 "execution_backend": self._backend_observation.label(),
             },

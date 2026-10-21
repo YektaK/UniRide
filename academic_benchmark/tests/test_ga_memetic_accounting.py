@@ -433,6 +433,7 @@ def _pilot_blocks():
                               "max_no_improvement": 10},
         "Core-TwoOpt-TSP": {"max_iterations": 20, "first_improvement": False},
         "Core-ThreeOpt-TSP": {"max_iterations": 20, "first_improvement": False, "window": 4},
+        "Core-OrOpt-TSP": {"max_iterations": 3, "first_improvement": False, "window": 3},
         "ALNS-TSP": alns,
     }
 
@@ -453,7 +454,7 @@ def test_fair_pilot_accepts_the_memetic_block_only_with_nonzero_polish(tmp_path)
             "protocol_version": "uniride-fair-tsp-v2",
             "comparison_regime": "fixed_evaluation_budget",
             "problems": ["tiny-tsp", "tiny-atsp"],
-            "algorithms": {**_pilot_blocks(), MEMETIC_ID: block},
+            "algorithms": {k: v for k, v in {**_pilot_blocks(), MEMETIC_ID: block}.items() if k != "Core-OrOpt-TSP"},
             "runs": 1, "evaluation_budget": 400, "base_seed": 17,
             "budget_policy": "atomic_upper_bound_v1", "workers": 1,
             "replay_replicates": [], "allow_repository_output": False, "overwrite": False,

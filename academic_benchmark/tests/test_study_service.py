@@ -95,18 +95,57 @@ def test_bildiri_profile_loads_and_expands():
     )
 
 
-def test_secondary_memetic_without_native_claim_is_rejected(tmp_path):
+def _secondary_only(algorithm_id: str):
     def mutate(payload):
-        payload["secondary_protocol"]["algorithm_ids"] = ["Core-GWO-TSP-Memetic-2opt"]
+        payload["secondary_protocol"]["algorithm_ids"] = [algorithm_id]
 
-    root = _tmp_study(tmp_path, mutate)
+    return mutate
+
+
+def test_secondary_algorithm_without_native_claim_is_rejected(tmp_path, monkeypatch):
+    """The service refuses a native-protocol algorithm that has no verified native claim.
+
+    The capability lookup is replaced so the outcome does not depend on which algorithms the live
+    catalog has promoted (Core-GWO-TSP-Memetic-2opt gained a native claim in C-10).
+    """
+    from academic_benchmark.studies import service as study_service
+
+    algorithm_id = "Core-GWO-TSP-Memetic-2opt"
+    real_lookup = study_service.get_algorithm_capability
+
+    def lookup_without_native_claim(requested: str):
+        capability = real_lookup(requested)
+        if requested != algorithm_id or capability is None:
+            return capability
+        return dataclasses.replace(
+            capability,
+            claims=tuple(
+                claim
+                for claim in capability.claims
+                if claim.protocol is not ExecutionProtocol.NATIVE_TERMINATION
+            ),
+        )
+
+    monkeypatch.setattr(study_service, "get_algorithm_capability", lookup_without_native_claim)
+    root = _tmp_study(tmp_path, _secondary_only(algorithm_id))
     # the contract alone accepts the profile ...
     StudyManifestV1.model_validate(
         json.loads((root / "studies" / "study.json").read_text(encoding="utf-8"))
     )
     # ... the service refuses it because no verified native claim exists.
-    with pytest.raises(StudyServiceError, match="native_termination claim for Core-GWO-TSP-Memetic-2opt"):
+    with pytest.raises(StudyServiceError, match=f"native_termination claim for {algorithm_id}"):
         _plan(root)
+
+
+def test_secondary_memetic_2opt_with_native_claim_is_accepted(tmp_path):
+    """Pins the C-10 promotion: the live catalog carries a verified native claim for it."""
+    root = _tmp_study(tmp_path, _secondary_only("Core-GWO-TSP-Memetic-2opt"))
+    plan = _plan(root)
+    assert any(
+        check.algorithm_id == "Core-GWO-TSP-Memetic-2opt"
+        and check.protocol is ExecutionProtocol.NATIVE_TERMINATION
+        for check in plan.claims
+    )
 
 
 def test_unknown_dataset_ref_is_rejected(tmp_path):

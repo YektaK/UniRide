@@ -7,7 +7,7 @@ from uniride_core.algorithms.local_search_numba import LocalSearchType
 from uniride_core.algorithms.registry import list_algorithm_names
 from uniride_core.adapters.matrix_builder import MatrixBuilder
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
-from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS, FCM_TSP_SOLVERS, create_matrix_engine
+from uniride_core.algorithms.engine_factory import FCM_TSP_SOLVERS, MATRIX_LEGACY_TSP_SOLVERS, create_matrix_engine
 from academic_benchmark.core.reported_cost import report_cycle_cost
 import importlib
 
@@ -448,6 +448,11 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_
 
 for name, payload, default_params in STRATEGIES:
     algo_type = default_params.get("algorithm_type", "local_search")
+    if algo_type == "meta_heuristic":
+        # C-14: no raw executor over numba_metaheuristics.py is registered. Numba-GA and
+        # Numba-PSO are deprecated aliases of the canonical Core-GA-TSP / Core-PSO-TSP,
+        # and Numba-GWO / Numba-HHO are registered once by the canonical GWO/HHO block.
+        continue
     public_name = f"Numba-{name}"
     AlgorithmRegistry.register(public_name)(_make_legacy_executor(payload, algo_type, public_name))
     # We could register param spaces here too, but for simplicity we rely on the old _build_doe_space inside cli_engine
@@ -590,15 +595,10 @@ def _core_greedy_executor(problem, params, seed, run_idx):
 AlgorithmRegistry.register("Core-Greedy-Routing")(_core_greedy_executor)
 
 
-for algo_name, solver in CORE_TSP_SOLVERS.items():
-    if algo_name == "Core-GA-TSP":
-        # C-16a: owned by the canonical GAOptimizer executor registered below
-        # (_make_canonical_ga_executor); the string-waypoint memetic GA is not reused.
-        continue
-    if algo_name == "Core-PSO-TSP":
-        # C-16b: owned by the canonical PSOOptimizer executor registered below
-        # (_make_canonical_pso_executor); the string-waypoint PSO engine is not reused.
-        continue
+# C-14: the string-waypoint matrix engines are registered under their truthful
+# Matrix-*-legacy names only; every Core-* catalog ID is owned by exactly one canonical
+# executor registered further below.
+for algo_name, solver in MATRIX_LEGACY_TSP_SOLVERS.items():
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
 
 _CANONICAL_LOCAL_SEARCH_REGISTRATIONS = {
@@ -898,7 +898,7 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP", memetic=False):
             # The memetic ID has no engine of its own: it routes through the GA engine.
             return _run_core_routing_executor(
                 problem, params, seed, run_idx, algorithm_name,
-                engine_name="Core-GA-TSP",
+                engine_name="Matrix-GA-TSP-legacy",
             )
         else:
             for alias in ("pop_size", "elite_size"):
@@ -1077,7 +1077,8 @@ def _make_canonical_pso_executor(algorithm_name="Core-PSO-TSP"):
             })
         elif _is_routing_problem(problem):
             return _run_core_routing_executor(
-                problem, params, seed, run_idx, algorithm_name, engine_name=algorithm_name
+                problem, params, seed, run_idx, algorithm_name,
+                engine_name="Matrix-PSO-TSP-legacy",
             )
         else:
             cfg = dict(defaults)
@@ -1386,53 +1387,51 @@ for _hybrid_id in (
 # Numba-accelerated Bildiri2026 solvers. Both Core-* and Numba-* entry
 # points now resolve to GWOOptimizer / HHOOptimizer which use the cached
 # numpy matrix + numba JIT kernel path via BaseTSPSolver.solve_with_matrix.
-_NUMBA_METAH_OVERRIDES = None
-try:
-    from uniride_core.algorithms.tsp_matrix_metaheuristics import GWOOptimizer, HHOOptimizer
-    _NUMBA_METAH_OVERRIDES = {
-        "Core-GWO-TSP": (GWOOptimizer, {
-            "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
-            "exploration_rate": 0.4, "max_no_improvement": 75,
-        }, None, "memetic_2opt", True),
-        "Core-GWO-TSP-Pure": (GWOOptimizer, {
-            "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
-            "exploration_rate": 0.4, "max_no_improvement": 75,
-        }, "Core-GWO-TSP", "pure", False),
-        "Core-GWO-TSP-Memetic-2opt": (GWOOptimizer, {
-            "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
-            "exploration_rate": 0.4, "max_no_improvement": 75,
-        }, "Core-GWO-TSP", "memetic_2opt", True),
-        "Core-HHO-TSP": (HHOOptimizer, {
-            "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
-            "jump_probability": 0.5, "max_no_improvement": 75,
-        }, None, "memetic_2opt", True),
-        "Core-HHO-TSP-Pure": (HHOOptimizer, {
-            "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
-            "jump_probability": 0.5, "max_no_improvement": 75,
-        }, "Core-HHO-TSP", "pure", False),
-        "Core-HHO-TSP-Memetic-2opt": (HHOOptimizer, {
-            "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
-            "jump_probability": 0.5, "max_no_improvement": 75,
-        }, "Core-HHO-TSP", "memetic_2opt", True),
-        "Numba-GWO": (GWOOptimizer, {
-            "pack_size": 80, "max_iterations": 250, "initial_a": 2.0,
-            "exploration_rate": 0.4, "max_no_improvement": 75,
-        }, "Core-GWO-TSP", "memetic_2opt", True),
-        "Numba-HHO": (HHOOptimizer, {
-            "hawks": 80, "max_iterations": 250, "initial_energy": 1.0,
-            "jump_probability": 0.5, "max_no_improvement": 75,
-        }, "Core-HHO-TSP", "memetic_2opt", True),
-    }
-except Exception as _e:  # ImportError or missing numpy/numba deps
-    logger.warning("Numba-accelerated GWO/HHO solvers unavailable: %s", _e)
+# C-14: a failed import must fail closed. There is no fallback engine under these names, so
+# the ImportError propagates and the academic registry does not load.
+from uniride_core.algorithms.tsp_matrix_metaheuristics import GWOOptimizer, HHOOptimizer
 
-if _NUMBA_METAH_OVERRIDES:
-    for _algo_name, (_cls, _defaults, _routing_eng, _variant, _polish_enabled) in _NUMBA_METAH_OVERRIDES.items():
-        AlgorithmRegistry.register(_algo_name)(
-            _make_numba_metah_executor(
-                _algo_name, _cls, _defaults, _routing_eng, _variant, _polish_enabled
-            )
+_NUMBA_METAH_OVERRIDES = {
+    "Core-GWO-TSP": (GWOOptimizer, {
+        "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
+        "exploration_rate": 0.4, "max_no_improvement": 75,
+    }, "Matrix-GWO-TSP-legacy", "memetic_2opt", True),
+    "Core-GWO-TSP-Pure": (GWOOptimizer, {
+        "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
+        "exploration_rate": 0.4, "max_no_improvement": 75,
+    }, "Matrix-GWO-TSP-legacy", "pure", False),
+    "Core-GWO-TSP-Memetic-2opt": (GWOOptimizer, {
+        "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
+        "exploration_rate": 0.4, "max_no_improvement": 75,
+    }, "Matrix-GWO-TSP-legacy", "memetic_2opt", True),
+    "Core-HHO-TSP": (HHOOptimizer, {
+        "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
+        "jump_probability": 0.5, "max_no_improvement": 75,
+    }, "Matrix-HHO-TSP-legacy", "memetic_2opt", True),
+    "Core-HHO-TSP-Pure": (HHOOptimizer, {
+        "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
+        "jump_probability": 0.5, "max_no_improvement": 75,
+    }, "Matrix-HHO-TSP-legacy", "pure", False),
+    "Core-HHO-TSP-Memetic-2opt": (HHOOptimizer, {
+        "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
+        "jump_probability": 0.5, "max_no_improvement": 75,
+    }, "Matrix-HHO-TSP-legacy", "memetic_2opt", True),
+    "Numba-GWO": (GWOOptimizer, {
+        "pack_size": 80, "max_iterations": 250, "initial_a": 2.0,
+        "exploration_rate": 0.4, "max_no_improvement": 75,
+    }, "Matrix-GWO-TSP-legacy", "memetic_2opt", True),
+    "Numba-HHO": (HHOOptimizer, {
+        "hawks": 80, "max_iterations": 250, "initial_energy": 1.0,
+        "jump_probability": 0.5, "max_no_improvement": 75,
+    }, "Matrix-HHO-TSP-legacy", "memetic_2opt", True),
+}
+
+for _algo_name, (_cls, _defaults, _routing_eng, _variant, _polish_enabled) in _NUMBA_METAH_OVERRIDES.items():
+    AlgorithmRegistry.register(_algo_name)(
+        _make_numba_metah_executor(
+            _algo_name, _cls, _defaults, _routing_eng, _variant, _polish_enabled
         )
+    )
 
 for algo_name in FCM_TSP_SOLVERS:
     AlgorithmRegistry.register(algo_name)(_make_matrix_tsp_executor(algo_name))
@@ -1591,24 +1590,24 @@ def _route_costs(routes, matrix, depot_index):
 
 _ROUTING_ALIAS_ENGINES = {
     "Core-Greedy-Routing": "Core-Greedy-Routing",
-    "Core-TwoOpt-TSP": "Core-TwoOpt-TSP",
-    "Core-GA-TSP": "Core-GA-TSP",
-    "Core-PSO-TSP": "Core-PSO-TSP",
-    "Core-GWO-TSP": "Core-GWO-TSP",
-    "Core-HHO-TSP": "Core-HHO-TSP",
-    "Numba-2-opt": "Core-TwoOpt-TSP",
-    "Numba-3-opt-bounded": "Core-TwoOpt-TSP",
-    "Numba-Or-opt": "Core-TwoOpt-TSP",
-    "Numba-Swap": "Core-TwoOpt-TSP",
-    "Numba-Hybrid": "Core-TwoOpt-TSP",
-    "Numba-GA": "Core-GA-TSP",
-    "Numba-PSO": "Core-PSO-TSP",
-    "Numba-GWO": "Core-GWO-TSP",
-    "Numba-HHO": "Core-HHO-TSP",
-    "GA-Split": "Core-GA-TSP",
-    "PSO-Split": "Core-PSO-TSP",
-    "GWO-Split": "Core-GWO-TSP",
-    "HHO-Split": "Core-HHO-TSP",
+    "Core-TwoOpt-TSP": "Matrix-TwoOpt-TSP-legacy",
+    "Core-GA-TSP": "Matrix-GA-TSP-legacy",
+    "Core-PSO-TSP": "Matrix-PSO-TSP-legacy",
+    "Core-GWO-TSP": "Matrix-GWO-TSP-legacy",
+    "Core-HHO-TSP": "Matrix-HHO-TSP-legacy",
+    "Numba-2-opt": "Matrix-TwoOpt-TSP-legacy",
+    "Numba-3-opt-bounded": "Matrix-TwoOpt-TSP-legacy",
+    "Numba-Or-opt": "Matrix-TwoOpt-TSP-legacy",
+    "Numba-Swap": "Matrix-TwoOpt-TSP-legacy",
+    "Numba-Hybrid": "Matrix-TwoOpt-TSP-legacy",
+    "Numba-GA": "Matrix-GA-TSP-legacy",
+    "Numba-PSO": "Matrix-PSO-TSP-legacy",
+    "Numba-GWO": "Matrix-GWO-TSP-legacy",
+    "Numba-HHO": "Matrix-HHO-TSP-legacy",
+    "GA-Split": "Matrix-GA-TSP-legacy",
+    "PSO-Split": "Matrix-PSO-TSP-legacy",
+    "GWO-Split": "Matrix-GWO-TSP-legacy",
+    "HHO-Split": "Matrix-HHO-TSP-legacy",
 }
 
 for problem_prefix in ("CVRP", "CVRPTW"):

@@ -22,7 +22,7 @@ def test_run_fcm_srs_comparison_persists_core_and_fcm_results(tmp_path):
         db_path=db_path,
         run_id="fcm-comparison-test",
         dimension=12,
-        algorithms=["Core-GA-TSP", "FCM-GA-TSP"],
+        algorithms=["Matrix-GA-TSP-legacy", "FCM-GA-TSP"],
         population_size=6,
         max_iterations=4,
         fcm_polish_iterations=10,
@@ -32,7 +32,7 @@ def test_run_fcm_srs_comparison_persists_core_and_fcm_results(tmp_path):
 
     assert result["saved_results"] == 2
     assert result["errors"] == []
-    assert {row["algorithm"] for row in rows} == {"Core-GA-TSP", "FCM-GA-TSP"}
+    assert {row["algorithm"] for row in rows} == {"Matrix-GA-TSP-legacy", "FCM-GA-TSP"}
     assert all(row["source"] == "fcm_srs_comparison" for row in rows)
     assert all(row["status"] == "completed" for row in rows)
     assert all(row["objective_cost"] > 0 for row in rows)

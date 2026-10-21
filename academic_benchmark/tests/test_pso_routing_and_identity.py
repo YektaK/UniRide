@@ -70,7 +70,7 @@ def test_core_pso_routing_call_builds_the_pso_engine_not_the_greedy_default(
     monkeypatch.setattr(registry_setup, "create_matrix_engine", recording_create)
     result = AlgorithmRegistry.get_executor("Core-PSO-TSP")(problem, {}, 42, 0)
 
-    assert built == [("Core-PSO-TSP", "TSPMetaMatrixEngine")]
+    assert built == [("Matrix-PSO-TSP-legacy", "TSPMetaMatrixEngine")]
     assert result.algorithm == "Core-PSO-TSP"
     assert result.routes
 

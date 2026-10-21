@@ -12,7 +12,7 @@ import pytest
 
 from academic_benchmark.core import registry_setup
 from academic_benchmark.engine_core import AlgorithmRegistry
-from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS
+from uniride_core.algorithms.engine_factory import MATRIX_LEGACY_TSP_SOLVERS
 from uniride_core.models import ProblemInstance
 
 
@@ -75,9 +75,9 @@ def test_core_tsp_executor_reports_unrounded_cost_with_deterministic_solver() ->
     assert abs(independent - round(independent, 2)) > 1e-6  # fixture is fractional
 
 
-@pytest.mark.parametrize("algorithm", ["Core-GA-TSP", "Core-PSO-TSP"])
+@pytest.mark.parametrize("algorithm", ["Matrix-GA-TSP-legacy", "Matrix-PSO-TSP-legacy"])
 def test_core_tsp_executor_real_solvers_report_unrounded_cost(algorithm: str) -> None:
-    executor = registry_setup._make_core_tsp_executor(algorithm, CORE_TSP_SOLVERS[algorithm])
+    executor = registry_setup._make_core_tsp_executor(algorithm, MATRIX_LEGACY_TSP_SOLVERS[algorithm])
     matrix = _fractional_matrix()
     result = executor(_problem(matrix, time_matrix=False), {"max_iterations": 3}, 3, 0)
     _assert_exact(result, matrix)

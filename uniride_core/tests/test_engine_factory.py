@@ -15,11 +15,11 @@ def test_matrix_engine_factory_lists_core_engines():
 
     assert {
         "Core-Greedy-Routing",
-        "Core-TwoOpt-TSP",
-        "Core-GA-TSP",
-        "Core-PSO-TSP",
-        "Core-GWO-TSP",
-        "Core-HHO-TSP",
+        "Matrix-TwoOpt-TSP-legacy",
+        "Matrix-GA-TSP-legacy",
+        "Matrix-PSO-TSP-legacy",
+        "Matrix-GWO-TSP-legacy",
+        "Matrix-HHO-TSP-legacy",
         "FCM-GA-TSP",
         "FCM-PSO-TSP",
         "FCM-GWO-TSP",
@@ -29,13 +29,12 @@ def test_matrix_engine_factory_lists_core_engines():
 
 def test_matrix_engine_factory_creates_greedy_and_tsp_engines():
     assert isinstance(create_matrix_engine("Core-Greedy-Routing"), GreedyMatrixEngine)
-    assert isinstance(create_matrix_engine("Core-GA-TSP"), TSPMetaMatrixEngine)
+    assert isinstance(create_matrix_engine("Matrix-GA-TSP-legacy"), TSPMetaMatrixEngine)
     assert isinstance(create_matrix_engine("FCM-GA-TSP"), FCMSplitMatrixEngine)
 
 
 def test_matrix_engine_factory_normalizes_aliases():
-    assert canonical_matrix_engine_name("Core-2OPT-TSP") == "Core-TwoOpt-TSP"
-    assert canonical_matrix_engine_name("Core-Genetic-TSP") == "Core-GA-TSP"
+    assert canonical_matrix_engine_name("Matrix-GA-TSP-legacy") == "Matrix-GA-TSP-legacy"
     assert canonical_matrix_engine_name("greedy") == "Core-Greedy-Routing"
 
 

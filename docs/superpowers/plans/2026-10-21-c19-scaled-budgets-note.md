@@ -36,3 +36,10 @@ Not changed: `PaperMetadataV1` (the GA/PSO provenance note goes into the commit 
 - `academic_benchmark/studies/service.py`, `academic_benchmark/studies/smoke.py`
 - `academic_benchmark/studies/bildiri2026/study.json`
 - tests: `test_bildiri_study_profile.py`, new `test_scaled_budget_levels.py`, profile-dependent expectations in `test_study_service.py`, `test_study_smoke.py`, `test_memetic_polish_truthfulness.py`; pins in `test_exact_reference_boundaries.py` (and any other pin of the two files)
+
+## Outcome (implementation, 2026-10-21)
+
+- Implemented as chosen; no fairness meaning, pooling identity or executor changed. Mutants (service recomputation off, contract n(n-1)/2 check off, wrong multiplier, wrong n, artifact DIMENSION check off, GA population ignored, smoke global-minimum slice) were all caught.
+- Parameter note: the C-04 `max_iterations`/`max_no_improvement` 60000 of pure GWO/HHO would stop them before the 100-scan budget (pure GWO spends about one evaluation per iteration; 100 x 1275 = 127500 > 60000), so the profile sets 495000 (the largest level) for the two pure entries; the memetic entries keep 60000 (they never reach it at these budgets).
+- Smoke observation (one replicate, no claim): with the explicit C-16a/C-16b defaults the pure GA (population 20, 500 generations) stops at 9020 evaluations and the PSO (swarm 50, 500 iterations) at 25500, both by `max_iterations`, below every level of the profile; at the 20-scan level the memetic GA spends the whole budget after its 20 initial evaluations in the initial 2-opt (no generation).
+- Provenance (plan section 1.4): the published Bildiri 2026 GA and PSO numbers came from the archived memetic GA and memetic PSO; the profile's `Core-GA-TSP` and `Core-PSO-TSP` are the pure canonical algorithms. `PaperMetadataV1` is not changed for this note.

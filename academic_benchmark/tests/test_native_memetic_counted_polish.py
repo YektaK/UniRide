@@ -223,7 +223,7 @@ def test_native_manifest_rejects_cross_variant_records_in_both_directions(algori
     with pytest.raises(FairnessValidationError, match="only the memetic_2opt variant for memetic IDs"):
         manifest.validate_result(replace(result, variant=COMPOSITE_VARIANT))
     hybrid_id = algorithm_id.replace("Memetic-2opt", "Memetic-3opt")
-    with pytest.raises(FairnessValidationError, match="accepts only pure variants|composite"):
+    with pytest.raises(FairnessValidationError, match="accepts only pure variants"):
         manifest.validate_result(
             replace(result, algorithm=hybrid_id, algorithm_id=hybrid_id, variant="memetic_2opt")
         )

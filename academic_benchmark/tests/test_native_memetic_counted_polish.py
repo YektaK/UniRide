@@ -181,3 +181,42 @@ def test_ungoverned_memetic_run_keeps_the_numba_polish_kernel(monkeypatch):
         _problem("tsp"), params, seed=1, run_idx=0
     )
     assert calls
+
+
+def _pilot_config_with(memetic_blocks):
+    from academic_benchmark.tests.test_native_termination_protocol import _config
+
+    data = _config()
+    data["algorithms"].update(memetic_blocks)
+    return data
+
+
+def test_pilot_config_accepts_memetic_members_as_optional_and_rejects_zero_polish(tmp_path):
+    import json
+
+    from academic_benchmark.native_pilot import NativePilotError, load_native_pilot_config
+
+    def load(blocks):
+        path = tmp_path / "config.json"
+        path.write_text(json.dumps(_pilot_config_with(blocks)), encoding="utf-8")
+        return load_native_pilot_config(path)
+
+    good = {
+        "Core-GWO-TSP-Memetic-2opt": {
+            "pack_size": 5, "max_iterations": 3, "max_no_improvement": 9,
+            "polish_iters": 2, "final_polish_iters": 3,
+        },
+        "Core-HHO-TSP-Memetic-2opt": {
+            "hawks": 5, "max_iterations": 3, "max_no_improvement": 9,
+            "polish_iters": 2, "final_polish_iters": 3,
+        },
+    }
+    config = load(good)
+    assert set(MEMETIC_IDS) <= set(config.algorithms)
+    zero = {k: {**v, "polish_iters": 0, "final_polish_iters": 0} for k, v in good.items()}
+    with pytest.raises(NativePilotError, match="positive polish_iters"):
+        load(zero)
+    missing = {k: {kk: vv for kk, vv in v.items() if kk != "final_polish_iters"}
+               for k, v in good.items()}
+    with pytest.raises(NativePilotError, match="schema mismatch"):
+        load(missing)

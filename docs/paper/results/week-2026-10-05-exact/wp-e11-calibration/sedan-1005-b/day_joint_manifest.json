@@ -1,0 +1,121 @@
+{
+  "aggregate": true,
+  "blocking_errors": [],
+  "claim": "Exact joint day model over all enumerated routes of a service date (solver-proven value or bound); a separate protocol, never pooled with exact_reference_v1 wave rows, union_day_v1 menu rows or heuristic rows; prototype results are reproduction targets, never tuning targets.",
+  "crosscheck_enabled": true,
+  "development_run": false,
+  "dirty_working_tree": false,
+  "enumeration": {
+    "column_cap": 2000000,
+    "columns_per_day": {
+      "large+sedan|2026-10-05|R70": 16239,
+      "large+sedan|2026-10-05|R90": 47215
+    },
+    "label_cap": 5000000,
+    "wall_clock_limit_seconds": 600
+  },
+  "git_commit": "d5c25a04010799d53f7fb5c471e73fbbfe8492a5",
+  "host_os": "Windows-11",
+  "mps_sha256": {
+    "large+sedan|2026-10-05|R70|L2|stage1": "8ddef46c9bd2c3d3f89def85acb9103f40eb6b4159abe23ad777a360a6ff0228",
+    "large+sedan|2026-10-05|R70|L2|stage2": "c0c3400ea0444b93b2603c02f454652845a4f519d5de3132ea60beca7454e60a",
+    "large+sedan|2026-10-05|R70|L2|stage3": "0be911bd26949aebf25527fa4348dd485139aa8643988dd8a7cb8e15cb4e71bb",
+    "large+sedan|2026-10-05|R90|L2|stage1": "8555ed991841be39bbc59ad0ba19603b349e3dbada9f68e27925f7eede16001a",
+    "large+sedan|2026-10-05|R90|L2|stage2": "0d07c477d1c3ebe890f19a4aa255f2c6ffe32c2beb33e8f8e4d312c007e808ad",
+    "large+sedan|2026-10-05|R90|L2|stage3": "e50f5dc42f1ee210359913ac6a3ef7e6a2fc15029a213ff42db7166a0c888292"
+  },
+  "options": {
+    "dates": [
+      "2026-10-05"
+    ],
+    "fleets": [
+      "large+sedan"
+    ],
+    "limits": [
+      2
+    ],
+    "rides": [
+      70,
+      90
+    ]
+  },
+  "output_sha256": {
+    "day_joint.csv": "71b80f8f28a9c176893ec82773cb2075368eb8fda6f9ac8ffd9602400ef5b24a",
+    "day_joint_plans.json": "6189903f967d7e40f899b21f864181e07cb2286a9eb28e83d0955fdd6fe007de",
+    "day_joint_stages.csv": "d6322629100e8a73a7cb74b53d0c6af48f85529bc2c623917a013d562fefdb08",
+    "day_joint_week.csv": "669f0c1c20ecad07ca789278be5b4d9eb1e79a105bb58f2886dbd3c984a69054",
+    "lb0.csv": "f6781dc68308b746bfd42f65d85318fed9d227d059457d8136b289ac31d4a628"
+  },
+  "protocol": "exact_day_joint_v1",
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "optimizer_api": "optimizer_api/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "run_history": {
+    "cache": "none",
+    "cells": [
+      {
+        "cell": "large+sedan|2026-10-05|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 124.99
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 679.13
+      }
+    ],
+    "cells_planned": 2,
+    "cells_solved": 2,
+    "invocations": [
+      {
+        "jobs": 1,
+        "serial": true,
+        "wall_seconds": 804.6
+      }
+    ],
+    "jobs": 1
+  },
+  "run_label": "",
+  "schema_version": 1,
+  "sensitivity_run": false,
+  "solvers": {
+    "gurobi": {
+      "name": "gurobi",
+      "options": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "Gurobi 13.0.3",
+      "work_limit": null
+    },
+    "highs": {
+      "name": "highs",
+      "options": "output_flag=false threads=1 random_seed=0 mip_rel_gap=0 mip_abs_gap=0.99 time_limit=600",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "1.15.1",
+      "work_limit": null
+    }
+  },
+  "source_manifests": {
+    "large+sedan": {
+      "fixed_type": "large",
+      "git_commit": "f29aa3d884882ada678e11ba3d5761b1ea65665a",
+      "manifest_sha256": "279a06fc19f222740e93bf842bb65ca407f221e7c3c159b6d0e084b019d7643b",
+      "minimised_type": "sedan",
+      "path": "docs/paper/results/week-2026-10-05-fleet-rerun-large-sedan"
+    }
+  },
+  "tools": {
+    "cli_command": "node --conditions=react-server --import tsx scripts/verify-typed-selection.ts",
+    "node": "v25.5.0",
+    "tsx": null
+  },
+  "total_wall_seconds": 804.6,
+  "wave_values": "sp",
+  "work_package": "WP-E11"
+}

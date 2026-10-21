@@ -621,8 +621,9 @@ def _executed_polish_policy(extra_stats, polish_enabled=False):
     (``polish_evaluations``); a phase is reported only when it spent at least one
     (audit M19: a polish call that finds the budget already exhausted did nothing).
     ``executed`` keeps the per-phase call counts as information. Where no counter
-    exists (the native path, owned by C-10) the flags fall back to the call counts
-    and ``evaluations`` is omitted.
+    exists (an ungoverned run) the flags fall back to the call counts and
+    ``evaluations`` is omitted. Governed native memetic runs count their polish too
+    (C-10), so they report ``evaluations`` like the fixed-budget path.
     """
     phases = ("initial", "periodic", "final")
     calls = {
@@ -721,6 +722,9 @@ def _make_numba_metah_executor(
         cfg["polish_enabled"] = polish_enabled
         if manifest is not None:
             cfg["evaluation_budget"] = manifest.evaluation_budget
+        if native_manifest is not None and polish_enabled:
+            # C-10: native memetic polish is counted (budgeted Python 2-opt, no cap).
+            cfg["count_polish"] = True
 
         solver = solver_cls(**cfg)
         if polish_enabled and (
@@ -792,7 +796,10 @@ def _make_numba_metah_executor(
                 acceptance_policy="population_evolution",
                 neighborhood_window=None,
                 termination_reason=termination_reason,
-                initialization_policy="paired_seed_random_population_all_nodes",
+                initialization_policy=(
+                    "paired_seed_random_population_all_nodes_with_initial_2opt"
+                    if polish_policy["initial"] else "paired_seed_random_population_all_nodes"
+                ),
                 termination_policy=(
                     f"algorithm_native_termination;max_iterations={cfg.get('max_iterations')};"
                     f"max_no_improvement={cfg.get('max_no_improvement')}"

@@ -359,17 +359,42 @@ def test_the_wave_values_verdict_vocabulary_is_the_crosscheck_vocabulary():
         label(solved(), wave_values_crosscheck="yes")
 
 
-def test_c2_by_bound_needs_both_the_day_and_the_wave_values_agreement():
-    ok = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck="agree", wave_values_crosscheck="agree")
+@pytest.mark.parametrize("day_verdict", ["inconclusive", "not_run", "agree"])
+def test_c2_by_bound_rests_on_the_checked_plan_and_the_wave_values_not_on_a_day_agreement(day_verdict):
+    # J5 gives day 'agree' only when every stage is proven on both solvers; stage 1 of a by-bound cell never is, so a
+    # realistic day verdict is 'inconclusive'. The claim must not depend on it.
+    ok = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck=day_verdict, wave_values_crosscheck="agree")
     assert ok.label == "optimal_stage1_by_bound" and ok.proof_claim_allowed
-    assert ok.proof_claim_reason == "crosscheck_and_wave_values_agree" and ok.wave_values_crosscheck_status == "agree"
-    for wave in ("not_run", "inconclusive"):
-        out = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck="agree", wave_values_crosscheck=wave)
-        assert out.label == "optimal_stage1_by_bound" and not out.proof_claim_allowed
-        assert out.proof_claim_reason == f"wave_values_crosscheck_{wave}"
-    for day_verdict in ("not_run", "inconclusive"):
-        out = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck=day_verdict, wave_values_crosscheck="agree")
-        assert not out.proof_claim_allowed and out.proof_claim_reason == f"crosscheck_{day_verdict}"
+    assert ok.proof_claim_reason == "checked_plan_and_wave_values_agree" and ok.wave_values_crosscheck_status == "agree"
+
+
+@pytest.mark.parametrize("day_verdict", ["inconclusive", "not_run", "agree"])
+@pytest.mark.parametrize("wave", ["not_run", "inconclusive"])
+def test_c2_by_bound_without_a_wave_values_agreement_makes_no_claim(day_verdict, wave):
+    out = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck=day_verdict, wave_values_crosscheck=wave)
+    assert out.label == "optimal_stage1_by_bound" and not out.proof_claim_allowed
+    assert out.proof_claim_reason == f"wave_values_crosscheck_{wave}"
+
+
+def test_c2_by_bound_with_an_arithmetic_only_bound_needs_no_wave_verdict():
+    arithmetic = DayBounds(lb0w=bound(5, [PROOF_ARITHMETIC, PROOF_ARITHMETIC]))
+    out = label(BY_BOUND, bounds=arithmetic, crosscheck="inconclusive", wave_values_crosscheck="not_run")
+    assert out.label == "optimal_stage1_by_bound" and out.bound_proof == PROOF_ARITHMETIC
+    assert out.proof_claim_allowed and out.proof_claim_reason == "arithmetic_bound"
+
+
+def test_c2_by_bound_with_a_day_disagreement_is_rejected_and_a_failed_checker_too():
+    assert label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck="blocking", wave_values_crosscheck="agree").label == "rejected"
+    out = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck="inconclusive", wave_values_crosscheck="agree", checker_ok=False)
+    assert out.label == "rejected" and not out.proof_claim_allowed
+
+
+def test_c2_by_bound_with_a_bound_above_incumbent_flag_makes_no_claim():
+    msg = f"{BOUND_ABOVE_INCUMBENT}: ceil(bound - 1e-6)=6 > incumbent=5; bound clipped to the incumbent"
+    res = day(sr("feasible_with_gap", 5, 4), sr("optimal", 90, 90, msg=msg))
+    out = label(res, bounds=BY_BOUND_BOUNDS, crosscheck="inconclusive", wave_values_crosscheck="agree")
+    assert out.label == "optimal_stage1_by_bound" and not out.proof_claim_allowed
+    assert out.proof_claim_reason == "bound_above_incumbent"
 
 
 def test_c2_a_tier_2_certificate_needs_the_wave_values_agreement_and_no_day_crosscheck():

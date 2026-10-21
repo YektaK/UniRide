@@ -5,6 +5,13 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from academic_benchmark.composite_protocol import (
+    COMPOSITE_ALGORITHMS,
+    COMPOSITE_COMPLETE_REASON,
+    COMPOSITE_VARIANT,
+    validate_composite_policy,
+    validate_composite_result,
+)
 from academic_benchmark.engine_core import RunResult
 from academic_benchmark.fairness import (
     FairComparisonManifest,
@@ -44,6 +51,8 @@ class NativeComparisonManifest:
     ALGORITHM_FAMILIES = {
         "Core-GWO-TSP-Pure": "GWO",
         "Core-HHO-TSP-Pure": "HHO",
+        "Core-GWO-TSP-Memetic-3opt": "GWO",
+        "Core-HHO-TSP-Memetic-3opt": "HHO",
         "Core-TwoOpt-TSP": "2-opt",
         "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
@@ -58,6 +67,9 @@ class NativeComparisonManifest:
         "max_iterations",
         "no_improving_move",
         "stagnation_limit",
+        # only composite rows (global_then_final_3opt) may carry it; validate_result
+        # refuses it on every other row
+        COMPOSITE_COMPLETE_REASON,
     })
     REQUIRED_RESULT_FIELDS = (
         "algorithm_id",
@@ -140,12 +152,17 @@ class NativeComparisonManifest:
         elif family != expected_family:
             errors.append("algorithm_family does not match algorithm_id")
         variant = getattr(result, "variant", None)
+        # Memetic-2opt IDs (C-10) accept only memetic_2opt; the composite variant (C-08)
+        # belongs to the 3-opt hybrid IDs; every other ID is pure-only.
         memetic = algorithm_id in NATIVE_MEMETIC_2OPT_ALGORITHMS
-        if variant != ("memetic_2opt" if memetic else "pure"):
-            errors.append(
-                "native comparison accepts only the memetic_2opt variant for memetic IDs"
-                if memetic else "native comparison accepts only pure variants"
-            )
+        composite_row = variant == COMPOSITE_VARIANT and not memetic
+        if memetic:
+            if variant != "memetic_2opt":
+                errors.append(
+                    "native comparison accepts only the memetic_2opt variant for memetic IDs"
+                )
+        elif variant != "pure" and not composite_row:
+            errors.append("native comparison accepts only pure variants")
         if getattr(result, "objective_evaluations", None) != result.evaluations:
             errors.append("objective_evaluations must equal evaluations")
         if result.evaluations <= 0:
@@ -183,6 +200,8 @@ class NativeComparisonManifest:
                     errors.extend(
                         FairComparisonManifest._memetic_polish_count_errors(polish_policy, result)
                     )
+                elif composite_row:
+                    errors.extend(validate_composite_policy(polish_policy, result))
                 else:
                     if any(polish_policy[name] is not False for name in phases):
                         errors.append("native pure variants cannot enable polishing")
@@ -197,7 +216,11 @@ class NativeComparisonManifest:
                 errors.append("GWO/HHO acceptance_policy must be population_evolution")
             if window is not None:
                 errors.append("GWO/HHO neighborhood_window must be null")
-            if reason not in {"max_iterations", "stagnation_limit"}:
+            expected_reasons = (
+                {COMPOSITE_COMPLETE_REASON}
+                if composite_row else {"max_iterations", "stagnation_limit"}
+            )
+            if reason not in expected_reasons:
                 errors.append("GWO/HHO native termination_reason is invalid")
         elif family == "2-opt":
             if acceptance not in {"best_improvement", "first_improvement"}:
@@ -238,6 +261,10 @@ class NativeComparisonManifest:
                 errors.append("PSO native termination_reason is invalid")
         if reason not in self.TERMINATION_REASONS:
             errors.append("unsupported native termination_reason")
+        if composite_row or algorithm_id in COMPOSITE_ALGORITHMS:
+            errors.extend(validate_composite_result(result, fixed_budget=None))
+        elif reason == COMPOSITE_COMPLETE_REASON:
+            errors.append("composite_complete is reserved for composite rows")
         if getattr(result, "execution_backend", None) in {None, "", "unknown"}:
             errors.append("execution backend must be known")
 

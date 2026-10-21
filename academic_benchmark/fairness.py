@@ -7,6 +7,12 @@ import hashlib
 import math
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
+from academic_benchmark.composite_protocol import (
+    COMPOSITE_ALGORITHMS,
+    COMPOSITE_VARIANT,
+    validate_composite_policy,
+    validate_composite_result,
+)
 from academic_benchmark.engine_core import RunResult
 from uniride_core.algorithms.objective_budget import (
     BudgetedSearchResult,
@@ -171,6 +177,79 @@ def validate_scientific_pso_params(params: Mapping[str, Any]) -> dict[str, Any]:
     return dict(params)
 
 
+HYBRID_3OPT_POLISH_REQUIRED = frozenset({"max_iterations", "first_improvement", "window"})
+
+
+def validate_scientific_hybrid_3opt_params(
+    family: str, params: Mapping[str, Any], *, fixed_budget: bool
+) -> dict[str, Any]:
+    """Validate the strict parameter schema of a ``global_then_final_3opt`` run (C-08).
+
+    The run takes two separate namespaces, ``global`` (the pure GWO/HHO stage) and
+    ``polish`` (the one 3-opt stage), both with every key explicit and no unknown key; a
+    polish knob in the global namespace is refused, so a result row can never be produced
+    from a configuration the solver silently ignored. A fixed-budget run also needs an
+    explicit ``global_fraction`` in (0, 1); a native run has none.
+    """
+    # The names of the swarm hyperparameters are owned by the composition engine.
+    from uniride_core.algorithms.composition import _SWARM_REQUIRED
+
+    top_required = {"global", "polish"} | ({"global_fraction"} if fixed_budget else set())
+    missing = top_required - params.keys()
+    unknown = params.keys() - top_required
+    if missing or unknown:
+        raise ValueError(
+            "hybrid parameter schema mismatch (global and polish namespaces"
+            + (", explicit global_fraction" if fixed_budget else "; native runs take no global_fraction")
+            + f"); missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
+    global_params, polish_params = params["global"], params["polish"]
+    if not isinstance(global_params, Mapping) or not isinstance(polish_params, Mapping):
+        raise ValueError("hybrid global and polish parameters must be mappings")
+    required = set(_SWARM_REQUIRED[family])
+    missing = required - global_params.keys()
+    unknown = global_params.keys() - required
+    if missing or unknown:
+        raise ValueError(
+            f"hybrid global ({family}) parameter schema mismatch; "
+            f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
+    missing = HYBRID_3OPT_POLISH_REQUIRED - polish_params.keys()
+    unknown = polish_params.keys() - HYBRID_3OPT_POLISH_REQUIRED
+    if missing or unknown:
+        raise ValueError(
+            "hybrid polish (3-opt) parameter schema mismatch; "
+            f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
+    counts = ("pack_size", "hawks", "max_iterations", "max_no_improvement")
+    for field in counts:
+        if field in global_params:
+            value = global_params[field]
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError(f"invalid hybrid global parameter: {field}")
+    for field in ("dive_count",):
+        if field in global_params:
+            value = global_params[field]
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"invalid hybrid global parameter: {field}")
+    for field in required - set(counts) - {"dive_count"}:
+        if not _is_finite_alns_number(global_params[field]):
+            raise ValueError(f"invalid hybrid global parameter: {field}")
+    value = polish_params["max_iterations"]
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError("invalid hybrid polish parameter: max_iterations")
+    if not isinstance(polish_params["first_improvement"], bool):
+        raise ValueError("invalid hybrid polish parameter: first_improvement")
+    value = polish_params["window"]
+    if isinstance(value, bool) or not isinstance(value, int) or value < 2:
+        raise ValueError("invalid hybrid polish parameter: window")
+    if fixed_budget:
+        fraction = params["global_fraction"]
+        if not _is_finite_alns_number(fraction) or not 0 < fraction < 1:
+            raise ValueError("invalid hybrid parameter: global_fraction must be strictly between 0 and 1")
+    return {key: params[key] for key in top_required}
+
+
 @dataclass
 class FairRunResult(RunResult):
     """Backward-compatible RunResult carrying the academic fairness contract."""
@@ -191,6 +270,8 @@ class FairRunResult(RunResult):
     acceptance_policy: str = ""
     neighborhood_window: Optional[int] = None
     termination_reason: str = ""
+    # Stage record of a composite (global_then_final_3opt) run; None for every other row.
+    composition: Optional[Dict[str, Any]] = None
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -244,6 +325,8 @@ class FairComparisonManifest:
         "Core-GWO-TSP-Memetic-2opt": "GWO",
         "Core-HHO-TSP-Pure": "HHO",
         "Core-HHO-TSP-Memetic-2opt": "HHO",
+        "Core-GWO-TSP-Memetic-3opt": "GWO",
+        "Core-HHO-TSP-Memetic-3opt": "HHO",
         "Core-TwoOpt-TSP": "2-opt",
         "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
@@ -418,8 +501,13 @@ class FairComparisonManifest:
                 bool_fields = ("enabled", "initial", "periodic", "final")
                 if any(not isinstance(polish_policy[field], bool) for field in bool_fields):
                     errors.append("polish_policy phase fields must be booleans")
-                if polish_policy["operator"] not in (None, "2-opt"):
-                    errors.append("polish_policy operator must be None or '2-opt'")
+                composite_row = getattr(result, "variant", None) == COMPOSITE_VARIANT
+                allowed_operators = (None, "3-opt") if composite_row else (None, "2-opt")
+                if polish_policy["operator"] not in allowed_operators:
+                    errors.append(
+                        "polish_policy operator must be None or "
+                        + ("'3-opt'" if composite_row else "'2-opt'")
+                    )
 
                 variant = getattr(result, "variant", None)
                 if variant == "pure":
@@ -450,8 +538,20 @@ class FairComparisonManifest:
                             "memetic_2opt variant must declare operator '2-opt'"
                         )
                     errors.extend(self._memetic_polish_count_errors(polish_policy, result))
+                elif variant == COMPOSITE_VARIANT:
+                    errors.extend(validate_composite_policy(polish_policy, result))
                 else:
                     errors.append("unsupported fair variant")
+        if getattr(result, "variant", None) == COMPOSITE_VARIANT or (
+            algorithm_id in COMPOSITE_ALGORITHMS
+        ):
+            if self.protocol_version != self.V2_PROTOCOL:
+                errors.append("composite rows need protocol v2 (explicit termination_reason)")
+            errors.extend(
+                validate_composite_result(result, fixed_budget=self.evaluation_budget)
+            )
+        elif getattr(result, "termination_reason", None) == "composite_complete":
+            errors.append("composite_complete is reserved for composite rows")
         if getattr(result, "execution_backend", None) == "unknown":
             errors.append("execution backend must be known")
         if result.seed != self.paired_seed(result.problem, result.run):

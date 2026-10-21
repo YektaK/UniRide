@@ -46,6 +46,7 @@ class CompositionKind(str, Enum):
     MEMETIC_2OPT = "memetic_2opt"
     LOCAL_SEARCH = "local_search"
     POPULATION_BASED = "population_based"
+    GLOBAL_THEN_FINAL_3OPT = "global_then_final_3opt"
 
 
 @dataclass(frozen=True)
@@ -241,6 +242,41 @@ def _alns_claims() -> tuple[CapabilityClaim, ...]:
     )
 
 
+def _hybrid_3opt_claims(
+    family_function: str,
+) -> tuple[CapabilityClaim, ...]:
+    """TSP/ATSP fixed-budget and native claims of a ``global_then_final_3opt`` hybrid (C-08).
+
+    ``family_function`` is ``gwo`` or ``hho``; each protocol cites its own evidence node in
+    ``test_hybrid_3opt_evidence.py``. The objective backend is Numba (the pure global
+    stage); the 3-opt polish is Python.
+    """
+    claims: list[CapabilityClaim] = []
+    for protocol, label in (
+        (ExecutionProtocol.FIXED_BUDGET, "fixed"),
+        (ExecutionProtocol.NATIVE_TERMINATION, "native"),
+    ):
+        evidence_id = (
+            "academic_benchmark/tests/test_hybrid_3opt_evidence.py::"
+            f"test_core_{family_function}_memetic_3opt_{label}_tsp_and_atsp_evidence"
+        )
+        for problem in (ProblemContract.TSP, ProblemContract.ATSP):
+            claims.append(CapabilityClaim(
+                problem=problem,
+                protocol=protocol,
+                backend_profile=ExecutionBackendProfile(
+                    BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON
+                ),
+                composition=CompositionKind.GLOBAL_THEN_FINAL_3OPT,
+                directed_cost_preserved=problem is ProblemContract.ATSP,
+                exact_objective_accounting=True,
+                fixed_seed_deterministic=True,
+                truthful_result_reporting=True,
+                evidence_ids=(evidence_id,),
+            ))
+    return tuple(claims)
+
+
 _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
     AlgorithmCapability(
         "Core-TwoOpt-TSP", "TwoOpt", "2-opt", LifecycleStatus.VERIFIED,
@@ -272,8 +308,8 @@ _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
         LifecycleStatus.VERIFIED,
         claims=_alns_claims(),
     ),
-    AlgorithmCapability("Core-GWO-TSP-Memetic-3opt", "GWO", "Grey Wolf Optimizer (memetic 3-opt)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 3-opt composition."),
-    AlgorithmCapability("Core-HHO-TSP-Memetic-3opt", "HHO", "Harris Hawks Optimizer (memetic 3-opt)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 3-opt composition."),
+    AlgorithmCapability("Core-GWO-TSP-Memetic-3opt", "GWO", "Grey Wolf Optimizer + 3-opt (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_3opt_claims("gwo")),
+    AlgorithmCapability("Core-HHO-TSP-Memetic-3opt", "HHO", "Harris Hawks Optimizer + 3-opt (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_3opt_claims("hho")),
     AlgorithmCapability("Core-GWO-TSP-Memetic-ALNS", "GWO", "Grey Wolf Optimizer (memetic ALNS)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 ALNS composition."),
     AlgorithmCapability("Core-HHO-TSP-Memetic-ALNS", "HHO", "Harris Hawks Optimizer (memetic ALNS)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 ALNS composition."),
 )

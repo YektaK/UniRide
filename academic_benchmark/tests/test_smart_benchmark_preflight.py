@@ -404,6 +404,9 @@ def test_cli_task_builder_preserves_legacy_tuple_and_adds_governed_request() -> 
     assert task[6] == governed.governed_request
 
 def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(monkeypatch) -> None:
+    # Every live governed ID may be VERIFIED; a synthetic CANDIDATE keeps the lifecycle
+    # filter of _selectable_algorithm_ids observable (it must be excluded).
+    force_lifecycle(monkeypatch, "Core-GA-TSP", LifecycleStatus.CANDIDATE)
     verified_ids = [
         algorithm_id
         for algorithm_id, capability in CAPABILITY_CATALOG.items()
@@ -424,10 +427,14 @@ def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(
 
     monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", Registry)
 
-    assert smart_benchmark._selectable_algorithm_ids() == [
+    selectable = smart_benchmark._selectable_algorithm_ids()
+    assert "Core-GA-TSP" in Registry.list_algorithms()
+    assert "Core-GA-TSP" not in selectable
+    assert selectable == [
         *verified_ids,
         "Core-Greedy-Routing",
     ]
+    assert len(verified_ids) == len(CAPABILITY_CATALOG) - 1
 
 
 @pytest.mark.parametrize("algorithm_id", ["Core-GA-TSP", "Numba-GA"])
@@ -501,6 +508,18 @@ def test_cli_alias_selection_uses_canonical_spec_and_governed_request() -> None:
     assert selected[0].name == "Core-TwoOpt-TSP"
     assert selected[0].governed_request is not None
     assert selected[0].governed_request.requested_algorithm_id == "Numba-2-opt"
+
+
+def test_cli_planned_governed_id_fails_in_lifecycle_validation(monkeypatch) -> None:
+    force_lifecycle(monkeypatch, "Core-PSO-TSP", LifecycleStatus.PLANNED)
+    request = cli_engine.GovernedExecutionRequest(
+        "Core-PSO-TSP", "Core-PSO-TSP", ExecutionProtocol.FIXED_BUDGET, 10, BackendPolicy.PYTHON_ONLY
+    )
+
+    with pytest.raises(PlannedAlgorithmError):
+        cli_engine._validate_governed_lifecycle(request)
+    with pytest.raises(PlannedAlgorithmError):
+        cli_engine._select_cli_specs([], ["Core-PSO-TSP"], "fixed_evaluation_budget", 10, "python_only")
 
 
 def test_cli_candidate_alias_fails_instead_of_becoming_zero_tasks(monkeypatch) -> None:

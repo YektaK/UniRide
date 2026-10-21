@@ -238,6 +238,8 @@ def test_study_rejects_canonical_candidate_secondary_ids_with_typed_error(
         "Core-GWO-TSP-Memetic-2opt",
         "Core-HHO-TSP-Memetic-2opt",
         "ALNS-TSP",
+        "Core-GA-TSP",
+        "Core-PSO-TSP",
     ],
 )
 def test_study_accepts_verified_canonical_primary_ids(algorithm_id: str):

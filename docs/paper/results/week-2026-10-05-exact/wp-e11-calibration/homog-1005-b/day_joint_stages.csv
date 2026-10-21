@@ -1,0 +1,9 @@
+fleet,date,R,L,solver,stage,status,stop_reason,objective,bound,bound_ceil,bound_source,timing_dependent,non_lexicographic,wall_seconds,work_units,solve_result,mps_sha256
+single_4sw5so,2026-10-05,70,,highs,1,optimal,optimal,4,4.0,4,solver,False,False,9.898228800000652,,kOptimal,b6cc9cdc4b6c834664d5a6f2b6f8baf96c46957e6c898e598b8f2158faf48f8f
+single_4sw5so,2026-10-05,70,,highs,2,optimal,optimal,1348,1347.99998752,1348,solver,False,False,16.768348700001297,,kOptimal,aaf3265a9cba0336256a29ef77536668dbc126394b5cc8ecbe418cc0c4385ebf
+single_4sw5so,2026-10-05,70,,gurobi,1,optimal,optimal,4,4.0,4,solver,False,False,0.7578,0.53,solved,b6cc9cdc4b6c834664d5a6f2b6f8baf96c46957e6c898e598b8f2158faf48f8f
+single_4sw5so,2026-10-05,70,,gurobi,2,optimal,optimal,1348,1348.0,1348,solver,False,False,1.0109,0.59,solved,aaf3265a9cba0336256a29ef77536668dbc126394b5cc8ecbe418cc0c4385ebf
+single_4sw5so,2026-10-05,90,,highs,1,optimal,optimal,3,3.0,3,solver,False,False,70.99875510000129,,kOptimal,2fe5ec0e33b808ca632c6c8462d2ff1d7afdfc6c63d5c0c11deb767e2b13fcdf
+single_4sw5so,2026-10-05,90,,highs,2,optimal,optimal,1303,1302.999987969998,1303,solver,False,False,42.81073020000076,,kOptimal,39983afc3e0f695f407914396e6c09e8be44cb1f3da708fd63ff84c1a5ae2ef5
+single_4sw5so,2026-10-05,90,,gurobi,1,optimal,optimal,3,3.0,3,solver,False,False,3.9466,2.42,solved,2fe5ec0e33b808ca632c6c8462d2ff1d7afdfc6c63d5c0c11deb767e2b13fcdf
+single_4sw5so,2026-10-05,90,,gurobi,2,optimal,optimal,1303,1303.0,1303,solver,False,False,1.8071,1.6,solved,39983afc3e0f695f407914396e6c09e8be44cb1f3da708fd63ff84c1a5ae2ef5

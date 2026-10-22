@@ -303,15 +303,24 @@ item C-19). It declares:
 - ten canonical IDs: `Core-TwoOpt-TSP`, `Core-ThreeOpt-TSP`, `Core-OrOpt-TSP`,
   `Core-GA-TSP`, `Core-PSO-TSP`, `Core-GA-TSP-Memetic-2opt`,
   `Core-GWO-TSP-Pure`, `Core-HHO-TSP-Pure`, `Core-GWO-TSP-Memetic-2opt`,
-  `Core-HHO-TSP-Memetic-2opt`, with every parameter written out;
+  `Core-HHO-TSP-Memetic-2opt`, with every parameter written out (the
+  local searches state the registry defaults: `max_iterations` 1000,
+  best improvement, window 12 for 3-opt and 3 for Or-opt);
 - seven dataset manifests: the TSP instances berlin52, eil51, st70, kroA100,
   rd100 and eil76, and the ATSP instance ft53;
 - fixed budget levels scaled per instance (`scaled_fixed_budget_levels`, rule
   `two_opt_scan_multiples_v1`): 50 x and 250 x n(n-1)/2 objective evaluations,
   one full 2-opt scan per unit; the study service recomputes the table from
   each dataset manifest and refuses a mismatch. All algorithms get the same
-  levels on a given instance, and the budget is the stopping rule (iteration
-  and stagnation limits are set so that they do not stop a run first);
+  levels on a given instance, and the budget is the stopping rule: iteration
+  and stagnation limits are set so that they do not stop a run first, except
+  that 2-opt and Or-opt stop at a local optimum (`no_improving_move`, their
+  documented stop, fairness design rule 6) when they reach one before the
+  budget;
+- GWO/HHO schedule: in fixed-budget runs the GWO and HHO explore-to-exploit
+  schedules follow the share of the budget spent, so `max_iterations` is only
+  a stop limit (DECISION_LOG A17, 2026-10-22; implemented on the branch
+  `feat/gwo-hho-budget-schedule`, which is merged before this profile);
 - paired seeds, the fixed-budget primary protocol, a native-termination
   secondary protocol for the pure GWO/HHO entries, a smoke placeholder
   `run_count` and the smoke-only repository output policy.

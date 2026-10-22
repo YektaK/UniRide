@@ -14,6 +14,8 @@ Labels used below: **[fact]** = checked in source or committed results on 2026-1
 
 WP-E11 brings this model into `uniride_core`, with proofs, an independent checker and a separate protocol.
 
+**WP-E11 status (2026-10-22; J11 results merged at `a5885234`; J12 records open).** The header line "design for owner approval; no code" is the state at writing; the owner approved the design on 2026-10-20 (E14). The model, runner, checker and the J10 and J11 results are merged. The J11 record is `docs/paper/results/week-2026-10-05-exact/wp-e11-joint-day/`: one clean serial run of `scripts/run_exact_day_joint.py --work-limit 200` at code commit `e45cd6bf`, 140 cells (`single_4sw5so` 20, large+sedan 60, large+Doblò cap3 60), HiGHS primary, Gurobi through AMPL as cross-check, 600 s per solver call. It was the third attempt at that commit; attempts 1 and 2 stopped with `backend_unavailable` (Gurobi licence) and wrote nothing. Labels: 114 `optimal`, 15 `infeasible_certified`, 11 `infeasible_solver_proven`. All 140 cells carry a proof claim (125 two-solver day agreements, 8 tier-1 and 7 tier-2 certificates). Blocking defects: 0. Reproduction categories (§6.3): 79 `equal`, 1 `prototype_open` (large+sedan 2026-10-05 R90 L2, where production proves S = 2), 60 `no_external_target`. The first run (code `f77c2484`, results `2ea2c5a2`) is superseded and not pooled. The rerun matches it in label, value, plan and MPS sha256 in all 140 cells, except the Doblò cell 2026-10-08 R50 L2 (its claim was withheld in the first run because of an integrality-test defect fixed before the rerun) and the raw Gurobi `bound` column in 113 cells (`bound_ceil` unchanged). Open: README and paper wording through the writing line.
+
 ## 1. Problem
 
 ### 1.1 Scope

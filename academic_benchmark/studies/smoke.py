@@ -254,7 +254,7 @@ def _row_params(study: Any, row: PlanRow) -> Dict[str, Any]:
     Composite IDs (GWO/HHO + final 3-opt or ALNS) keep their ``global``/``polish`` namespaces. A
     fixed-budget composite row needs ``global_fraction`` written explicitly in the study (A17 C-08:
     the executor has no default, so smoke does not supply one either); a native row never passes
-    it, and the native termination keys apply to the global stage."""
+    it, and the native termination keys apply to both stages (an unbounded native polish would make a smoke run last hours)."""
     params: Dict[str, Any] = copy.deepcopy(dict(study.algorithm_parameters[row.algorithm_id]))
     fixed = row.protocol is ExecutionProtocol.FIXED_BUDGET
     composite = is_composite_algorithm(row.algorithm_id)
@@ -268,7 +268,8 @@ def _row_params(study: Any, row: PlanRow) -> Dict[str, Any]:
     termination = copy.deepcopy(dict(study.secondary_protocol.termination))
     if composite:
         params.pop("global_fraction", None)  # native runs refuse it
-        params["global"] = {**params.get("global", {}), **termination}
+        for stage in ("global", "polish"):  # the native stopping rule bounds every stage
+            params[stage] = {**params.get(stage, {}), **termination}
     else:
         params.update(termination)
     return params

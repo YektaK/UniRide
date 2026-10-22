@@ -918,7 +918,7 @@ def test_a_licence_failure_then_success_gives_the_normal_result_with_one_retry(m
 
 def test_two_licence_failures_then_success_give_two_retries_and_pause_each_time(monkeypatch):
     pauses: list = []
-    solved, ampl, _ = _flaky_stage(monkeypatch, [_LICENCE_FAIL, (999, "Cannot invoke gurobi: no such program.", [])],
+    solved, ampl, _ = _flaky_stage(monkeypatch, [_LICENCE_FAIL, (500, "?", ["Gurobi: license not found"])],
                                    retry_pause=7.5, sleep=pauses.append)
     assert solved.result.licence_retries == 2 and solved.result.objective == 540 and len(ampl.attempts) == 3
     assert pauses == [7.5, 7.5]
@@ -933,10 +933,20 @@ def test_three_licence_failures_raise_with_scrubbed_facts_only(monkeypatch):
     assert "ZX-SECRET" not in text and "example.org" not in text and "expired" not in text and "error" not in text
 
 
-def test_the_branch_in_the_final_message_is_binary_for_a_missing_program(monkeypatch):
+def test_a_missing_program_is_raised_at_once_without_retry_or_pause(monkeypatch):
+    # lead decision 2026-10-22: only the licence kind is retried; a missing program is permanent
     gone = (999, "Cannot invoke gurobi: no such program.", [])
-    exc, _, _ = _flaky_stage(monkeypatch, [gone, gone, gone])
-    assert isinstance(exc, GurobiBackendUnavailable) and "999" in str(exc) and "binary" in str(exc)
+    pauses: list = []
+    exc, ampl, _ = _flaky_stage(monkeypatch, [gone, gone, gone], sleep=pauses.append)
+    assert isinstance(exc, GurobiBackendUnavailable) and len(ampl.attempts) == 1 and pauses == []
+    assert "999" in str(exc) and "binary" in str(exc) and "0 licence retries" in str(exc)
+
+
+def test_a_missing_program_after_a_licence_failure_stops_at_once_and_counts_the_retry(monkeypatch):
+    gone = (999, "Cannot invoke gurobi: no such program.", [])
+    exc, ampl, _ = _flaky_stage(monkeypatch, [_LICENCE_FAIL, gone, gone])
+    assert isinstance(exc, GurobiBackendUnavailable) and len(ampl.attempts) == 2
+    assert "binary" in str(exc) and "1 licence retries" in str(exc)
 
 
 def test_a_non_licence_failure_is_not_retried_and_stays_rejected(monkeypatch):

@@ -321,7 +321,7 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     are set again, so a retry cannot depend on what the failed solve left behind (a failed solve returned no values, and
     only the final attempt is read). The number of re-runs is ``StageResult.licence_retries``. When the last attempt
     also fails, ``GurobiBackendUnavailable`` carries scrubbed facts only (result number, ``licence`` or ``binary``, the
-    retry count), never the message or the log. A failure that is not a missing solver or licence is never retried.
+    retry count), never the message or the log. Only the licence kind is retried: a missing program (kind "binary") and any other failure are never retried.
     """
     settings = settings or GurobiSettings()
     max_retries = LICENCE_RETRIES if licence_retries is None else licence_retries
@@ -333,7 +333,7 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
         kind = backend_absent_kind(SOLVER, f"{message}\n{log}") if num >= 500 else None
         if kind is None:
             break
-        if retries >= max_retries:
+        if kind != "licence" or retries >= max_retries:  # a missing program is permanent: raised at once (lead decision)
             raise GurobiBackendUnavailable(f"{SOLVER}: solver or license missing (solve_result_num {num}, {kind}, "
                                            f"{retries} licence retries)")
         retries += 1

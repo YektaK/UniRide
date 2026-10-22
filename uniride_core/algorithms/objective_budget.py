@@ -129,6 +129,24 @@ class StageCappedBudget:
         return closed_tour_cost(route, matrix)
 
 
+def budget_share_spent(budget, start_used: int = 0) -> Optional[float]:
+    """Share of the budget's allowance already spent, in ``[0, 1]``.
+
+    ``(used - start_used) / (limit - start_used)`` over a counter (or a
+    :class:`StageCappedBudget`) whose ``limit`` is the effective ceiling, so a
+    stage that starts at ``start_used`` spans 0 to 1 over its own allowance.
+    Returns ``None`` for an unlimited (native) counter: there is no budget to
+    follow. A zero-width allowance counts as fully spent.
+    """
+    limit = budget.limit
+    if limit is None:
+        return None
+    span = limit - start_used
+    if span <= 0:
+        return 1.0
+    return min(1.0, max(0.0, (budget.used - start_used) / span))
+
+
 @dataclass(frozen=True)
 class BudgetedSearchResult:
     route: List[int]

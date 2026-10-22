@@ -132,7 +132,10 @@ def test_fixed_arc_reaches_zero_within_one_atomic_phase_of_the_budget_end(monkey
     polish_ub = params["polish_iters"] * PAIRS if memetic else 0
     slack = (2 * _phase_ub(algorithm, params) + polish_ub) / budget
     assert spy.records[-1]["value"] <= slack
-    assert spy.records[0]["value"] > 0.5, "the arc starts high"
+    # The arc starts at the share left after initialization (memetic: the counted
+    # initial polish is a large part of a small budget), never at 0.
+    first = spy.records[0]["value"]
+    assert 0.3 < first < 1.0 if memetic else first > 0.9
 
 
 @pytest.mark.parametrize("algorithm", ["GWO", "HHO"])

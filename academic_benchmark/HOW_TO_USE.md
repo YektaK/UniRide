@@ -303,9 +303,12 @@ item C-19). It declares:
 - ten canonical IDs: `Core-TwoOpt-TSP`, `Core-ThreeOpt-TSP`, `Core-OrOpt-TSP`,
   `Core-GA-TSP`, `Core-PSO-TSP`, `Core-GA-TSP-Memetic-2opt`,
   `Core-GWO-TSP-Pure`, `Core-HHO-TSP-Pure`, `Core-GWO-TSP-Memetic-2opt`,
-  `Core-HHO-TSP-Memetic-2opt`, with every parameter written out (the
-  local searches state the registry defaults: `max_iterations` 1000,
-  best improvement, window 12 for 3-opt and 3 for Or-opt);
+  `Core-HHO-TSP-Memetic-2opt`; the budget, stop and polish parameters are
+  written out (the local searches state the registry defaults:
+  `max_iterations` 1000, best improvement, window 12 for 3-opt and 3 for
+  Or-opt), and the other GWO/HHO settings (GWO `initial_a`,
+  `exploration_rate`; HHO `initial_energy`, `jump_probability`,
+  `levy_scale`) use the solver defaults;
 - seven dataset manifests: the TSP instances berlin52, eil51, st70, kroA100,
   rd100 and eil76, and the ATSP instance ft53;
 - fixed budget levels scaled per instance (`scaled_fixed_budget_levels`, rule

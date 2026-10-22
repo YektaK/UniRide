@@ -1,6 +1,6 @@
 # Global joint day model (WP-E11): design
 
-Status: **design for owner approval; no code.** Date: 2026-10-20. Design addendum to [`EXACT_SOLVER_AMPL_DESIGN.md`](EXACT_SOLVER_AMPL_DESIGN.md) (cited below as "exact design"), written after DECISION_LOG **E13** reopened EQ3. Implementation plan: [`docs/superpowers/plans/2026-10-20-wp-e11-joint-day-model.md`](../superpowers/plans/2026-10-20-wp-e11-joint-day-model.md).
+Status: **approved by the owner on 2026-10-20 (DECISION_LOG E14); implemented and run, J11 results merged at `a5885234` (status paragraph in §0).** Design date: 2026-10-20. Design addendum to [`EXACT_SOLVER_AMPL_DESIGN.md`](EXACT_SOLVER_AMPL_DESIGN.md) (cited below as "exact design"), written after DECISION_LOG **E13** reopened EQ3. Implementation plan: [`docs/superpowers/plans/2026-10-20-wp-e11-joint-day-model.md`](../superpowers/plans/2026-10-20-wp-e11-joint-day-model.md).
 
 Binding context: `AGENTS.md` (core vs academic ownership, protocols never pooled, file/line evidence); DECISION_LOG E01-E13, H01, H03, H05, H06, A04, A13, A14 (nothing here reopens a decided question other than the EQ3 part that E13 reopened); exact design §0 (facts F1-F18), §1.1-§1.5, §3, §4, §8, §9.
 
@@ -13,6 +13,8 @@ Labels used below: **[fact]** = checked in source or committed results on 2026-1
 - [prototype] The comparison report `docs/science_review/2026-10-19_cs_cc_karsilastirma/CS_CC_228_DALGA_KARSILASTIRMA_2026-10-19.md` §3-§4 found, with a joint model over all enumerated routes: homogeneous weekly fleet 6 → 5 at R = 60 and 70, vehicle-days 94 → 83, one sedan fewer than the union menu in 12 of 60 large+sedan cells, and feasible plans in two cells our menus label infeasible. These are the motivation and the reproduction targets (§6.3), not results.
 
 WP-E11 brings this model into `uniride_core`, with proofs, an independent checker and a separate protocol.
+
+**WP-E11 status (2026-10-22; J11 results merged at `a5885234`).** The model, runner, checker and the J10 and J11 results are merged. The J11 record is `docs/paper/results/week-2026-10-05-exact/wp-e11-joint-day/`: one clean serial run of `scripts/run_exact_day_joint.py --work-limit 200` at code commit `e45cd6bf`, 140 cells (`single_4sw5so` 20, large+sedan 60, large+Doblò cap3 60), HiGHS primary, Gurobi through AMPL as cross-check, 600 s per solver call. It was the third attempt at that commit; attempts 1 and 2 stopped with `backend_unavailable` (Gurobi licence) and wrote nothing. Labels: 114 `optimal`, 15 `infeasible_certified`, 11 `infeasible_solver_proven`. All 140 cells carry a proof claim (125 two-solver day agreements, 8 tier-1 and 7 tier-2 certificates). Blocking defects: 0. Reproduction categories (§6.3): 79 `equal`, 1 `prototype_open` (large+sedan 2026-10-05 R90 L2, where production proves S = 2), 60 `no_external_target`. The first run (code `f77c2484`, results `2ea2c5a2`) is superseded and not pooled. The rerun has the same label, value, plan and MPS sha256 in all 140 cells. It differs from the first run in the proof claim of the Doblò cell 2026-10-08 R50 L2 (withheld in the first run because of an integrality-test defect fixed before the rerun; its Gurobi stage 3 is now accepted), and in the raw Gurobi `bound` column of 113 further cells (`bound_ceil` unchanged in those). Open after this merge: the licence-retry change of the runner (decided in E14, on a separate branch, not merged), a README pointer to `scripts/compare_exact_day_joint_runs.py`, and the paper and method wording through the writing line.
 
 ## 1. Problem
 
@@ -210,13 +212,14 @@ Separate from the solver path: standard library only, no import of `uniride_core
 |---|---|
 | `README.md` | scope, claim wording, labels, limits, deviations, what is not claimed |
 | `day_joint_manifest.json` | protocol `exact_day_joint_v1`; code commit and dirty flag; `python_provenance`; source manifests and their sha256 (4sw5so, both WP-E10 re-runs, WP-E3, WP-E4b); solver names, versions, verbatim options, limits, threads, seed; MPS sha256 per (cell, stage); enumeration caps and per-day column counts; `run_history` (E06); sha256 of every output file |
-| `day_joint.csv` | one row per cell: `fleet, date, R, L, waves, legs, columns, columns_outside_day, day_status, K_or_S, large_peak, total_minutes, car_minutes, routes, lb0, lb0w, lb_L, lb_S, bound_used, bound_source, certificate_tier, timing_dependent, non_lexicographic, crosscheck_solver, crosscheck_status, checker_ok, ts_confirmation, wall_seconds` |
-| `day_joint_stages.csv` | one row per (cell, stage, solver): status, stop reason, objective, bound, flags, wall seconds, work units (Gurobi) |
+| `day_joint.csv` | one row per cell, columns in this order (`CSV_FIELDS` of `scripts/run_exact_day_joint.py`): `fleet, date, R, L, waves, legs, columns, columns_outside_day, day_status, K_or_S, large_peak, total_minutes, car_minutes, routes, lb0, lb0w, lb_L, lb_S, bound_used, bound_source, bound_proof, proof_claim_allowed, proof_claim_reason, reason, flags, unverified_bounds, certificate_tier, timing_dependent, non_lexicographic, crosscheck_solver, crosscheck_status, wave_values_status, checker_ok, ts_confirmation, wall_seconds, note` |
+| `day_joint_stages.csv` | one row per (cell, solver, stage), columns in this order (`STAGE_FIELDS`): `fleet, date, R, L, solver, stage, status, stop_reason, objective, bound, bound_ceil, bound_source, timing_dependent, non_lexicographic, wall_seconds, work_units, solve_result, mps_sha256` (`work_units` for Gurobi only) |
 | `day_joint_plans.json` | per cell and wave the chosen routes: type, ordered occurrence ids, start, end, tour |
-| `day_joint_week.csv` | per (fleet, R, L): weekly fleet = maximum over dates, sum of vehicle-days, cells not proven |
-| `lb0.csv` | per cell: LB0, LB0w, LB_L, LB_S, their argmax point, contributing waves |
+| `day_joint_week.csv` | per (fleet, R, L), columns `fleet, R, L, dates, weekly_fleet_max, vehicle_days_sum, cells_not_proven, cells_without_value` (`WEEK_FIELDS`): weekly fleet = maximum over dates, sum of vehicle-days, cells without a proof claim, cells without a value |
+| `lb0.csv` | one row per (cell, bound), columns `fleet, date, R, L, bound, value, point, contributions, wave_value_source, used_value, used_proof` (`LB_FIELDS`): LB0, LB0w, LB_L, LB_S with their argmax point and contributing waves, and the wave values (`wave_*` rows) with the value and proof tag the bounds really received |
 | `comparison.csv` | descriptive, per cell: joint value; WP-E4b GA-menu and union cars with labels (typed); peaks of the archived GA routes and of the WP-E3 routes (homogeneous); never `min(...)` |
 | `reproduction_check.csv` | per cell: prototype value, production value, category (§6.3) |
+| `rerun_vs_first_run.csv` | only in a record that repeats an earlier run: per cell, the day-level and stage-level differences of the two runs, timing columns excluded. The J11 file was written by a scratch script recorded in the J11 README; `scripts/compare_exact_day_joint_runs.py` reproduces it byte for byte (sha256 `5ae2410ca49939eab415ac506602cbbee628c5f2c8671353717abb46ae2e83e9`) |
 
 ### 6.2 Run rules
 
@@ -240,7 +243,16 @@ From the comparison report (§3-§4 and its CSVs):
 
 The minute targets depend on the tie-break order (§1.3) and are compared only if the owner chooses the prototype order (Q2); otherwise production minutes are expected to be <= the prototype's at equal K or S.
 
-Categories in `reproduction_check.csv`: `equal`; `production_better`; `production_worse`; `production_open`; `prototype_open`; `co_optimal_alternative`.
+Categories in `reproduction_check.csv` (`REPRODUCTION_CATEGORIES` in `academic_benchmark/exact_reference/day_compare.py`; every cell gets exactly one):
+
+- `equal`: production and prototype have the same objective tuple, or both report the cell infeasible (production by proof).
+- `co_optimal_alternative`: the objective tuples are equal and the routes differ (route identity is never compared, so the function returns this category only when its caller passes `same_routes=False`; `scripts/report_exact_day_joint.py` does not, so it writes no such row).
+- `production_better`, in three cases: production's objective tuple is smaller than the prototype's; production has a value (`optimal`, `optimal_stage1_by_bound` or `feasible_with_gap`) where the prototype reports infeasibility; production proves infeasibility and the prototype's plan fails the checker. (Production proving infeasibility where the prototype also reports infeasibility is `equal`.) It is a described difference, not a blocking defect.
+- `production_worse`: the prototype's tuple is smaller than production's and no blocking rule applies.
+- `production_open`: production has no value or proof for the cell (`bound_only`, `not_run_enumeration_cap`, `input_rejected` or `backend_unavailable`) while the prototype has a result.
+- `prototype_open`: the prototype has a target for the cell but no result, while production has a value or an infeasibility proof.
+- `both_open`: production is open as above and the prototype is open too (E14, J9b owner decision); it counts as neither agreement nor disagreement.
+- `no_external_target`: the fleet has no prototype target at all (large + Doblò cap3, E14 Q1); it says nothing about production and keeps the rule that every cell has a reproduction row.
 
 **If production disagrees with the prototype:** report it in `reproduction_check.csv` and the README; never change limits, options or the model to approach a prototype number. Run the checker of §5.1 on the prototype plan of that cell (data copied with provenance). If the prototype plan passes the checker and is better than a production value labelled `optimal`, that is a **blocking defect** in production (a checked plan cannot beat a proven optimum). If production is better than a prototype "optimal", the prototype claim is wrong or its semantics differ; the difference is described, not blocking.
 

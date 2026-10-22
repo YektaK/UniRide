@@ -352,3 +352,26 @@ def test_native_pilot_accepts_a_composite_block_and_refuses_global_fraction(tmp_
     assert "global_fraction" not in config.algorithms[algorithm_id]
     with pytest.raises(NativePilotError, match="global_fraction"):
         load_native_pilot_config(_native_config(tmp_path, {algorithm_id: _entry(algorithm_id)}))
+
+
+def test_composite_row_is_validated_as_exported_not_only_as_computed(tmp_path, monkeypatch):
+    """A record that lost its stage record on the way to the file fails the composite check."""
+    from academic_benchmark.studies import smoke
+
+    real = smoke._result_record
+
+    def builder_that_drops_the_stage_record(*args, **kwargs):
+        record = real(*args, **kwargs)
+        record.pop("composition", None)
+        return record
+
+    monkeypatch.setattr(smoke, "_result_record", builder_that_drops_the_stage_record)
+    root = _repository(tmp_path / "repo")
+    report = run_study_smoke(
+        _plan(root), tmp_path / "out", problem_loader=_loader(), repository_root=root, replicates=1
+    )
+    assert report.status == "failed"
+    failed = _read(tmp_path / "out" / "failed_runs.jsonl")
+    assert [row["stage"] for row in failed] == ["composite_validation"]
+    assert "composition" in failed[0]["error"]
+    assert not (tmp_path / "out" / "fixed_runs.jsonl").exists()

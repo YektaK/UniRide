@@ -90,8 +90,13 @@ def snap_to_integer_data(objective: Optional[float], bound: Optional[float], rel
 _OBJECTIVE_ALLOWANCE_CAP = 0.25  # below one half: an accepted objective is always the integer nearest to the solver's
 
 
-def reconcile_objective(objective: Optional[float], coefficients: Sequence[float], values: Sequence[float]) -> Optional[float]:
-    """Return the integer objective of the ROUNDED variable values when it explains the solver's raw objective, else ``objective``.
+def reconcile_objective_with_allowance(objective: Optional[float], coefficients: Sequence[float],
+                                       values: Sequence[float]) -> Tuple[Optional[float], float]:
+    """``(objective, allowance)``: the integer objective of the ROUNDED variable values when it explains the solver's raw objective, else ``objective``.
+
+    ``allowance`` is the amount of the raw objective that the deviations explain (see below); it is 0.0 when the values were not
+    reconciled (no objective, a non-integral coefficient, a value beyond ``_INT_TOL``). The Gurobi day path uses it to tell a bound
+    that is just the solver's own noisy raw objective (gap 0) from a bound that contradicts the incumbent.
 
     A MIP solver keeps every integer variable within its integrality tolerance, not at an integer, so the objective it
     reports is the objective of slightly off-integer values. Several small deviations add up through large integer
@@ -110,20 +115,27 @@ def reconcile_objective(objective: Optional[float], coefficients: Sequence[float
     so a result that was accepted before is accepted with the same value.
     """
     if objective is None or not math.isfinite(float(objective)) or abs(float(objective)) >= _HUGE:
-        return objective
+        return objective, 0.0
     if len(coefficients) != len(values):
         raise ValueError("coefficients and values differ in length")
     if any(not float(c).is_integer() for c in coefficients):
-        return objective  # the recomputed value is an integer only for integer coefficients (the exact models have them)
+        return objective, 0.0  # the recomputed value is an integer only for integer coefficients (the exact models have them)
     recomputed, explained = 0, 0.0
     for c, x in zip(coefficients, values):
         x = float(x)
         if not math.isfinite(x) or abs(x - round(x)) > _INT_TOL:
-            return objective
+            return objective, 0.0
         recomputed += int(round(c)) * int(round(x))
         explained += abs(float(c)) * abs(x - round(x))
     allowance = min(explained + _BOUND_TOL + 1e-9 * abs(float(objective)), _OBJECTIVE_ALLOWANCE_CAP)
-    return float(recomputed) if abs(float(objective) - recomputed) <= allowance else objective
+    if abs(float(objective) - recomputed) <= allowance:
+        return float(recomputed), allowance
+    return objective, 0.0
+
+
+def reconcile_objective(objective: Optional[float], coefficients: Sequence[float], values: Sequence[float]) -> Optional[float]:
+    """The objective part of ``reconcile_objective_with_allowance`` (see there)."""
+    return reconcile_objective_with_allowance(objective, coefficients, values)[0]
 
 
 def has_incumbent(num: int) -> bool:

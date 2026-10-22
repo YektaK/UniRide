@@ -732,3 +732,16 @@ def test_reconcile_objective_needs_integer_coefficients():
     assert reconcile_objective(539.9999877, (81, 72), values) == 540.0  # integral coefficients: reconciled
     assert reconcile_objective(539.9999877, (81.4, 72), values) == 539.9999877
     assert reconcile_objective(539.9999877, (81.0, 72.0), values) == 540.0  # integral floats are fine
+
+
+def test_reconcile_objective_with_allowance_returns_what_the_deviations_explain():
+    from uniride_core.exact.ampl_backend import reconcile_objective_with_allowance
+
+    obj, allowance = reconcile_objective_with_allowance(540.0000123, (81, 72), (4 + 1e-7, 3 + 5.8333333e-8))
+    assert obj == 540.0 and 1.23e-5 < allowance < 1.5e-5  # the explained 1.23e-5 plus the float margin
+    obj, allowance = reconcile_objective_with_allowance(540.0, (81, 72), (4.0, 3.0))
+    assert obj == 540.0 and 0 < allowance < 2e-6  # nothing to explain: only the float margin
+    # not reconciled: the objective comes back unchanged with allowance 0
+    assert reconcile_objective_with_allowance(540.3, (81, 72), (4.0, 3.0)) == (540.3, 0.0)
+    assert reconcile_objective_with_allowance(540.0, (81, 72), (4.0, 3.0 + 3e-5)) == (540.0, 0.0)
+    assert reconcile_objective_with_allowance(None, (1,), (1.0,)) == (None, 0.0)

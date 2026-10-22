@@ -1,0 +1,1205 @@
+{
+  "aggregate": true,
+  "blocking_errors": [],
+  "claim": "Exact joint day model over all enumerated routes of a service date (solver-proven value or bound); a separate protocol, never pooled with exact_reference_v1 wave rows, union_day_v1 menu rows or heuristic rows; prototype results are reproduction targets, never tuning targets.",
+  "crosscheck_enabled": true,
+  "development_run": false,
+  "dirty_working_tree": false,
+  "enumeration": {
+    "column_cap": 2000000,
+    "columns_per_day": {
+      "large+doblo_cap3|2026-10-05|R50": 3000,
+      "large+doblo_cap3|2026-10-05|R60": 7321,
+      "large+doblo_cap3|2026-10-05|R70": 15835,
+      "large+doblo_cap3|2026-10-05|R90": 46571,
+      "large+doblo_cap3|2026-10-06|R50": 451,
+      "large+doblo_cap3|2026-10-06|R60": 683,
+      "large+doblo_cap3|2026-10-06|R70": 979,
+      "large+doblo_cap3|2026-10-06|R90": 1529,
+      "large+doblo_cap3|2026-10-07|R50": 610,
+      "large+doblo_cap3|2026-10-07|R60": 875,
+      "large+doblo_cap3|2026-10-07|R70": 1193,
+      "large+doblo_cap3|2026-10-07|R90": 1808,
+      "large+doblo_cap3|2026-10-08|R50": 425,
+      "large+doblo_cap3|2026-10-08|R60": 619,
+      "large+doblo_cap3|2026-10-08|R70": 808,
+      "large+doblo_cap3|2026-10-08|R90": 1147,
+      "large+doblo_cap3|2026-10-09|R50": 911,
+      "large+doblo_cap3|2026-10-09|R60": 1432,
+      "large+doblo_cap3|2026-10-09|R70": 2097,
+      "large+doblo_cap3|2026-10-09|R90": 3472,
+      "large+sedan|2026-10-05|R50": 2964,
+      "large+sedan|2026-10-05|R60": 7554,
+      "large+sedan|2026-10-05|R70": 16239,
+      "large+sedan|2026-10-05|R90": 47215,
+      "large+sedan|2026-10-06|R50": 378,
+      "large+sedan|2026-10-06|R60": 594,
+      "large+sedan|2026-10-06|R70": 881,
+      "large+sedan|2026-10-06|R90": 1451,
+      "large+sedan|2026-10-07|R50": 516,
+      "large+sedan|2026-10-07|R60": 764,
+      "large+sedan|2026-10-07|R70": 1075,
+      "large+sedan|2026-10-07|R90": 1709,
+      "large+sedan|2026-10-08|R50": 335,
+      "large+sedan|2026-10-08|R60": 509,
+      "large+sedan|2026-10-08|R70": 691,
+      "large+sedan|2026-10-08|R90": 1029,
+      "large+sedan|2026-10-09|R50": 839,
+      "large+sedan|2026-10-09|R60": 1378,
+      "large+sedan|2026-10-09|R70": 2030,
+      "large+sedan|2026-10-09|R90": 3420,
+      "single_4sw5so|2026-10-05|R50": 2224,
+      "single_4sw5so|2026-10-05|R60": 6322,
+      "single_4sw5so|2026-10-05|R70": 14654,
+      "single_4sw5so|2026-10-05|R90": 45302,
+      "single_4sw5so|2026-10-06|R50": 273,
+      "single_4sw5so|2026-10-06|R60": 455,
+      "single_4sw5so|2026-10-06|R70": 715,
+      "single_4sw5so|2026-10-06|R90": 1251,
+      "single_4sw5so|2026-10-07|R50": 363,
+      "single_4sw5so|2026-10-07|R60": 562,
+      "single_4sw5so|2026-10-07|R70": 844,
+      "single_4sw5so|2026-10-07|R90": 1437,
+      "single_4sw5so|2026-10-08|R50": 267,
+      "single_4sw5so|2026-10-08|R60": 436,
+      "single_4sw5so|2026-10-08|R70": 616,
+      "single_4sw5so|2026-10-08|R90": 950,
+      "single_4sw5so|2026-10-09|R50": 590,
+      "single_4sw5so|2026-10-09|R60": 1063,
+      "single_4sw5so|2026-10-09|R70": 1668,
+      "single_4sw5so|2026-10-09|R90": 3016
+    },
+    "label_cap": 5000000,
+    "wall_clock_limit_seconds": 600
+  },
+  "git_commit": "e45cd6bffc743417b1914952a565ae14af75b21f",
+  "host_os": "Windows-11",
+  "mps_sha256": {
+    "large+doblo_cap3|2026-10-05|R50|L0|stage1": "203833f35e9ec74404e132f9050d32149c84401a1f4da04d8bbc62ac5befceed",
+    "large+doblo_cap3|2026-10-05|R50|L0|stage2": "ee0a6e8e20493c05624c3de2bc954a6f58d1b172c5f08d2055fe50b61401b3f3",
+    "large+doblo_cap3|2026-10-05|R50|L0|stage3": "16a43e0231bfef9366f10134f43fe7f113092a44b1f7bdad9a1f4147e848ac57",
+    "large+doblo_cap3|2026-10-05|R50|L1|stage1": "4755712f3a0985bfdcfe0e9d53df75146c0dae0dd70f5f6804f1648733c4531f",
+    "large+doblo_cap3|2026-10-05|R50|L1|stage2": "ffa10509ff8e62cb932c85f5524e3159302e5eb83c37f51b126908b906321bd5",
+    "large+doblo_cap3|2026-10-05|R50|L1|stage3": "29fbd286530d0e1f51cd07dfffbcc622b67f34f6fdf8a0f719ed01765a19f345",
+    "large+doblo_cap3|2026-10-05|R50|L2|stage1": "11f7bdd51c9009e0c5e718c6e065b15e183aaecffee4fbef36363fafd7f15091",
+    "large+doblo_cap3|2026-10-05|R50|L2|stage2": "77c4d665241ae2f730fb763fc966084269a32864fc0d98a962857017ebf9e743",
+    "large+doblo_cap3|2026-10-05|R50|L2|stage3": "88bb2438177fc959f468389a11070d1a863a3fc006c540dac2dbc5cec4622aba",
+    "large+doblo_cap3|2026-10-05|R60|L0|stage1": "fa6882ab8b34ca9baebb3700b31c8fc64ee09056fc2c236923ddd2b866106904",
+    "large+doblo_cap3|2026-10-05|R60|L0|stage2": "7b377d4b1c43f9a5c8cc3e151ad901587ecb29dfe9bea395e32823dc8c5ff093",
+    "large+doblo_cap3|2026-10-05|R60|L0|stage3": "fb28486e584757e0442e82b59401fa3cb83a91e46ef5cd5bd16b85b9870bacfe",
+    "large+doblo_cap3|2026-10-05|R60|L1|stage1": "71803489a1e9b1b0d08b9e87f3bb0539a0921349440e74424fe68d714e45d52e",
+    "large+doblo_cap3|2026-10-05|R60|L1|stage2": "fdf4974ce2aff9014df9b3b8fdd22363d34f9ec52d0671af884375c29b2061a8",
+    "large+doblo_cap3|2026-10-05|R60|L1|stage3": "4e0c9bdd4a5e134a066c7b4eddcdc7f6173db72b180db037639abadf6288f3ef",
+    "large+doblo_cap3|2026-10-05|R60|L2|stage1": "345f4906759a0279e518557ca889fbfa192ff0515ede4f63631e768d6c9bc0b7",
+    "large+doblo_cap3|2026-10-05|R60|L2|stage2": "a74b075ae9aada48381793ebd8157f3e20902ecd6e500b6381fc4d7e463b4e7b",
+    "large+doblo_cap3|2026-10-05|R60|L2|stage3": "5adbdc9cd582deb110d0150a9187d22c8442d989a6abdfc1ad5bf0f57479f102",
+    "large+doblo_cap3|2026-10-05|R70|L0|stage1": "d8f2b47b928b92418d4818d9840c5a7d9bf2069b09134e4a185ff686bd4b04a6",
+    "large+doblo_cap3|2026-10-05|R70|L0|stage2": "0389e2868dffbf0d6ea8d75ea9bcc471f56589e50b6832cec51f833a530ba211",
+    "large+doblo_cap3|2026-10-05|R70|L0|stage3": "e7b1e4d3e97d28266d68992efdd10f4bd9c621db2fb6137de9cc6fc0ccf6d8b8",
+    "large+doblo_cap3|2026-10-05|R70|L1|stage1": "8f2aadf1ace6f177975a3d2aaa00edcdd854db5003be9fda6345e67b7180c551",
+    "large+doblo_cap3|2026-10-05|R70|L1|stage2": "218d55772b6c375c4a90186ee2765bedd2ba60c66b6a6ffed8011e79fc89b487",
+    "large+doblo_cap3|2026-10-05|R70|L1|stage3": "4b9c790a6e04f5cfe3b9a83b8470e67edba34730dfda80cea46fea1e84f188ed",
+    "large+doblo_cap3|2026-10-05|R70|L2|stage1": "6611cbe8cc934173441902e86653f0a3434b5140b320f7479f7df2e722018c0c",
+    "large+doblo_cap3|2026-10-05|R70|L2|stage2": "9aeea8a04c292d2a37d542e3068751064c8db77d2750fe95459dcd6ae5b4e1b6",
+    "large+doblo_cap3|2026-10-05|R70|L2|stage3": "be572d6ee4a79ff662b7e131760aa96d547b513ba0667e18c79a6b504c63f250",
+    "large+doblo_cap3|2026-10-05|R90|L0|stage1": "f0d3c5af5471a35e853e4309d4acbc6b125e584570406e65b0ac2360fc1a759a",
+    "large+doblo_cap3|2026-10-05|R90|L0|stage2": "3a6fb2d15408f5c6b32174cc30622f13d0afae2416c85da7bbbcbe7007fdad4f",
+    "large+doblo_cap3|2026-10-05|R90|L0|stage3": "94c14e4b9bdfbcbdbe6060a774633bb3017b1be812fccddcb86e4e4f5c06e4d6",
+    "large+doblo_cap3|2026-10-05|R90|L1|stage1": "63637f9b232a03571161c84da955dbf91ed5d3a238f0f37fb6b73ce3c51d0117",
+    "large+doblo_cap3|2026-10-05|R90|L1|stage2": "77aaff75a5d49556035454dc23c565e2966e761bbb2ed80eccbb7a87d2448360",
+    "large+doblo_cap3|2026-10-05|R90|L1|stage3": "4607e562ba4d0e8dd8d017ae662383c6b25c559e26dbee9ef677d5a48c483485",
+    "large+doblo_cap3|2026-10-05|R90|L2|stage1": "f47dac3cdb74aa0627d0995f336331404a6aa2625e1ce7d48c523bef4ec87f71",
+    "large+doblo_cap3|2026-10-05|R90|L2|stage2": "1f7e156a45de88044320229fe405f1026f87221c36f76105890188198ba838f0",
+    "large+doblo_cap3|2026-10-05|R90|L2|stage3": "832d87673c185f9aa169e8204a9c48c9bf3de37ddb6ba9955f27ae284824128a",
+    "large+doblo_cap3|2026-10-06|R50|L0|stage1": "56c27bf81487f126568d5d9e4ee56532f1a35b256595e817619511809594abbf",
+    "large+doblo_cap3|2026-10-06|R50|L0|stage2": "a6d04a1d00fcd20db6b45b48bd16a7a1fcb7bae8474cbdc7e9afea076fb0d8e1",
+    "large+doblo_cap3|2026-10-06|R50|L0|stage3": "a2bffaa2118cfa8c36f3ddeff52515a9f79614eeaa9db85fcc4af253257cb874",
+    "large+doblo_cap3|2026-10-06|R50|L1|stage1": "5abc1b738c5acdd1650fa1f2c5fb15099a5b06ab0ebbda13a8145af023ca1395",
+    "large+doblo_cap3|2026-10-06|R50|L1|stage2": "c80f9b56863b1798a94100e6fe6e8fb45886014867bac6f348ff03e816764678",
+    "large+doblo_cap3|2026-10-06|R50|L1|stage3": "a52b250f78a1d9f6f5e5faf8ede1f2cdcdb1865f80feccd9177eb4829d44f67b",
+    "large+doblo_cap3|2026-10-06|R50|L2|stage1": "3b4da8f71ea598bc21533773f993def2be20a064986cc59d2f82e1e9e5deabe7",
+    "large+doblo_cap3|2026-10-06|R50|L2|stage2": "bba8cd1cd605795ca1f8ec106371cabbff761b198bcba3ebeb942a9193059c7f",
+    "large+doblo_cap3|2026-10-06|R50|L2|stage3": "5466936ef58ee4e2f887d8ccd02e90f9d992aaedf3e94ba1b2e2a02e61e77acb",
+    "large+doblo_cap3|2026-10-06|R60|L0|stage1": "ed859d2d24f48f2a823f8a28a4791558f8a3b280a04f5dce6220b2c2b1240426",
+    "large+doblo_cap3|2026-10-06|R60|L0|stage2": "ff9776ca97ff3e8aa66e772294060ec108fb75abf39fbe65d745b5f99b2f2f69",
+    "large+doblo_cap3|2026-10-06|R60|L0|stage3": "59d53be1984a2d4737d268aa36f4cbf35ea634321bc1581850169c10b00bb8dc",
+    "large+doblo_cap3|2026-10-06|R60|L1|stage1": "445c2ca1e572917e2b8db1f567fa7480bed11519c8e217e39e9f4b714f6b8139",
+    "large+doblo_cap3|2026-10-06|R60|L1|stage2": "9caf858f6397b8b260016e46645725a350e9a5f24b4bb2d84b931aa9bd8d65d1",
+    "large+doblo_cap3|2026-10-06|R60|L1|stage3": "5d459253f316ad231ab9e92b3f5a80883de949c680eb2b6db54e00d43ad934fb",
+    "large+doblo_cap3|2026-10-06|R60|L2|stage1": "a6a288253a783e30145eadb15c10ca4ed0c319d6cdb304f3253e58c5e87948d1",
+    "large+doblo_cap3|2026-10-06|R60|L2|stage2": "12ac7322f987cec9faa909be6e0aba11923939deade839adb9134235772c6bac",
+    "large+doblo_cap3|2026-10-06|R60|L2|stage3": "3c4dab243e88913d12c07ba651542e0292c1913ffd43aff5c1de94404d8c1590",
+    "large+doblo_cap3|2026-10-06|R70|L0|stage1": "1f3ec5f93141d668e419624bc6f70934abc5646aec07436fc512e2da8373d604",
+    "large+doblo_cap3|2026-10-06|R70|L0|stage2": "02c03f5d120f75bdaa32ad4dd33f842b321f0c35f5a529062a57874351e076c8",
+    "large+doblo_cap3|2026-10-06|R70|L0|stage3": "ac46968c1920c39b72dc2a3d4424072c0a62168499bc5c1d08c064c006656be9",
+    "large+doblo_cap3|2026-10-06|R70|L1|stage1": "2621b99565ff4e4e3d782f78dfce3951c922e9919b00459e72e01e39a63ff1ef",
+    "large+doblo_cap3|2026-10-06|R70|L1|stage2": "6ff153cbdb08e571bdc6b49d4b6c594dac0e14649f138218750d6309b877bdc7",
+    "large+doblo_cap3|2026-10-06|R70|L1|stage3": "afad53a384b27c1d4aca5d39277459c3d2d2c1b0457855c14c7758d62d0c54d9",
+    "large+doblo_cap3|2026-10-06|R70|L2|stage1": "3bbd8d716c0e8ea41612c4f3cc580c501440b69082d29f0924e5f6b9fef123fa",
+    "large+doblo_cap3|2026-10-06|R70|L2|stage2": "9d974b8f46a9dc9a6ca94f1ce729d8254ae25d6f94af256a3db2c59a9041ca6b",
+    "large+doblo_cap3|2026-10-06|R70|L2|stage3": "5064b542db3f49cdc55fc0119a667a923c26d975018b09b40ee4e6f1a7dc6f07",
+    "large+doblo_cap3|2026-10-06|R90|L0|stage1": "3d9ee8f0efff827cd00948ee662318177cc67f8d0dd727762977e1e1fb8de29b",
+    "large+doblo_cap3|2026-10-06|R90|L0|stage2": "2d834f26cdeb611a08f415d2135716c7319e49e541bc7d6261cf6763411c0515",
+    "large+doblo_cap3|2026-10-06|R90|L0|stage3": "3918414df0b66ae3c3afe2ad1a34c8850aee49b996cfb8ffc08215e234ae2f32",
+    "large+doblo_cap3|2026-10-06|R90|L1|stage1": "45bdd9d89202727dd6c04bd7f93ecef96362f1a7e17d944f98d903090a38f015",
+    "large+doblo_cap3|2026-10-06|R90|L1|stage2": "9b1a63ad4f67445cf3d1aa32a7ee396961c0347073f4c4c13affb15fe4fdbc50",
+    "large+doblo_cap3|2026-10-06|R90|L1|stage3": "1a7b13d042be91fdde2b75b15c6bb044f6f5d8df1bbc56afc9a051e49256d39f",
+    "large+doblo_cap3|2026-10-06|R90|L2|stage1": "35bcf9ebfc9bad2b2d6dbfebb718e582fe1ac04a981d949f86f94748ffa0b58f",
+    "large+doblo_cap3|2026-10-06|R90|L2|stage2": "85a406ba49aefd0015b858f6f72e4e1590f3301794fb858c1a822841e4cd7f3e",
+    "large+doblo_cap3|2026-10-06|R90|L2|stage3": "52130df4a6eb8a2fc8961828291d821d046f7296d45a26104fa14ca16672e17e",
+    "large+doblo_cap3|2026-10-07|R50|L0|stage1": "f4888d8c6166d6412dc483846c34d4613eda5595a0ed2323f327c518be18c9f6",
+    "large+doblo_cap3|2026-10-07|R50|L0|stage2": "28bad42d9f28b1fc9c5e3f75da4e291ce8b4e9266f10c72c6f22f4068ae1e178",
+    "large+doblo_cap3|2026-10-07|R50|L0|stage3": "43445b1579d62fbe7892c711862b62ee370819a933a9f4a82aff83352bc1364f",
+    "large+doblo_cap3|2026-10-07|R50|L1|stage1": "0eaf7ab5af867f560e6f438f7cd1f6abc85cdf0e773bb8cdbaaf59962c3a683e",
+    "large+doblo_cap3|2026-10-07|R50|L1|stage2": "21c580b3f9fc2bef4cf50c264a321222772fe781064bbeaa169621d320ba961a",
+    "large+doblo_cap3|2026-10-07|R50|L1|stage3": "1ebd5ccfcf4bd320591aeebd4969343b82273eed577be765d9430ec612281991",
+    "large+doblo_cap3|2026-10-07|R50|L2|stage1": "be7a91fa621bb45c1472174e72070681f51773791bc160e796dd5a947193f45e",
+    "large+doblo_cap3|2026-10-07|R50|L2|stage2": "b5f849763912b0f4cb1e1c1fda6a0692508c934d8445a31e9c7849ea54e9532c",
+    "large+doblo_cap3|2026-10-07|R50|L2|stage3": "fba3d9480dc20d99481c065aa6c1c609d25431322f063df0f70d7dcee945fafe",
+    "large+doblo_cap3|2026-10-07|R60|L0|stage1": "5b43ff822526ef040f7a00eb44794a992f0867558c3375a465bf66ce78dafc56",
+    "large+doblo_cap3|2026-10-07|R60|L0|stage2": "b48af5197d9281e24f8aa1803b9e0dcf6a482fce4ef42d9047224a3a1576265e",
+    "large+doblo_cap3|2026-10-07|R60|L0|stage3": "5b34c15b6800060e3b62f8ec9a27538f1a167f968a1550859601391fadde8bcd",
+    "large+doblo_cap3|2026-10-07|R60|L1|stage1": "d795074abfc5c0198ac8a47c52a90584dcadfdfe814ce48e8785c9cdbb40926e",
+    "large+doblo_cap3|2026-10-07|R60|L1|stage2": "9a67e813ce3ff4cbf3e41a38e7ba817b713480dbef6986d64fcc1a967501a514",
+    "large+doblo_cap3|2026-10-07|R60|L1|stage3": "915424bc16d7e9b51679f9abd779e1892388808f5ccafde7ab9499ba96791a24",
+    "large+doblo_cap3|2026-10-07|R60|L2|stage1": "0d8aa6e352bf672e79b0ddad173a5765a219fd0bf63b4729cd81bee7263b18d5",
+    "large+doblo_cap3|2026-10-07|R60|L2|stage2": "15a7d13001469650b0b9ca7f44bb969c4fc0d5e76bf0c1bedd5c2353688bc5b3",
+    "large+doblo_cap3|2026-10-07|R60|L2|stage3": "efe0fba979d2c87446c88a382444cd835459d12e5f328db74b9108545f71ad3e",
+    "large+doblo_cap3|2026-10-07|R70|L0|stage1": "681585e50c108895cd509ba0b2c51cd7a924fd76c27ad492f47aa910b215f336",
+    "large+doblo_cap3|2026-10-07|R70|L0|stage2": "f6efd887b08a35f14d0cf1ef9a2c18d5e3c436032ddc2c560731fc6d939a94af",
+    "large+doblo_cap3|2026-10-07|R70|L0|stage3": "10c3347be92bda46934a124185785b2e7b01c05f08861dffb4b4b84c23176cc6",
+    "large+doblo_cap3|2026-10-07|R70|L1|stage1": "44f4718de65586a09f0eb7770f0a5a323c1d4d55ff9a24162a50c59d39e9c82b",
+    "large+doblo_cap3|2026-10-07|R70|L1|stage2": "402a0c7ef17d6e29dd375ebce61cf952ab0ec5a244d1aa4e561b38f2c119925a",
+    "large+doblo_cap3|2026-10-07|R70|L1|stage3": "9f55530b391158a1ff6d1c7c8ec7f3563ae36b689bb805da204764bb45f8e755",
+    "large+doblo_cap3|2026-10-07|R70|L2|stage1": "0fb093d909444562d8e8a5f8244442f4d7ec2d60056b3b54a63be17e414ea3ab",
+    "large+doblo_cap3|2026-10-07|R70|L2|stage2": "7e457cc077941d6b725fb602f94c4638057d887039b94266344d34dacbf85cf1",
+    "large+doblo_cap3|2026-10-07|R70|L2|stage3": "c2c7a7e7c3fa1a159a76f1fe0fd8064a5130c872ce214bf1148290dd89c7b7b8",
+    "large+doblo_cap3|2026-10-07|R90|L0|stage1": "b107a9502c0d3904cb40e530fd2f6c2d3a5a6fb09b2eb18fbe69a7fbb76c62f0",
+    "large+doblo_cap3|2026-10-07|R90|L0|stage2": "565be43b8d2805d6d13604c67dda2b5110b2669ad0230dbc2edcc859cb1cdd7f",
+    "large+doblo_cap3|2026-10-07|R90|L0|stage3": "c6936b5720c08ba226c5dd300ae20df2f6929ac56d27f97a85eabe739ba6b017",
+    "large+doblo_cap3|2026-10-07|R90|L1|stage1": "7d2e0f356d3e5c833fa3e18eb56bf10111a7c7b5b2dde5fcdb5b0ba2a2520e72",
+    "large+doblo_cap3|2026-10-07|R90|L1|stage2": "27e169e9466af865b9973ba827a9a80cfb5bb008c53bf65383d70baebee7aaf8",
+    "large+doblo_cap3|2026-10-07|R90|L1|stage3": "46d7570bab4776f475d5d782feb1e6fce9c9b2ba3e5faac5b23082cd70de4f54",
+    "large+doblo_cap3|2026-10-07|R90|L2|stage1": "0cc9088c6e8071765e70c052c18186721d32cd953033fe56ac212dc6625eff2b",
+    "large+doblo_cap3|2026-10-07|R90|L2|stage2": "0bf3a1400cdbc685a4c4d239efbfda921da7d2644d39c291f053c83396f7f7b4",
+    "large+doblo_cap3|2026-10-07|R90|L2|stage3": "20ed81d45357abe9fc5971837ac0341c893d8da5837c6fef02956e68368ebf44",
+    "large+doblo_cap3|2026-10-08|R50|L0|stage1": "b55f4d7d9503eba7dde96561192c68faf3d749f1d739390d3b226cbb7c12eb29",
+    "large+doblo_cap3|2026-10-08|R50|L0|stage2": "5ea7090ca747b27ac3e788050051324f51a37f325246842ebe1e46bba087707b",
+    "large+doblo_cap3|2026-10-08|R50|L0|stage3": "d51a2eb3defc0d635425267695a0c7612154fecd9b986a5e08449b45132ab24f",
+    "large+doblo_cap3|2026-10-08|R50|L1|stage1": "89bf15fb78763a61b4c47ad927d08d9d6b038766a0aa70085fb486951731a013",
+    "large+doblo_cap3|2026-10-08|R50|L1|stage2": "b7ece9657556d909b68f8633e97d3175e08d1c8ff6b2f2ff16c36488b0bbc53a",
+    "large+doblo_cap3|2026-10-08|R50|L1|stage3": "01b4dbdf8ee054947059d913c8981b51adac03fca6391c36967c745ee765f60f",
+    "large+doblo_cap3|2026-10-08|R50|L2|stage1": "32eb838fd1f2c2ece9f4bce27ff30beecf30f441cd1ed4286b35f501b615b160",
+    "large+doblo_cap3|2026-10-08|R50|L2|stage2": "486cb67d91ed6595d550efe1ca95768264c49bf8ffcdb7291bb4524efae80c13",
+    "large+doblo_cap3|2026-10-08|R50|L2|stage3": "22713c923dc2adb28b9f725112b46b4dfa5c2943f51706bb77ed90bedd79addf",
+    "large+doblo_cap3|2026-10-08|R60|L0|stage1": "7e45a60f3b8f1a78779cf246734f14dcd9b8b1bde2e79d2708e7a2056a87523d",
+    "large+doblo_cap3|2026-10-08|R60|L0|stage2": "587ad83d4bc665d2d9ddbe9a74c12dd6f79a79a626e4a3ba8f22d40aa692b4bf",
+    "large+doblo_cap3|2026-10-08|R60|L0|stage3": "7255aab943c53ad22e4035539c7ff0ff6b68201103e0bec0a87c7001889ab584",
+    "large+doblo_cap3|2026-10-08|R60|L1|stage1": "bb4fc32c59deb883a258bbba6516654c42b2331b627af53e78448290cd575215",
+    "large+doblo_cap3|2026-10-08|R60|L1|stage2": "3a2ed4fcb2a4d13b6bc8a880a8317b30ef6ad222a2351e13c166035a553323cd",
+    "large+doblo_cap3|2026-10-08|R60|L1|stage3": "37d3093dc263302c5749645a6c6aba92f51d14d092490ba400f4ab900fd45d5e",
+    "large+doblo_cap3|2026-10-08|R60|L2|stage1": "596cfbdce87981b3c610908cc5be0abfcb77a60e30d85db6cd2c1361fb04341e",
+    "large+doblo_cap3|2026-10-08|R60|L2|stage2": "dd780f7f9a46791e372e8fa78be954e26054d080735a8c9cf917e907d4a6d14d",
+    "large+doblo_cap3|2026-10-08|R60|L2|stage3": "385c559d3b069d764c6f95ee58caaeecd1981fb1b7eff5b7208b347dd296b0c6",
+    "large+doblo_cap3|2026-10-08|R70|L0|stage1": "80664eb36fe49eb3d51936e04f6c8a0c3ef7b97dc8e9389e87c6a954e5eff545",
+    "large+doblo_cap3|2026-10-08|R70|L0|stage2": "6115e554c73a239ea7a40efe3b66d86c5cd48d6af631201d6fbc57468d26c8b1",
+    "large+doblo_cap3|2026-10-08|R70|L0|stage3": "716adff3f9a3e31ac6a9b94fae9b3b55669741fc32ab5d961eb27cfc399b9c58",
+    "large+doblo_cap3|2026-10-08|R70|L1|stage1": "2bcb73a146150605fac1399c31a732124a6bcd2549a4de8819080059a7f630db",
+    "large+doblo_cap3|2026-10-08|R70|L1|stage2": "149178c8d23258e4816d663af0d5a347ae6f8d7890b689ec1edd6a659aab11a0",
+    "large+doblo_cap3|2026-10-08|R70|L1|stage3": "822744978b57c3e3adc11213793be87ce60fa3d9f37db67eb8131e088c96b72d",
+    "large+doblo_cap3|2026-10-08|R70|L2|stage1": "ebf8b4aebf49615ad788119d0aa1c847fedb5417f4ee77f93feb563b4c287f59",
+    "large+doblo_cap3|2026-10-08|R70|L2|stage2": "60b937ec96ee23dc68274fc92caffb3775891eb9e5bce9c0c400bbf1ef9f6541",
+    "large+doblo_cap3|2026-10-08|R70|L2|stage3": "c66e4f5cfb6f428971e9d3d720384f235a74a90f157115e2325f046dda370541",
+    "large+doblo_cap3|2026-10-08|R90|L0|stage1": "7fe36a2418592cddd5f95ce370786ca7e652222ffe9e9456ef97e87f11d0b8f6",
+    "large+doblo_cap3|2026-10-08|R90|L0|stage2": "8151903350bfc9d4d8ba6bc85479da35b4fa09301e7e41ae84657adec592a986",
+    "large+doblo_cap3|2026-10-08|R90|L0|stage3": "6d47de84fe0cff509b9b2e4a130f99f47d5b5d67771a7db3fe3cd722bd736bac",
+    "large+doblo_cap3|2026-10-08|R90|L1|stage1": "57129276aa48c4bd7f7f81ef5683437f23ba871a5197f631d21b82427ac1a1f8",
+    "large+doblo_cap3|2026-10-08|R90|L1|stage2": "1d6d8a69517f475ae1cd95ecc0f7a6b5893931a4551025e04591b8e9e2fae345",
+    "large+doblo_cap3|2026-10-08|R90|L1|stage3": "cf033f5f88b9e46aca65ef05c21e863cb2f6c8f06f25d55325ec3dbb49242418",
+    "large+doblo_cap3|2026-10-08|R90|L2|stage1": "0c67f9af09ac4dbc0a43cc5e1db733850fc76a76cef6097b17c3971e082d407b",
+    "large+doblo_cap3|2026-10-08|R90|L2|stage2": "569289f77991ff2567f4acef44794caf210694af7277133d60a4ad4d048f6355",
+    "large+doblo_cap3|2026-10-08|R90|L2|stage3": "1c110e68daf24ea105436561539009a45366ba507e76d632f39731007b1530fe",
+    "large+doblo_cap3|2026-10-09|R50|L0|stage1": "011b8aa822198c4876cf0e4b043073025d6cf819a47cbed42b79fc444ef23f88",
+    "large+doblo_cap3|2026-10-09|R50|L0|stage2": "873b50b88637481013f6a887b52548c48d24bded5e81dd1d1b1189736e058720",
+    "large+doblo_cap3|2026-10-09|R50|L0|stage3": "51e7797295d3f15451ff562d3b73082a8e6ab050c9873bd1c9a8ef6b4b23bdb8",
+    "large+doblo_cap3|2026-10-09|R50|L1|stage1": "c13d903025b36ca6fcbf7457a2872da3818c54908012e5b27b842ec6115fa0e3",
+    "large+doblo_cap3|2026-10-09|R50|L1|stage2": "8c5e8c15f93129a5808347e36087167cf1f35b9e7a9331e3a45795d35e7f76fd",
+    "large+doblo_cap3|2026-10-09|R50|L1|stage3": "e800f67da68d14ba2d86323cc9bc3fca08000c957f1caf8f7b4f415b6d6ec1f0",
+    "large+doblo_cap3|2026-10-09|R50|L2|stage1": "34648572fc1cf275c1dcf242a74f56fd78a6df1a4f9730d4efea94e12716ce53",
+    "large+doblo_cap3|2026-10-09|R50|L2|stage2": "5c8b98223a4fdb0dccc94c80cb274a60382311ce9c7d7ac9c5a5180948ec3a18",
+    "large+doblo_cap3|2026-10-09|R50|L2|stage3": "5d99dc1b73a7606973ac39be398bf9b796281af4ac80e9493a8c1493c99f624c",
+    "large+doblo_cap3|2026-10-09|R60|L0|stage1": "9481b3932c0ad3f8c02bbef652aac31b63f3d6eabcf65797faa98de1900b816f",
+    "large+doblo_cap3|2026-10-09|R60|L0|stage2": "c2f8fdef719d27e2fadaf7a9697d743b50146d11f60058aae4c687a6b12ec317",
+    "large+doblo_cap3|2026-10-09|R60|L0|stage3": "172e25f01dcc9d89966da3f86dfd2054ecd402b7f5de45d250f68de819186ac9",
+    "large+doblo_cap3|2026-10-09|R60|L1|stage1": "7236c5d91be0864d85bd6bfb519212327fb8f0a7c25044ac2d8424184f1db15d",
+    "large+doblo_cap3|2026-10-09|R60|L1|stage2": "f0d2df04ddac7cea48b014b1155fe97891e10ef300c0d42960c08378c9b1b6ef",
+    "large+doblo_cap3|2026-10-09|R60|L1|stage3": "684c257ae9791727a9874fb3c795a57fe660914518575bbc306b4ab1373daf8b",
+    "large+doblo_cap3|2026-10-09|R60|L2|stage1": "d00b3f64212ff82f965214fdb875f903a03b600e9a14ee4ce51598c08b24c730",
+    "large+doblo_cap3|2026-10-09|R60|L2|stage2": "c2716c66d58962ee399e23f88da9d8772753c42d77bdffa3ab5da10d252fd055",
+    "large+doblo_cap3|2026-10-09|R60|L2|stage3": "d58002dc70530b4993c5b1926110d661740c15fe6f4ad9242224ac99aa646167",
+    "large+doblo_cap3|2026-10-09|R70|L0|stage1": "5a365da028f9414bd746505c3378252c5d58b3cf88a933ac981e58c950bb9711",
+    "large+doblo_cap3|2026-10-09|R70|L0|stage2": "c0dd569ed0018ef62143436bc79275211828c376c2d7db4ed5a0d42cea070d51",
+    "large+doblo_cap3|2026-10-09|R70|L0|stage3": "405e5f87ca9929cb12b515f8c49d5a3b172f9917e9bf6da58cca150bca95f969",
+    "large+doblo_cap3|2026-10-09|R70|L1|stage1": "78751ceaea5965a56d6ef6b323365e0e52d76cfe27f9e7fed632fc2cefa5825c",
+    "large+doblo_cap3|2026-10-09|R70|L1|stage2": "5b10e18dc9a2b985534a30feb53d400e24f116ba17c6257c8ff6ca170c59fcfa",
+    "large+doblo_cap3|2026-10-09|R70|L1|stage3": "35be31499f595e85391ee2865751efa12e208d583f33c365673e911bd22dbcd8",
+    "large+doblo_cap3|2026-10-09|R70|L2|stage1": "2252d76143caba1584e10a2c80cbed1fe04d8d1bfd39241cdfcefa29917bee5c",
+    "large+doblo_cap3|2026-10-09|R70|L2|stage2": "183abd6791094b8a3a7868fdcc716e41db20f08d9aa5192275aa48b7b5412fb6",
+    "large+doblo_cap3|2026-10-09|R70|L2|stage3": "ee440a41604f0077e7fac2e4070b88d3e21ce7142861a420a91a4fe6ec1e3edc",
+    "large+doblo_cap3|2026-10-09|R90|L0|stage1": "22e633fe72d542735b47d64aff123838e55e3076caad9b1c00f1342cb9dc5f34",
+    "large+doblo_cap3|2026-10-09|R90|L0|stage2": "6c944addb5cf37aef6652c962dad8683023115daea7015b202b98ceae7ca2e14",
+    "large+doblo_cap3|2026-10-09|R90|L0|stage3": "038678ab29042bf7dc431027d33b78c4b8cd37cd86146b6b9c8e32880da5c649",
+    "large+doblo_cap3|2026-10-09|R90|L1|stage1": "559d56886c11c76b5280c0ef0e70648a011742abe8bed4b5a1c208cbca74364b",
+    "large+doblo_cap3|2026-10-09|R90|L1|stage2": "39ec2e93c44903ad5565fa78acb226ad7bbf527aa4946dfc28bee517e928fe44",
+    "large+doblo_cap3|2026-10-09|R90|L1|stage3": "cdf639850ea23b8797de39dc78ad77d65464601253168e91172c353f829df394",
+    "large+doblo_cap3|2026-10-09|R90|L2|stage1": "53600b3b5c5f1fd66d6e5c1ce183c634cb1b99f29a90f8627eecae130bc7dbee",
+    "large+doblo_cap3|2026-10-09|R90|L2|stage2": "8888a63f68fc6a97e9df2b4bafe82535c73b98389e5fe5f0b886876adc24a075",
+    "large+doblo_cap3|2026-10-09|R90|L2|stage3": "147074c7d3bd687a7d949403be27ade1f831e551f7e6b9043f02a4e6b365287e",
+    "large+sedan|2026-10-05|R50|L2|stage1": "6a7acc4374dda6d7f2fea901d4c8bcff5f9813f2d5f76db74f46f7ea6962bb10",
+    "large+sedan|2026-10-05|R50|L3|stage1": "b4f75cae4b5611088f3bc3e17b62638df6f5817837e0ffddb2b2d8135297a4d5",
+    "large+sedan|2026-10-05|R50|L3|stage2": "81542bf4b9f3d66b0f3a9494537cd07cdf82b4e99ac337064570a945b1abdc57",
+    "large+sedan|2026-10-05|R50|L3|stage3": "892c4ad716aaacdfa9524463438c86dee0749da4921a029f985f8ec4cd58ea66",
+    "large+sedan|2026-10-05|R60|L2|stage1": "548dd6b7f7e685d1379646c95c712e31ed729f1d73c1e6b749d9f018839806c3",
+    "large+sedan|2026-10-05|R60|L2|stage2": "0a41cfb87ec51dcca1c5cfc2511aca87e024181f195fdc2b7c546bcca7c98dfd",
+    "large+sedan|2026-10-05|R60|L2|stage3": "13304e0c59629aaa14d35e302be6ce03c0c21ad908d4c14ba3bc3c51415e0eb5",
+    "large+sedan|2026-10-05|R60|L3|stage1": "1c1d12a1de4875bcc9dfff50af01f8baa1779f44f8be2e1ff7cb299350d02121",
+    "large+sedan|2026-10-05|R60|L3|stage2": "3cb8f671fd9a9ace7101bd57519a8590a74ab35059097f896bd40ccdf3e10cc1",
+    "large+sedan|2026-10-05|R60|L3|stage3": "fc55fb849b1c3e52a4813f5afd5d3db64758b4c3887b5e418347536f4c88b8dc",
+    "large+sedan|2026-10-05|R70|L2|stage1": "8ddef46c9bd2c3d3f89def85acb9103f40eb6b4159abe23ad777a360a6ff0228",
+    "large+sedan|2026-10-05|R70|L2|stage2": "c0c3400ea0444b93b2603c02f454652845a4f519d5de3132ea60beca7454e60a",
+    "large+sedan|2026-10-05|R70|L2|stage3": "0be911bd26949aebf25527fa4348dd485139aa8643988dd8a7cb8e15cb4e71bb",
+    "large+sedan|2026-10-05|R70|L3|stage1": "2cd475a389e5044e21697189204ecb01355764b06f19d55ba0d9c4cbc29692f7",
+    "large+sedan|2026-10-05|R70|L3|stage2": "fedae162fce01a25d06b06e910ff4e6be1056d7c8fac0aec31c53e5be00caf36",
+    "large+sedan|2026-10-05|R70|L3|stage3": "f7ecbb05fbed113351c24a53fa741f890faa40ef51b753196e0d43155792148b",
+    "large+sedan|2026-10-05|R90|L2|stage1": "8555ed991841be39bbc59ad0ba19603b349e3dbada9f68e27925f7eede16001a",
+    "large+sedan|2026-10-05|R90|L2|stage2": "0d07c477d1c3ebe890f19a4aa255f2c6ffe32c2beb33e8f8e4d312c007e808ad",
+    "large+sedan|2026-10-05|R90|L2|stage3": "e50f5dc42f1ee210359913ac6a3ef7e6a2fc15029a213ff42db7166a0c888292",
+    "large+sedan|2026-10-05|R90|L3|stage1": "497ec80900d6857616f2175d1bdf32907b0ae58964019d5c41e314c8ed48e848",
+    "large+sedan|2026-10-05|R90|L3|stage2": "f7635e118e4e28ca2b367b4ca02767f47c1ff218e21f8aafd6325f05ed56f615",
+    "large+sedan|2026-10-05|R90|L3|stage3": "78c1609766d097cef3284c777b76d238796e07cf69519c45cab00b4b8b2ef7a2",
+    "large+sedan|2026-10-06|R50|L2|stage1": "da6cfcf78d9b5082bb3aab81e3f9a1fcd5ab59d4515e19f7e7f7efe64f2ecf17",
+    "large+sedan|2026-10-06|R50|L2|stage2": "b4a114df365686300e6249610bbea74c8150ea239c7f58002aa2d562b542be31",
+    "large+sedan|2026-10-06|R50|L2|stage3": "7ddcaf37c7597be8ccb6a17dcab4ee3093a8d280183769b33302b874f0921ff8",
+    "large+sedan|2026-10-06|R50|L3|stage1": "9caefbb70b964ecf5ec9dabb5563a7c283cdf8a42d7b9c484e178d631a8d2c8c",
+    "large+sedan|2026-10-06|R50|L3|stage2": "b1eb92901479625626a531cf6b1e92bf9817dd6ffec29424b82dcdf9ca7c51cd",
+    "large+sedan|2026-10-06|R50|L3|stage3": "f40b9f1a6f780a3774a0db5ab30ac09f021ff958faa4daf45204eb4ef8e0d30c",
+    "large+sedan|2026-10-06|R60|L2|stage1": "1008c2681ace84c7968cbd0b2715fcaf2bde076a012c01ff8d3a111d6cb08796",
+    "large+sedan|2026-10-06|R60|L2|stage2": "6de0b828135aea364759e98e6d644ae8e747906847a0d3a9cddac5d363e13e23",
+    "large+sedan|2026-10-06|R60|L2|stage3": "17b0a8d3eff139afd72c34eebf069f3df43be45d22e8fc6cbe8d98a975f33b36",
+    "large+sedan|2026-10-06|R60|L3|stage1": "cbf80c345065cd7f81cf44be480f2b4317561c9ce5914bcca7da4c83c1845d35",
+    "large+sedan|2026-10-06|R60|L3|stage2": "c300e5e572c9fb2b73b6e238321c2b99ec35d04a03812228c3894781539c20eb",
+    "large+sedan|2026-10-06|R60|L3|stage3": "ca31903ce58afd63294d7a57b1ae1e64a69c76cd2bb2d5681a77fc935858b909",
+    "large+sedan|2026-10-06|R70|L1|stage1": "cdc25ce969b8ec1240723d29d7f0975e6ce5033154b8ea99451b16309a2f009d",
+    "large+sedan|2026-10-06|R70|L2|stage1": "65e0482cc8ccde0a09502fe8bdca0d4356d409f2136903b0a5721aa3644d1c36",
+    "large+sedan|2026-10-06|R70|L2|stage2": "98036fcf7c5cfaba0e0e956540d18a78faecd31ee553c6d903ba603cac1bc929",
+    "large+sedan|2026-10-06|R70|L2|stage3": "fd9df89e42c2f6e8f4f6ac04adb2e7c612f2b0a6ce5ee0752313277cc2cfd6a5",
+    "large+sedan|2026-10-06|R70|L3|stage1": "5cb4d712adb911386f7c5926583038ff711ab9bfb90b25523cff35e683119506",
+    "large+sedan|2026-10-06|R70|L3|stage2": "050772fc0dd9c5e24aefb2913eeed3d154fd53302fde22134d970c0b7cebde5e",
+    "large+sedan|2026-10-06|R70|L3|stage3": "b17098abaf9341ecbee928857cbdf7d739cac6e32ead43d79ff0303d37fb1e5b",
+    "large+sedan|2026-10-06|R90|L1|stage1": "4d42060b06bac164b8926d98d9d12d1d645f835b4ee7ad8c6b685d9586760e3a",
+    "large+sedan|2026-10-06|R90|L2|stage1": "3fab8f922a2e6c6ddfdf1f2a8193ce0c53bd01429faa665dcfd6762a8ba25c68",
+    "large+sedan|2026-10-06|R90|L2|stage2": "4d6b428443706a6d76081c9ad9fe6c3c99e0422059b146469ebf5a2c9eae0f76",
+    "large+sedan|2026-10-06|R90|L2|stage3": "92f366178c313aaf991c820e0a16cc0821e970428678c2053fd4ee3d9eb657b8",
+    "large+sedan|2026-10-06|R90|L3|stage1": "f1d1edc9730dfbcfa1e8b445ab89d23bf9ae65e880bdbcfc76a88e614f878560",
+    "large+sedan|2026-10-06|R90|L3|stage2": "26271a5b09f71f37eb04637d167c347a6dc944e184d665d7cbfbd385b902cbf2",
+    "large+sedan|2026-10-06|R90|L3|stage3": "1daa8c3412b622814ce0343c5946a714d514367d205a6f01b6f71295afa3c579",
+    "large+sedan|2026-10-07|R50|L2|stage1": "4dfab9c0fb58586f2ae0fbf0b395e53e59582699443843d8575a72af9d7cfd8c",
+    "large+sedan|2026-10-07|R50|L3|stage1": "405d97ea2d0a853d4410435324d538b694a690438fb6b6656948fa91988579f2",
+    "large+sedan|2026-10-07|R50|L3|stage2": "7c61ff7ff4b6bbff7b5aff7067eb9e7ba4a8f1084314bf8ec2b5f83c4a046631",
+    "large+sedan|2026-10-07|R50|L3|stage3": "848b782290a56875a77c97dd338cdba59e28396fcf0e719d8a63a298061f1945",
+    "large+sedan|2026-10-07|R60|L1|stage1": "3f519a2b1c0ef7448e59c718845fea3f6704b0bc95a35bf9ec8dc2af913efeae",
+    "large+sedan|2026-10-07|R60|L2|stage1": "8334052ee176dbbdf5a8f38bbfa1170b2a98ee7b39c33ab2d01063d12d93c129",
+    "large+sedan|2026-10-07|R60|L3|stage1": "93cd143f0333220e5155005172b7aa8e405bf6025f7a45eec6673a88a3bf0e60",
+    "large+sedan|2026-10-07|R60|L3|stage2": "4c10dccaf8ff2d4865364028c19b2ba0390af334fd973b3a0c83255caa0f09c8",
+    "large+sedan|2026-10-07|R60|L3|stage3": "4f4d90ee4f3f22b90fbdf8dc196652b442ecf9e56fb11a28681a05c59b85a710",
+    "large+sedan|2026-10-07|R70|L1|stage1": "882f3766ec9afc419a2765a8277b0a4a18bdaa1c6bc58dca8c9b518051d85e5f",
+    "large+sedan|2026-10-07|R70|L2|stage1": "8d9afe5b95bf19cb8e2ad1157a213f528dbebb8ece1bb8cbabdfc26197ba560f",
+    "large+sedan|2026-10-07|R70|L3|stage1": "16eef2110a03e594fd92fb4f437f7f658a83c59e07b1244922eb2156c937b5f2",
+    "large+sedan|2026-10-07|R70|L3|stage2": "5c7904da5b5904aeb9c8969f5bb46f9d4b2335a229d9cb0c97f0ee69123b86f3",
+    "large+sedan|2026-10-07|R70|L3|stage3": "3954f84db4eca18849fc744264eeac132f11e9b777efaf8c1b5e1483892e170e",
+    "large+sedan|2026-10-07|R90|L1|stage1": "9addf4acea4307fe9c69d183be6479cd5a75706927bce705fbcb684ffdaa16a3",
+    "large+sedan|2026-10-07|R90|L2|stage1": "9be81be9e1afe7c27bbd4cecdd4b65cda6093b6758cfe01adba42223dfeac230",
+    "large+sedan|2026-10-07|R90|L3|stage1": "43f491c21cfda90a160371889b375ff5705d23554e30bbd0f8bdee2409d11de7",
+    "large+sedan|2026-10-07|R90|L3|stage2": "98591edc676d1e01d55998c9e86a36bf630c62c258574e648ee3bba8cb140888",
+    "large+sedan|2026-10-07|R90|L3|stage3": "fd845079a27530a5b6feda669a0be85e1d371ee11c392c461f6ddc1a436f006c",
+    "large+sedan|2026-10-08|R50|L2|stage1": "b3afdb6ac746331c4f141cb14ab84e1a647d23c1694c175819338b2934dab7ab",
+    "large+sedan|2026-10-08|R50|L3|stage1": "c47106b43a7b2527b305f33d98612c3104181cb68f7873359fe2bd7e7c400911",
+    "large+sedan|2026-10-08|R50|L3|stage2": "02ebca7407ee2cc2d58d4ea566ab3eb33516bc4d7ab064f33d1e421f1eb76502",
+    "large+sedan|2026-10-08|R50|L3|stage3": "2985a97c075de4bcf7a176fcd9337d0e83f80abba87c2dcb51d8d8fac927f974",
+    "large+sedan|2026-10-08|R60|L2|stage1": "646d1d6af92ed13991317c8a8d88837c5bead79d6d895ebebb041a10a28b34fd",
+    "large+sedan|2026-10-08|R60|L2|stage2": "ef119167a6f2584e1ac05cb91c28f785accc1ba1d4dfa6385ace8e127fa9b7f3",
+    "large+sedan|2026-10-08|R60|L2|stage3": "be4eef6b679f7be680cde017ad61bf2667c9fe65027b5fa121314d9c3991e062",
+    "large+sedan|2026-10-08|R60|L3|stage1": "b41c455f1867f87a1299f46d1ae0676d154d9e5af3f879bfc2f9fdd2f8f3fe76",
+    "large+sedan|2026-10-08|R60|L3|stage2": "677be67dcc0c3d51ccb09711680eb53270a6a4c3e099397157f5857052a5b818",
+    "large+sedan|2026-10-08|R60|L3|stage3": "1587b6401869ff6131577d1df25d4c75ec12ca8be2e17019e2b98aa7b9fdf02d",
+    "large+sedan|2026-10-08|R70|L2|stage1": "77f7b26af6c19136a0bee1f48d6fe6494b2a1ba21fd1967e79769988e67799cf",
+    "large+sedan|2026-10-08|R70|L2|stage2": "fcf30e06d4321df76f5b1502fcab4efeb2110991d0e748f5b8a39fee4194f5c2",
+    "large+sedan|2026-10-08|R70|L2|stage3": "df684dfe6bb5425e1802975c1f1e8161f7490f0aff9c95cfa666825c767d81c1",
+    "large+sedan|2026-10-08|R70|L3|stage1": "27f072f1318c397c840a92910e8f0d9175074a24d935a866f791c692e19ac4bb",
+    "large+sedan|2026-10-08|R70|L3|stage2": "8988b4b07aa314e606b1da21e71f96dd5f664d8dc4c20b63842da3876079a0a1",
+    "large+sedan|2026-10-08|R70|L3|stage3": "6c9014f3aa788c8b99db64484f341c639f9c02d2ea4663869e545d23787bcb02",
+    "large+sedan|2026-10-08|R90|L2|stage1": "6b71d8a112238e695f754a2744d39d9a9a3fb0b024a71a2a4818f2f06a5efea6",
+    "large+sedan|2026-10-08|R90|L2|stage2": "f5dcc461a7948b08c9a13c6faa91b1bad26278ae36fed4d0b9b61d70c7c0185b",
+    "large+sedan|2026-10-08|R90|L2|stage3": "78f2bae1b8721a4ce653fefe8082ab0e0c62e509c958c25d8c63280e5643cbef",
+    "large+sedan|2026-10-08|R90|L3|stage1": "bef68f71902f0d5bc849df6e2ed1c7344ed0ca1a99d24846276ce2ad43eb30eb",
+    "large+sedan|2026-10-08|R90|L3|stage2": "e177796c14cf850cb7cfacf5571fd2c86fd0753a55153e692238768e2a4b2050",
+    "large+sedan|2026-10-08|R90|L3|stage3": "5f97eec795689d1751bc8bf399a2eccfeb855a2b71296aade2ef6c1eabcde186",
+    "large+sedan|2026-10-09|R50|L2|stage1": "9dd8280b80eab7ab447c53763a205bd5dd2a1dabad50978f9f2d525758b5bc5d",
+    "large+sedan|2026-10-09|R50|L2|stage2": "5e8b7bda51afcae23dfa73c4d0976986c9eec0666363ea72ec4bd630cbbaaa28",
+    "large+sedan|2026-10-09|R50|L2|stage3": "a6d839245ebf5b7f891cfa67b983eeb8a7cfbd716ed4fa119cbbb94a685785d7",
+    "large+sedan|2026-10-09|R50|L3|stage1": "82c76820d4c096b463f08a91e8f39b1fca75ff5d42b6b68240e607e64f63597e",
+    "large+sedan|2026-10-09|R50|L3|stage2": "03407839365020091fe16f968f6edb8fb01246e3934066b7e1e9f66b1a9fc9d3",
+    "large+sedan|2026-10-09|R50|L3|stage3": "7ac1a14a5561d4882cd8ebfff3b1e870b561214bfc64319b8a169b9440b328ad",
+    "large+sedan|2026-10-09|R60|L2|stage1": "de64f6aad275899d02205349d40a9008871c87d6599a2bf56a17b070039772d8",
+    "large+sedan|2026-10-09|R60|L2|stage2": "35472857870a717f5903a59f912eba458b44deb9b53dbb199cabacab08699582",
+    "large+sedan|2026-10-09|R60|L2|stage3": "5e1b6472af3483a07dbfd15b639878ccaad89fc13c8af3b22f42e2daf01b98c2",
+    "large+sedan|2026-10-09|R60|L3|stage1": "c798f41bff3f42c70f0daf40751dcac4d58ff145ebfa1fe93efcba87942786c6",
+    "large+sedan|2026-10-09|R60|L3|stage2": "5a719a70e02ad4b559bcf972016a451465820d0e58fb7424be82d21c07046a98",
+    "large+sedan|2026-10-09|R60|L3|stage3": "59264ede32e969c36c4bcfd212e8c4be394c9dcd22f2ba8a4d0ed6bc7429ff8d",
+    "large+sedan|2026-10-09|R70|L2|stage1": "f2820e8520cb26cdecd3bf7534eaa7a1a3eeef553f96656cfa273ddfb3815c4c",
+    "large+sedan|2026-10-09|R70|L2|stage2": "ca960cb0190c4821752defd9df6a119c8e4351e289cbebd42e800e20a2dd9863",
+    "large+sedan|2026-10-09|R70|L2|stage3": "0320a63c7c922f42d3651fdd6990540f87ec48454144b814bb3e2f6a862afbc1",
+    "large+sedan|2026-10-09|R70|L3|stage1": "73dd1ec0b73e9c2900082af8571821dc587008eda02ef6faef46fb256305920b",
+    "large+sedan|2026-10-09|R70|L3|stage2": "a31e2cbeb74f774811af74bbd60c55afce6e76c6301176c770e20bd0d7b828ff",
+    "large+sedan|2026-10-09|R70|L3|stage3": "69c9b1d4bec9309ce9ccc40736265b7dbd25fc1a1bfb5a7db97fdd4392da1a80",
+    "large+sedan|2026-10-09|R90|L2|stage1": "586cfba8a7f182bee0bb04428f72d7d29e8617097a05530c45021f3f8829896c",
+    "large+sedan|2026-10-09|R90|L2|stage2": "5fa8519c53e61fb24df0aa7aae268b9a1712586e6f549c3e4bd6936143f93249",
+    "large+sedan|2026-10-09|R90|L2|stage3": "0083b5e068e6e1e37e10cb115ae25ba5adb3a707c2bb24dd75766b32014b0241",
+    "large+sedan|2026-10-09|R90|L3|stage1": "47dd956a32a78041ab599047980d3b983c70679089e6c08dba70ac6160bde2e7",
+    "large+sedan|2026-10-09|R90|L3|stage2": "782c363b379ad39c2b61b44b0438406863280e3faf95733c6177aba28003d8f8",
+    "large+sedan|2026-10-09|R90|L3|stage3": "1fbecb3c35b2b05d69eb9da79df12a4d6be937b56740950d355774e38d835003",
+    "single_4sw5so|2026-10-05|R50|L-|stage1": "3428f4623f0fab384ad87c2433a2aa60533b9c38bc32a58e14a1fd8bb984568f",
+    "single_4sw5so|2026-10-05|R50|L-|stage2": "e28eee7d7c9486cda6cdd050894f48d0895d422cabac2797a17e48c2096bd714",
+    "single_4sw5so|2026-10-05|R60|L-|stage1": "38a221e8c137f01b7c8e1f8ae6d0f65979a394e5c2c7d47256e4bdca32074ea9",
+    "single_4sw5so|2026-10-05|R60|L-|stage2": "32280c4136acf3aca663b4befc8343541e5a89da828b663004759462e6c84494",
+    "single_4sw5so|2026-10-05|R70|L-|stage1": "b6cc9cdc4b6c834664d5a6f2b6f8baf96c46957e6c898e598b8f2158faf48f8f",
+    "single_4sw5so|2026-10-05|R70|L-|stage2": "aaf3265a9cba0336256a29ef77536668dbc126394b5cc8ecbe418cc0c4385ebf",
+    "single_4sw5so|2026-10-05|R90|L-|stage1": "2fe5ec0e33b808ca632c6c8462d2ff1d7afdfc6c63d5c0c11deb767e2b13fcdf",
+    "single_4sw5so|2026-10-05|R90|L-|stage2": "39983afc3e0f695f407914396e6c09e8be44cb1f3da708fd63ff84c1a5ae2ef5",
+    "single_4sw5so|2026-10-06|R50|L-|stage1": "753f0de08706cfd1be1007ae0a55059fe663144ab5fed3ef0e1c40b91398b1aa",
+    "single_4sw5so|2026-10-06|R50|L-|stage2": "c6246df3a91d446ded2e0afbdbf1bb46827b16b4c785aa1df7e6727e1d4d7855",
+    "single_4sw5so|2026-10-06|R60|L-|stage1": "54c9603efeb07751d28924ebc9a2b5063ed5f6614fe8c4b2882ef48e36c10484",
+    "single_4sw5so|2026-10-06|R60|L-|stage2": "6656fa680a124548fc73e013e5edc6d1dadaf33278c003dc63f9351ec387f09d",
+    "single_4sw5so|2026-10-06|R70|L-|stage1": "168f883b98b20859cd4817e83226759b0681337a472dff07a737cc3a71814bd0",
+    "single_4sw5so|2026-10-06|R70|L-|stage2": "99285b80f466c1392057535a9152d4fa36ad1029a7a2fdcf5d40f293f37d965f",
+    "single_4sw5so|2026-10-06|R90|L-|stage1": "8826666652cad5f292b09b969373776d0c71d0a84239e52d50b4d9fa09ce9eb8",
+    "single_4sw5so|2026-10-06|R90|L-|stage2": "45414c32d3a44dc0f70d160c482d53ffb12e9f50e2a446469c93aa9524396101",
+    "single_4sw5so|2026-10-07|R50|L-|stage1": "bc4c629a3323e78f5d7fc25173f7ff9d6ab11c91df13bc055fcfef02056083bd",
+    "single_4sw5so|2026-10-07|R50|L-|stage2": "e6ac5f53f72bf1d71e1d4c281f90bd166d20ff918daf86f349ee94975751159c",
+    "single_4sw5so|2026-10-07|R60|L-|stage1": "5d3416e934e356ad4ee4e6b75a7cfcd3fb14dc80a1b2aa74e544a4817fa6cf24",
+    "single_4sw5so|2026-10-07|R60|L-|stage2": "ac0bc20f6aa55624379990f09ff813185270658821b05337a5ce3eda76e73844",
+    "single_4sw5so|2026-10-07|R70|L-|stage1": "03f5dc2d868ed360bf2b8a30c34ab036bcc5fdb07ebaaf14ef5ea50c38ca1901",
+    "single_4sw5so|2026-10-07|R70|L-|stage2": "fa94f71254625c23e330d26476741c669912cddeb6826ab01b7a719660cf0f6b",
+    "single_4sw5so|2026-10-07|R90|L-|stage1": "bd290c7774d5e0a33cd3338494448dd9cf81ee1c272c286c415c9dbbb44ce1e0",
+    "single_4sw5so|2026-10-07|R90|L-|stage2": "a3c4fb7dcd1372202c6b15309b42d4cf7d8b3eb80cc6a86e07ed3fbc33814dd7",
+    "single_4sw5so|2026-10-08|R50|L-|stage1": "1d51cf5ef8c1f18cbf725a38826e5425398f9004809a1428b612a2645c5247ff",
+    "single_4sw5so|2026-10-08|R50|L-|stage2": "01cbe1ff4305680c6e5b249edb738ee734151e1b07b31055fe2bb3362f62ba48",
+    "single_4sw5so|2026-10-08|R60|L-|stage1": "3a0dafd9f36fea379e2dc871ebc70399a539a426471290fd826d386d73868b06",
+    "single_4sw5so|2026-10-08|R60|L-|stage2": "8e93a57d71b39c803128875f16f0f3b52485cb1919e1eb3ad865df5f39dda96f",
+    "single_4sw5so|2026-10-08|R70|L-|stage1": "19c302fea8f6af49e3d67c8503ac9279e5b6cfc677ff37e96403e6eaedf61039",
+    "single_4sw5so|2026-10-08|R70|L-|stage2": "1fc8143e91a5e00d840edcd3f64ef17ce4685a0a89e1efafa0997d5bcb77dec9",
+    "single_4sw5so|2026-10-08|R90|L-|stage1": "5fb168f1ae92df2d2bf5c3d5b211d603aa6b537171e71acdecb5d06ce8272cfe",
+    "single_4sw5so|2026-10-08|R90|L-|stage2": "e0b22de389499c5aeeb8db5c9bff26f2d59e875c2ffc07ff8332f95228a76782",
+    "single_4sw5so|2026-10-09|R50|L-|stage1": "e3e4d5180e77f771d1615b7fd3d72cee5489cacc6689e1b81bd358dcfb221196",
+    "single_4sw5so|2026-10-09|R50|L-|stage2": "4265d2548bb2273b56879e3363496d67d98c747e066863ff31be08808e8fdd56",
+    "single_4sw5so|2026-10-09|R60|L-|stage1": "cba05c74a114d5d4958cec64d7513591f3cdeacf2cba8bef89f4ddb25a55cf64",
+    "single_4sw5so|2026-10-09|R60|L-|stage2": "2d75e0df6ad4094c73dd4f2aa3f26fccd6ad84d0ac821986efae9dfbce40e7cf",
+    "single_4sw5so|2026-10-09|R70|L-|stage1": "ce6c25e7934748bdeda5913f96a0273d335656596d9c6e397e494c2c82233f60",
+    "single_4sw5so|2026-10-09|R70|L-|stage2": "dd55246cfcb844688304e3fc29b98eafc6c29b2c8862ac6cb53da08279502bd5",
+    "single_4sw5so|2026-10-09|R90|L-|stage1": "d3fcebe34f737024b3c40944d636eafde6423ec2e38b77e02d0ce3896a8bd3a8",
+    "single_4sw5so|2026-10-09|R90|L-|stage2": "30a81c05f9e37eb8b955a6e74f29af3a3cac17a9fe10cd57ad1b039fa0e74ea7"
+  },
+  "options": {
+    "dates": [],
+    "fleets": [
+      "single_4sw5so",
+      "large+sedan",
+      "large+doblo_cap3"
+    ],
+    "limits": [],
+    "rides": []
+  },
+  "output_sha256": {
+    "day_joint.csv": "600b326c95301145414a1a5ced58e2f48a3163482153a9e4b8e1d9fe17c0e078",
+    "day_joint_plans.json": "41b55d7598090a2abaa553e3530e2397d505b554ae784bc2412e9ebe4d3e7d81",
+    "day_joint_stages.csv": "d92d1408c989d07571334bf4b24224e7a9aa2fa9b592955792ec6b3dbedce757",
+    "day_joint_week.csv": "d9a0c79ffc2d398acb73916dedcd6eeb7b5429bba40390f11006c44d4f0bbd3d",
+    "lb0.csv": "7181796d09dfb6351ee89f03ae9faa8c753e9b04b0075b348084027145f2125d"
+  },
+  "protocol": "exact_day_joint_v1",
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "optimizer_api": "optimizer_api/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "run_history": {
+    "cache": "none",
+    "cells": [
+      {
+        "cell": "single_4sw5so|2026-10-05|R50|L-",
+        "day_status": "optimal",
+        "wall_seconds": 34.52
+      },
+      {
+        "cell": "single_4sw5so|2026-10-06|R50|L-",
+        "day_status": "optimal",
+        "wall_seconds": 25.14
+      },
+      {
+        "cell": "single_4sw5so|2026-10-07|R50|L-",
+        "day_status": "optimal",
+        "wall_seconds": 20.51
+      },
+      {
+        "cell": "single_4sw5so|2026-10-08|R50|L-",
+        "day_status": "optimal",
+        "wall_seconds": 30.19
+      },
+      {
+        "cell": "single_4sw5so|2026-10-09|R50|L-",
+        "day_status": "optimal",
+        "wall_seconds": 13.92
+      },
+      {
+        "cell": "single_4sw5so|2026-10-05|R60|L-",
+        "day_status": "optimal",
+        "wall_seconds": 33.74
+      },
+      {
+        "cell": "single_4sw5so|2026-10-06|R60|L-",
+        "day_status": "optimal",
+        "wall_seconds": 26.29
+      },
+      {
+        "cell": "single_4sw5so|2026-10-07|R60|L-",
+        "day_status": "optimal",
+        "wall_seconds": 23.67
+      },
+      {
+        "cell": "single_4sw5so|2026-10-08|R60|L-",
+        "day_status": "optimal",
+        "wall_seconds": 43.78
+      },
+      {
+        "cell": "single_4sw5so|2026-10-09|R60|L-",
+        "day_status": "optimal",
+        "wall_seconds": 21.19
+      },
+      {
+        "cell": "single_4sw5so|2026-10-05|R70|L-",
+        "day_status": "optimal",
+        "wall_seconds": 90.43
+      },
+      {
+        "cell": "single_4sw5so|2026-10-06|R70|L-",
+        "day_status": "optimal",
+        "wall_seconds": 25.65
+      },
+      {
+        "cell": "single_4sw5so|2026-10-07|R70|L-",
+        "day_status": "optimal",
+        "wall_seconds": 21.08
+      },
+      {
+        "cell": "single_4sw5so|2026-10-08|R70|L-",
+        "day_status": "optimal",
+        "wall_seconds": 32.11
+      },
+      {
+        "cell": "single_4sw5so|2026-10-09|R70|L-",
+        "day_status": "optimal",
+        "wall_seconds": 15.0
+      },
+      {
+        "cell": "single_4sw5so|2026-10-05|R90|L-",
+        "day_status": "optimal",
+        "wall_seconds": 251.48
+      },
+      {
+        "cell": "single_4sw5so|2026-10-06|R90|L-",
+        "day_status": "optimal",
+        "wall_seconds": 28.07
+      },
+      {
+        "cell": "single_4sw5so|2026-10-07|R90|L-",
+        "day_status": "optimal",
+        "wall_seconds": 21.24
+      },
+      {
+        "cell": "single_4sw5so|2026-10-08|R90|L-",
+        "day_status": "optimal",
+        "wall_seconds": 32.79
+      },
+      {
+        "cell": "single_4sw5so|2026-10-09|R90|L-",
+        "day_status": "optimal",
+        "wall_seconds": 18.87
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R50|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 57.55
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R50|L2",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 57.78
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R50|L3",
+        "day_status": "optimal",
+        "wall_seconds": 71.48
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R50|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 58.16
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R50|L2",
+        "day_status": "optimal",
+        "wall_seconds": 59.92
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R50|L3",
+        "day_status": "optimal",
+        "wall_seconds": 60.08
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R50|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 46.97
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R50|L2",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 45.38
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R50|L3",
+        "day_status": "optimal",
+        "wall_seconds": 47.22
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R50|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 59.98
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R50|L2",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 62.11
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R50|L3",
+        "day_status": "optimal",
+        "wall_seconds": 61.84
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R50|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 34.55
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R50|L2",
+        "day_status": "optimal",
+        "wall_seconds": 38.9
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R50|L3",
+        "day_status": "optimal",
+        "wall_seconds": 38.45
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R60|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 68.22
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 76.08
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R60|L3",
+        "day_status": "optimal",
+        "wall_seconds": 79.94
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R60|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 57.71
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 62.42
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R60|L3",
+        "day_status": "optimal",
+        "wall_seconds": 60.3
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R60|L1",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 45.9
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R60|L2",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 45.39
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R60|L3",
+        "day_status": "optimal",
+        "wall_seconds": 49.45
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R60|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 64.26
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 64.01
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R60|L3",
+        "day_status": "optimal",
+        "wall_seconds": 63.99
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R60|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 35.88
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 43.41
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R60|L3",
+        "day_status": "optimal",
+        "wall_seconds": 45.16
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R70|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 91.57
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 124.84
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R70|L3",
+        "day_status": "optimal",
+        "wall_seconds": 173.55
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R70|L1",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 60.87
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 63.36
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R70|L3",
+        "day_status": "optimal",
+        "wall_seconds": 62.03
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R70|L1",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 45.93
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R70|L2",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 47.64
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R70|L3",
+        "day_status": "optimal",
+        "wall_seconds": 50.04
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R70|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 61.43
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 63.18
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R70|L3",
+        "day_status": "optimal",
+        "wall_seconds": 67.42
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R70|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 38.23
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 44.75
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R70|L3",
+        "day_status": "optimal",
+        "wall_seconds": 46.1
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R90|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 317.53
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 568.31
+      },
+      {
+        "cell": "large+sedan|2026-10-05|R90|L3",
+        "day_status": "optimal",
+        "wall_seconds": 480.39
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R90|L1",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 63.87
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 71.84
+      },
+      {
+        "cell": "large+sedan|2026-10-06|R90|L3",
+        "day_status": "optimal",
+        "wall_seconds": 69.47
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R90|L1",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 47.0
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R90|L2",
+        "day_status": "infeasible_solver_proven",
+        "wall_seconds": 49.31
+      },
+      {
+        "cell": "large+sedan|2026-10-07|R90|L3",
+        "day_status": "optimal",
+        "wall_seconds": 52.96
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R90|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 61.88
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 66.73
+      },
+      {
+        "cell": "large+sedan|2026-10-08|R90|L3",
+        "day_status": "optimal",
+        "wall_seconds": 67.23
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R90|L1",
+        "day_status": "infeasible_certified",
+        "wall_seconds": 40.24
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 78.06
+      },
+      {
+        "cell": "large+sedan|2026-10-09|R90|L3",
+        "day_status": "optimal",
+        "wall_seconds": 55.73
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R50|L0",
+        "day_status": "optimal",
+        "wall_seconds": 62.43
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R50|L1",
+        "day_status": "optimal",
+        "wall_seconds": 62.69
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R50|L2",
+        "day_status": "optimal",
+        "wall_seconds": 63.1
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R50|L0",
+        "day_status": "optimal",
+        "wall_seconds": 56.61
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R50|L1",
+        "day_status": "optimal",
+        "wall_seconds": 59.22
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R50|L2",
+        "day_status": "optimal",
+        "wall_seconds": 57.56
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R50|L0",
+        "day_status": "optimal",
+        "wall_seconds": 50.07
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R50|L1",
+        "day_status": "optimal",
+        "wall_seconds": 50.77
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R50|L2",
+        "day_status": "optimal",
+        "wall_seconds": 52.45
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R50|L0",
+        "day_status": "optimal",
+        "wall_seconds": 61.63
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R50|L1",
+        "day_status": "optimal",
+        "wall_seconds": 61.81
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R50|L2",
+        "day_status": "optimal",
+        "wall_seconds": 62.09
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R50|L0",
+        "day_status": "optimal",
+        "wall_seconds": 36.55
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R50|L1",
+        "day_status": "optimal",
+        "wall_seconds": 41.72
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R50|L2",
+        "day_status": "optimal",
+        "wall_seconds": 37.83
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R60|L0",
+        "day_status": "optimal",
+        "wall_seconds": 69.66
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R60|L1",
+        "day_status": "optimal",
+        "wall_seconds": 88.76
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 79.84
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R60|L0",
+        "day_status": "optimal",
+        "wall_seconds": 57.89
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R60|L1",
+        "day_status": "optimal",
+        "wall_seconds": 58.43
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 58.18
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R60|L0",
+        "day_status": "optimal",
+        "wall_seconds": 53.78
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R60|L1",
+        "day_status": "optimal",
+        "wall_seconds": 53.86
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 64.44
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R60|L0",
+        "day_status": "optimal",
+        "wall_seconds": 69.85
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R60|L1",
+        "day_status": "optimal",
+        "wall_seconds": 67.73
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 65.41
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R60|L0",
+        "day_status": "optimal",
+        "wall_seconds": 38.61
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R60|L1",
+        "day_status": "optimal",
+        "wall_seconds": 40.5
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R60|L2",
+        "day_status": "optimal",
+        "wall_seconds": 46.57
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R70|L0",
+        "day_status": "optimal",
+        "wall_seconds": 97.06
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R70|L1",
+        "day_status": "optimal",
+        "wall_seconds": 128.98
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 133.76
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R70|L0",
+        "day_status": "optimal",
+        "wall_seconds": 59.24
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R70|L1",
+        "day_status": "optimal",
+        "wall_seconds": 62.48
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 61.57
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R70|L0",
+        "day_status": "optimal",
+        "wall_seconds": 51.3
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R70|L1",
+        "day_status": "optimal",
+        "wall_seconds": 53.35
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 73.49
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R70|L0",
+        "day_status": "optimal",
+        "wall_seconds": 88.05
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R70|L1",
+        "day_status": "optimal",
+        "wall_seconds": 90.63
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 82.83
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R70|L0",
+        "day_status": "optimal",
+        "wall_seconds": 40.64
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R70|L1",
+        "day_status": "optimal",
+        "wall_seconds": 39.66
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R70|L2",
+        "day_status": "optimal",
+        "wall_seconds": 37.71
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R90|L0",
+        "day_status": "optimal",
+        "wall_seconds": 176.32
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R90|L1",
+        "day_status": "optimal",
+        "wall_seconds": 422.65
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 409.55
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R90|L0",
+        "day_status": "optimal",
+        "wall_seconds": 54.97
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R90|L1",
+        "day_status": "optimal",
+        "wall_seconds": 55.37
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-06|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 57.33
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R90|L0",
+        "day_status": "optimal",
+        "wall_seconds": 46.91
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R90|L1",
+        "day_status": "optimal",
+        "wall_seconds": 49.53
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-07|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 48.65
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R90|L0",
+        "day_status": "optimal",
+        "wall_seconds": 55.86
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R90|L1",
+        "day_status": "optimal",
+        "wall_seconds": 56.46
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-08|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 57.68
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R90|L0",
+        "day_status": "optimal",
+        "wall_seconds": 35.07
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R90|L1",
+        "day_status": "optimal",
+        "wall_seconds": 39.2
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-09|R90|L2",
+        "day_status": "optimal",
+        "wall_seconds": 56.3
+      }
+    ],
+    "cells_planned": 140,
+    "cells_solved": 140,
+    "invocations": [
+      {
+        "jobs": 1,
+        "serial": true,
+        "wall_seconds": 10060.5
+      }
+    ],
+    "jobs": 1
+  },
+  "run_label": "",
+  "schema_version": 1,
+  "sensitivity_run": false,
+  "solvers": {
+    "gurobi": {
+      "name": "gurobi",
+      "options": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 lim:work=200 outlev=1",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "Gurobi 13.0.3",
+      "work_limit": 200.0
+    },
+    "highs": {
+      "name": "highs",
+      "options": "output_flag=false threads=1 random_seed=0 mip_rel_gap=0 mip_abs_gap=0.99 time_limit=600",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "1.15.1",
+      "work_limit": null
+    }
+  },
+  "source_manifests": {
+    "large+doblo_cap3": {
+      "fixed_type": "large",
+      "git_commit": "f29aa3d884882ada678e11ba3d5761b1ea65665a",
+      "manifest_sha256": "b7dcd7da657a4cb660f1f4bba54b7c9b14285a127fce5e18346c692b158c1e5b",
+      "minimised_type": "minivan",
+      "path": "docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3"
+    },
+    "large+sedan": {
+      "fixed_type": "large",
+      "git_commit": "f29aa3d884882ada678e11ba3d5761b1ea65665a",
+      "manifest_sha256": "279a06fc19f222740e93bf842bb65ca407f221e7c3c159b6d0e084b019d7643b",
+      "minimised_type": "sedan",
+      "path": "docs/paper/results/week-2026-10-05-fleet-rerun-large-sedan"
+    },
+    "single_4sw5so": {
+      "fixed_type": null,
+      "git_commit": "6be127d048ae6c871baffd0c1992e0eb617231b2",
+      "manifest_sha256": "f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15",
+      "minimised_type": null,
+      "path": "docs/paper/results/week-2026-10-05-4sw5so"
+    }
+  },
+  "tools": {
+    "cli_command": "node --conditions=react-server --import tsx scripts/verify-typed-selection.ts",
+    "node": "v25.5.0",
+    "tsx": null
+  },
+  "total_wall_seconds": 10060.5,
+  "wave_values": "sp",
+  "work_package": "WP-E11"
+}

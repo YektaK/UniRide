@@ -196,9 +196,13 @@ def test_missing_run_file_is_refused(tmp_path, capsys):
     assert "lb0.csv" in capsys.readouterr().err
 
 
-def test_out_inside_results_folder_is_refused(tmp_path):
+def test_out_inside_results_folder_is_refused(tmp_path, monkeypatch):
     first, rerun = make_run(tmp_path / "first"), make_run(tmp_path / "rerun")
-    target = REPO / "docs" / "paper" / "results" / "week-2026-10-05-exact" / "wp-e11-joint-day" / "never_written.csv"
+    results = tmp_path / "results"  # a stand-in: a failing guard must never write into the real results folder
+    results.mkdir()
+    monkeypatch.setattr(cmp_, "RESULTS", results)
+    target = results / "wp" / "never_written.csv"
+    target.parent.mkdir()
     assert cmp_.main([str(first), str(rerun), "--out", str(target)]) == 2
     assert not target.exists()
 

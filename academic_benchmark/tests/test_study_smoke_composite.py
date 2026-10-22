@@ -375,3 +375,24 @@ def test_composite_row_is_validated_as_exported_not_only_as_computed(tmp_path, m
     assert [row["stage"] for row in failed] == ["composite_validation"]
     assert "composition" in failed[0]["error"]
     assert not (tmp_path / "out" / "fixed_runs.jsonl").exists()
+
+
+def test_native_termination_bounds_both_stages_of_a_composite_run(tmp_path):
+    """The study's native termination (here max_iterations 2) caps the global and the polish stage,
+    otherwise an unbounded native polish (1000 3-opt iterations) would make a smoke run last hours."""
+    root = _repository(tmp_path / "repo")
+    seen = []
+
+    def gateway(**kwargs):
+        if kwargs["protocol"].value == "native_termination":
+            seen.append(copy.deepcopy(kwargs["params"]))
+        return execute_preflighted(**kwargs)
+
+    run_study_smoke(
+        _plan(root), tmp_path / "out", problem_loader=_loader(), repository_root=root,
+        replicates=1, gateway_executor=gateway,
+    )
+    assert len(seen) == len(COMPOSITES)
+    for params in seen:
+        assert params["global"]["max_iterations"] == 2
+        assert params["polish"]["max_iterations"] == 2

@@ -5,8 +5,16 @@ from typing import Annotated, Literal
 from pydantic import Field, PositiveInt, model_validator
 from pydantic import field_validator
 
-from academic_benchmark.core.algorithm_errors import CandidateAlgorithmError, PlannedAlgorithmError
-from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
+from academic_benchmark.core.algorithm_errors import (
+    CandidateAlgorithmError,
+    ForbiddenAliasError,
+    PlannedAlgorithmError,
+)
+from academic_benchmark.core.algorithm_resolution import (
+    FORBIDDEN_ALGORITHM_REPLACEMENTS,
+    IdentifierSource,
+    resolve_algorithm_id,
+)
 from uniride_core.algorithms.capabilities import LifecycleStatus, get_algorithm_capability
 
 from .common import JsonValue, RepositoryRelativePath, StrictContract
@@ -170,9 +178,11 @@ class StudyManifestV1(StrictContract):
     def validate_algorithm_parameter_keys(self) -> "StudyManifestV1":
         if len(set(self.algorithm_ids)) != len(self.algorithm_ids):
             raise ValueError("algorithm_ids must be unique")
-        # a false or retired label used only as a parameter key is refused with its replacement named
-        # (the same canonical-ID rule as algorithm_ids), not as a mere key mismatch
-        _validate_manifest_algorithm_ids(list(self.algorithm_parameters))
+        # a false historical label used only as a parameter key is refused with its replacement named
+        # (as in algorithm_ids), not as a mere key mismatch
+        for key in self.algorithm_parameters:
+            if key in FORBIDDEN_ALGORITHM_REPLACEMENTS:
+                raise ForbiddenAliasError(key, FORBIDDEN_ALGORITHM_REPLACEMENTS[key])
         if set(self.algorithm_parameters) != set(self.algorithm_ids):
             raise ValueError("algorithm_parameters keys must exactly match algorithm_ids")
         if (self.fixed_budget_levels is None) == (self.scaled_fixed_budget_levels is None):

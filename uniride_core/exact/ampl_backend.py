@@ -475,6 +475,7 @@ class AmplSession:
         self._objective_coefficients: dict = {}  # set by _load
         self._log: list = []
         self.ampl_version = self.amplpy_version = self.location = self.solver_version = None
+        self.probe_retries = 0  # re-runs of the start-up probe after a licence-type failure (E14)
 
     def __enter__(self) -> "AmplSession":
         self.open()
@@ -524,7 +525,7 @@ class AmplSession:
         """'<Solver> x.y.z' from a two-variable solve the AMPL presolve cannot settle (license check too)."""
         a = self._ampl
         solver = self.settings.solver
-        retries = 0
+        retries = self.probe_retries = 0  # kept on the session so the runner can record it (manifest run_history.probe_retries)
         while True:  # E14: a licence-type failure of the probe is re-run (same model and options) before the backend is called absent
             a.reset()
             a.eval("var x {1..2} binary; minimize o: x[1] + 2 * x[2]; subject to c: x[1] + x[2] >= 1;")
@@ -540,9 +541,11 @@ class AmplSession:
                 raise
             msg = str(a.get_value("solve_message"))
             num = int(a.get_value("solve_result_num"))
-            if num >= 500 and backend_absent(solver, f"{msg}\n{output}"):
-                if retries < self.PROBE_RETRIES:
+            kind = backend_absent_kind(solver, f"{msg}\n{output}") if num >= 500 else None
+            if kind is not None:
+                if kind == "licence" and retries < self.PROBE_RETRIES:  # a missing program is permanent: raised at once
                     retries += 1
+                    self.probe_retries = retries
                     time.sleep(self.PROBE_PAUSE_SECONDS)
                     continue
                 raise ExactBackendUnavailable(f"{solver}: solver or license missing (after {retries} probe retries)")

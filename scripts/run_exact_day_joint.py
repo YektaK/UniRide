@@ -195,6 +195,9 @@ def strict_manifest_problems(manifest: dict) -> list:
     for key in ("cells_planned", "cells_solved", "jobs"):
         if key in history and (isinstance(history[key], bool) or not isinstance(history[key], int)):
             problems.append(f"run_history.{key} must be an integer")
+    if "probe_retries" in history and (isinstance(history["probe_retries"], bool) or not isinstance(history["probe_retries"], int)
+                                       or history["probe_retries"] < 0):
+        problems.append("run_history.probe_retries must be a non-negative integer")
     if "retried_solves_total" in history and (isinstance(history["retried_solves_total"], bool)
                                                or not isinstance(history["retried_solves_total"], int)
                                                or history["retried_solves_total"] < 0):
@@ -228,6 +231,7 @@ class Deps:
     wave_solver: Optional[Callable]  # (wave, enumeration, minimize_type, solver, peak) -> SPSolveResult
     cli: Callable
     close: Callable = lambda: None
+    probe_retries: Callable = lambda: 0  # () -> int: start-up probe re-runs of the AMPL sessions (read after close; E14)
 
 
 class _RealWaveSolver:
@@ -246,6 +250,9 @@ class _RealWaveSolver:
             self._sessions[solver] = session
         return ab.solve_wave(wave, enumeration, minimize_type=minimize_type, peak=peak, d_lb_free=False,
                              session=self._sessions[solver])
+
+    def probe_retries(self) -> int:
+        return sum(int(getattr(s, "probe_retries", 0)) for s in self._sessions.values())
 
     def close(self):
         for s in self._sessions.values():
@@ -272,7 +279,11 @@ def real_deps(cfg: Config) -> Deps:
         if waves is not None:
             waves.close()
 
-    return Deps(hb.run_day_stages, gurobi_run if cfg.crosscheck else None, waves, ud.run_cli, close)
+    def probe_retries():  # the sessions stay attributes after close(); the count is read when the manifest is written
+        own = int(getattr(holder.get("session"), "probe_retries", 0))
+        return own + (waves.probe_retries() if waves is not None else 0)
+
+    return Deps(hb.run_day_stages, gurobi_run if cfg.crosscheck else None, waves, ud.run_cli, close, probe_retries)
 
 
 # ---------------------------------------------------------------- the label hook (J9b's label_cell)
@@ -956,6 +967,8 @@ def main(argv=None, deps: Optional[Deps] = None) -> int:
                         "cells_planned": len(rows), "cells_solved": sum(1 for r in rows if r["day_status"] not in ("input_rejected",)),
                         # E14: Gurobi solves re-run after a licence-type failure (per stage: day_joint_stages.csv, column licence_retries); the key avoids the word the manifest privacy scan rejects
                         "retried_solves_total": sum(int(s["licence_retries"]) for s in stage_rows),
+                        # E14: re-runs of the AMPL start-up probes (Gurobi session and wave sessions), counted apart from the stages
+                        "probe_retries": int(deps.probe_retries()),
                         "cells": cell_log},
         "claim": protocol.DAY_JOINT_CLAIM, "blocking_errors": errors, "total_wall_seconds": wall,
     }

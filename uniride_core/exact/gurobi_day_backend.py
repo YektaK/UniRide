@@ -321,7 +321,9 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     are set again, so a retry cannot depend on what the failed solve left behind (a failed solve returned no values, and
     only the final attempt is read). The number of re-runs is ``StageResult.solve_retries (CSV column licence_retries)``. When the last attempt
     also fails, ``GurobiBackendUnavailable`` carries scrubbed facts only (result number, ``licence`` or ``binary``, the
-    retry count), never the message or the log. Only the licence kind is retried: a missing program (kind "binary") and any other failure are never retried.
+    retry count), never the message or the log. ``wall_seconds`` and ``work_units`` of the result describe the last (successful)
+    attempt only, and every attempt gets the full time and work limit, so a retried stage can have used more than one limit
+    in total; ``solve_retries`` says whether that happened. Only the licence kind is retried: a missing program (kind "binary") and any other failure are never retried.
     """
     settings = settings or GurobiSettings()
     max_retries = LICENCE_RETRIES if licence_retries is None else licence_retries

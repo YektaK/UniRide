@@ -210,13 +210,14 @@ Separate from the solver path: standard library only, no import of `uniride_core
 |---|---|
 | `README.md` | scope, claim wording, labels, limits, deviations, what is not claimed |
 | `day_joint_manifest.json` | protocol `exact_day_joint_v1`; code commit and dirty flag; `python_provenance`; source manifests and their sha256 (4sw5so, both WP-E10 re-runs, WP-E3, WP-E4b); solver names, versions, verbatim options, limits, threads, seed; MPS sha256 per (cell, stage); enumeration caps and per-day column counts; `run_history` (E06); sha256 of every output file |
-| `day_joint.csv` | one row per cell: `fleet, date, R, L, waves, legs, columns, columns_outside_day, day_status, K_or_S, large_peak, total_minutes, car_minutes, routes, lb0, lb0w, lb_L, lb_S, bound_used, bound_source, certificate_tier, timing_dependent, non_lexicographic, crosscheck_solver, crosscheck_status, checker_ok, ts_confirmation, wall_seconds` |
-| `day_joint_stages.csv` | one row per (cell, stage, solver): status, stop reason, objective, bound, flags, wall seconds, work units (Gurobi) |
+| `day_joint.csv` | one row per cell, columns in this order (`CSV_FIELDS` of `scripts/run_exact_day_joint.py`): `fleet, date, R, L, waves, legs, columns, columns_outside_day, day_status, K_or_S, large_peak, total_minutes, car_minutes, routes, lb0, lb0w, lb_L, lb_S, bound_used, bound_source, bound_proof, proof_claim_allowed, proof_claim_reason, reason, flags, unverified_bounds, certificate_tier, timing_dependent, non_lexicographic, crosscheck_solver, crosscheck_status, wave_values_status, checker_ok, ts_confirmation, wall_seconds, note` |
+| `day_joint_stages.csv` | one row per (cell, solver, stage), columns in this order (`STAGE_FIELDS`): `fleet, date, R, L, solver, stage, status, stop_reason, objective, bound, bound_ceil, bound_source, timing_dependent, non_lexicographic, wall_seconds, work_units, solve_result, mps_sha256` (`work_units` for Gurobi only) |
 | `day_joint_plans.json` | per cell and wave the chosen routes: type, ordered occurrence ids, start, end, tour |
-| `day_joint_week.csv` | per (fleet, R, L): weekly fleet = maximum over dates, sum of vehicle-days, cells not proven |
-| `lb0.csv` | per cell: LB0, LB0w, LB_L, LB_S, their argmax point, contributing waves |
+| `day_joint_week.csv` | per (fleet, R, L), columns `fleet, R, L, dates, weekly_fleet_max, vehicle_days_sum, cells_not_proven, cells_without_value` (`WEEK_FIELDS`): weekly fleet = maximum over dates, sum of vehicle-days, cells without a proof claim, cells without a value |
+| `lb0.csv` | one row per (cell, bound), columns `fleet, date, R, L, bound, value, point, contributions, wave_value_source, used_value, used_proof` (`LB_FIELDS`): LB0, LB0w, LB_L, LB_S with their argmax point and contributing waves, and the wave values (`wave_*` rows) with the value and proof tag the bounds really received |
 | `comparison.csv` | descriptive, per cell: joint value; WP-E4b GA-menu and union cars with labels (typed); peaks of the archived GA routes and of the WP-E3 routes (homogeneous); never `min(...)` |
 | `reproduction_check.csv` | per cell: prototype value, production value, category (§6.3) |
+| `rerun_vs_first_run.csv` | only in a record that repeats an earlier run: per cell, the day-level and stage-level differences of the two runs, timing columns excluded; written by `scripts/compare_exact_day_joint_runs.py` |
 
 ### 6.2 Run rules
 
@@ -240,7 +241,16 @@ From the comparison report (§3-§4 and its CSVs):
 
 The minute targets depend on the tie-break order (§1.3) and are compared only if the owner chooses the prototype order (Q2); otherwise production minutes are expected to be <= the prototype's at equal K or S.
 
-Categories in `reproduction_check.csv`: `equal`; `production_better`; `production_worse`; `production_open`; `prototype_open`; `co_optimal_alternative`.
+Categories in `reproduction_check.csv` (`REPRODUCTION_CATEGORIES` in `academic_benchmark/exact_reference/day_compare.py`; every cell gets exactly one):
+
+- `equal`: production and prototype have the same objective tuple, or both report the cell infeasible (production by proof).
+- `co_optimal_alternative`: the objective tuples are equal and the routes differ (route identity is never compared, so the function returns this category only when its caller passes `same_routes=False`; `scripts/report_exact_day_joint.py` does not, so it writes no such row).
+- `production_better`: production's tuple is smaller than the prototype's, or production has a value or a proof where the prototype reports infeasibility or a plan against an infeasibility proof that fails the checker. It is a described difference, not a blocking defect.
+- `production_worse`: the prototype's tuple is smaller than production's and no blocking rule applies.
+- `production_open`: production has no value or proof for the cell (`bound_only`, `not_run_enumeration_cap`, `input_rejected` or `backend_unavailable`) while the prototype has a result.
+- `prototype_open`: the prototype has a target for the cell but no result, while production has a value or an infeasibility proof.
+- `both_open`: production is open as above and the prototype is open too (E14, J9b owner decision); it counts as neither agreement nor disagreement.
+- `no_external_target`: the fleet has no prototype target at all (large + Doblò cap3, E14 Q1); it says nothing about production and keeps the rule that every cell has a reproduction row.
 
 **If production disagrees with the prototype:** report it in `reproduction_check.csv` and the README; never change limits, options or the model to approach a prototype number. Run the checker of §5.1 on the prototype plan of that cell (data copied with provenance). If the prototype plan passes the checker and is better than a production value labelled `optimal`, that is a **blocking defect** in production (a checked plan cannot beat a proven optimum). If production is better than a prototype "optimal", the prototype claim is wrong or its semantics differ; the difference is described, not blocking.
 

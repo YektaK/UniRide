@@ -772,7 +772,78 @@ def test_a_bound_genuinely_above_the_raw_objective_still_writes_the_note_and_wit
 
 
 def test_a_bound_above_the_noisy_raw_objective_beyond_the_allowance_still_writes_the_note(monkeypatch):
-    # raw objective 540.0000123 explained by deviations of 1.23e-5; a bound 1e-4 above that is not the solver's number for this plan
+    # raw objective 540.0000123, whose deviations are small (allowance only about 1.4e-5): a bound 1e-4 above the RAW objective
+    # is not the solver's number for this plan. (This held only because the allowance was small; the next tests use a large one.)
     values = [4 + 1e-7, 3 + 5.8333333e-8, 0.0]
     solved = _solve_model_stage(monkeypatch, _model_for((81, 72, 66), (4, 3, 0)), 540.0000123, values, bound=540.0001123)
     assert str(solved.result.solver_message).startswith(BOUND_ABOVE_INCUMBENT)
+
+
+# ------------------------------------------------------------------ 9. the exemption is float noise around the solver's own number, not the reconcile allowance
+# The allowance says how far the RAW objective may sit from the rounded one; it says nothing about how far a bound may sit above
+# the raw objective (at gap 0 the bound IS the raw objective). Adding it would count it twice (reviewer's hole.py).
+from uniride_core.exact.ampl_backend import reconcile_objective_with_allowance  # noqa: E402
+
+_BIG_DEVS = (1e-6, -9.5417e-7, 0.0)  # signed sum 1.23e-5, but |c|*|dev| adds up to about 1.5e-4 (J11-sized allowance)
+
+
+def _big_allowance_values():
+    values = [4 + _BIG_DEVS[0], 3 + _BIG_DEVS[1], 0.0]
+    raw = sum(c * x for c, x in zip((81, 72, 66), values))
+    return values, raw
+
+
+def test_the_big_allowance_setup_is_what_the_reviewer_measured():
+    values, raw = _big_allowance_values()
+    assert raw == pytest.approx(540.0000123, abs=2e-9)
+    obj, allowance = reconcile_objective_with_allowance(raw, (81, 72, 66), values)
+    assert obj == 540.0 and 1.4e-4 < allowance < 1.7e-4
+
+
+@pytest.mark.parametrize("excess", [1e-5, 1e-4, 1.4e-4])
+def test_a_bound_above_the_raw_objective_by_more_than_float_noise_writes_the_note_even_with_a_large_allowance(monkeypatch, excess):
+    values, raw = _big_allowance_values()
+    solved = _solve_model_stage(monkeypatch, _model_for((81, 72, 66), (4, 3, 0)), raw, values, bound=raw + excess)
+    r = solved.result
+    assert r.objective == 540 and r.bound_ceil == 540
+    assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT), (excess, r.solver_message)
+    label = _claim_kept(r)
+    assert not label.proof_claim_allowed and label.proof_claim_reason == BOUND_ABOVE_INCUMBENT
+
+
+def test_a_capped_allowance_does_not_hide_a_bound_above_the_raw_objective(monkeypatch):
+    # reviewer's capped case: 100000 * 2.4e-6 = 0.24 of deviation, raw objective 540.24 accepted as 540
+    model = _model_for((100_000, 1), (0, 540))
+    values = [2.4e-6, 540.0]
+    raw = 100_000 * values[0] + values[1]
+    assert raw == pytest.approx(540.24, abs=1e-9)
+    assert reconcile_objective_with_allowance(raw, (100_000, 1), values)[0] == 540.0
+    for bound in (540.3, 540.45, 540.49):  # ceiling 541 contradicts the plan of 540; all were silently clipped before
+        r = _solve_model_stage(monkeypatch, model, raw, values, bound=bound).result
+        assert r.objective == 540 and r.bound_ceil == 540
+        assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT), bound
+    # the bound that IS the solver's raw objective is its own number for the plan: no note (the rule as written)
+    own = _solve_model_stage(monkeypatch, model, raw, values, bound=raw).result
+    assert not str(own.solver_message).startswith(BOUND_ABOVE_INCUMBENT)
+
+
+def test_a_bound_between_the_rounded_objective_and_the_raw_objective_is_the_solvers_own_noise(monkeypatch):
+    # catches a rule that compares the bound with the rounded objective R plus the margin instead of the RAW objective:
+    # raw 540.0000123, bound 540.00001 lies above R + margin (540.0000015) and below raw
+    values = [4 + 1e-7, 3 + 5.8333333e-8, 0.0]
+    solved = _solve_model_stage(monkeypatch, _model_for((81, 72, 66), (4, 3, 0)), 540.0000123, values, bound=540.00001)
+    assert not str(solved.result.solver_message).startswith(BOUND_ABOVE_INCUMBENT)
+    assert _claim_kept(solved.result).proof_claim_allowed
+
+
+def test_the_comparison_uses_the_solvers_bound_not_the_snapped_one(monkeypatch):
+    # catches a rule that compares the SNAPPED bound. Raw objective 540.00001 (deviations 1e-5 upward), solver bound
+    # 540.000015: above raw + margin (540.0000115), so it is a contradiction. The snap lowers it by 4.4e-6 to 540.0000106,
+    # which would sit below raw + margin, and the note would be lost; the ceiling of the snapped bound is still 541.
+    values = [4 + 1e-7, 3 + (1e-5 - 8.1e-6) / 72, 0.0]
+    raw = 81 * 1e-7 + 72 * (1e-5 - 8.1e-6) / 72 + 540.0
+    assert raw == pytest.approx(540.00001, abs=1e-9)
+    solved = _solve_model_stage(monkeypatch, _model_for((81, 72, 66), (4, 3, 0)), 540.00001, values, bound=540.000015)
+    r = solved.result
+    assert r.objective == 540 and r.bound_ceil == 540
+    assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT)

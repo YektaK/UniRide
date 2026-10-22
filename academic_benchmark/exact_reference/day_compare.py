@@ -107,8 +107,11 @@ CATEGORY_PRODUCTION_OPEN = "production_open"
 CATEGORY_PROTOTYPE_OPEN = "prototype_open"
 CATEGORY_CO_OPTIMAL = CO_OPTIMAL_ALTERNATIVE
 CATEGORY_BOTH_OPEN = "both_open"  # owner decision (E14 note 2026-10-21): neither side has a value or a proof
+# The fleet has no external reproduction target at all (owner Q1: large+Doblo cap3); not an open prototype result, and it
+# says nothing about production. It keeps the owner rule "every cell gets a reproduction row".
+CATEGORY_NO_EXTERNAL_TARGET = "no_external_target"
 REPRODUCTION_CATEGORIES = (CATEGORY_EQUAL, CATEGORY_PRODUCTION_BETTER, CATEGORY_PRODUCTION_WORSE, CATEGORY_PRODUCTION_OPEN,
-                           CATEGORY_PROTOTYPE_OPEN, CATEGORY_CO_OPTIMAL, CATEGORY_BOTH_OPEN)
+                           CATEGORY_PROTOTYPE_OPEN, CATEGORY_CO_OPTIMAL, CATEGORY_BOTH_OPEN, CATEGORY_NO_EXTERNAL_TARGET)
 NOTE_PROTOTYPE_NOT_VERIFIED = "prototype_plan_not_verified"
 
 _VALUE_LABELS = ("optimal", "optimal_stage1_by_bound", "feasible_with_gap")
@@ -119,7 +122,8 @@ _OPEN_LABELS = ("bound_only", "not_run_enumeration_cap", "input_rejected", "back
 @dataclass(frozen=True)
 class PrototypeClaim:
     """What the prototype says about a cell: a ``value`` (objective tuple, optionally with the verdict of the independent
-    checker on its plan: ``True`` passes, ``False`` fails, ``None`` not run), ``infeasible`` or ``open`` (no result)."""
+    checker on its plan: ``True`` passes, ``False`` fails, ``None`` not run), ``infeasible``, ``open`` (a target exists but has
+    no result) or ``no_target`` (the fleet has no external target at all)."""
 
     kind: str
     objective: Optional[tuple] = None
@@ -137,6 +141,10 @@ class PrototypeClaim:
     def open(cls) -> "PrototypeClaim":
         return cls("open")
 
+    @classmethod
+    def no_target(cls) -> "PrototypeClaim":
+        return cls("no_target")
+
 
 @dataclass(frozen=True)
 class ReproductionResult:
@@ -147,8 +155,8 @@ class ReproductionResult:
     @property
     def agreement(self) -> Optional[bool]:
         """True for ``equal`` and ``co_optimal_alternative``, False for ``production_better`` / ``production_worse``, and
-        ``None`` (neither agreement nor disagreement) when a side is open: ``both_open``, ``production_open``,
-        ``prototype_open``."""
+        ``None`` (neither agreement nor disagreement) when a side is open or there is nothing to compare: ``both_open``,
+        ``production_open``, ``prototype_open``, ``no_external_target``."""
         if self.category in (CATEGORY_EQUAL, CATEGORY_CO_OPTIMAL):
             return True
         if self.category in (CATEGORY_PRODUCTION_BETTER, CATEGORY_PRODUCTION_WORSE):
@@ -204,6 +212,8 @@ def reproduction_category(prototype: PrototypeClaim, *, production_label: str,
         raise ValueError("a rejected production cell is not a result to compare")
     if production_label not in _VALUE_LABELS + _INFEASIBLE_LABELS + _OPEN_LABELS:
         raise ValueError(f"unknown production label {production_label!r}")
+    if prototype.kind == "no_target":  # nothing to compare against, whatever production says
+        return ReproductionResult(CATEGORY_NO_EXTERNAL_TARGET)
     is_value = prototype.kind == "value"
     verified = (prototype.plan_checked is True) if is_value else None
     note = NOTE_PROTOTYPE_NOT_VERIFIED if is_value and not verified else ""

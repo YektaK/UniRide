@@ -263,7 +263,31 @@ def test_c3_a_production_value_against_an_open_prototype_stays_prototype_open():
                                  production_objective=(2, 100)).category == "prototype_open"
 
 
-def test_c3_not_comparable_is_gone_and_the_vocabulary_has_seven_categories():
+def test_c3_not_comparable_is_gone_and_the_vocabulary_has_eight_categories():  # seven of J9b plus no_external_target (2026-10-21)
     assert not hasattr(dc, "NotComparable")
     assert set(dc.REPRODUCTION_CATEGORIES) == {"equal", "production_better", "production_worse", "production_open",
-                                               "prototype_open", "co_optimal_alternative", "both_open"}
+                                               "prototype_open", "co_optimal_alternative", "both_open", "no_external_target"}
+
+
+# ------------------------------------------------------------------ no_external_target (lead decision 2026-10-21, owner Q1)
+def test_a_cell_with_no_external_target_has_its_own_category_whatever_production_says():
+    no_target = PrototypeClaim.no_target()
+    for label, objective in (("optimal", (5, 800)), ("optimal_stage1_by_bound", (5, 800)), ("feasible_with_gap", (5, 800)),
+                             ("infeasible_certified", None), ("infeasible_solver_proven", None), ("bound_only", None),
+                             ("not_run_enumeration_cap", None), ("input_rejected", None), ("backend_unavailable", None)):
+        out = reproduction_category(no_target, production_label=label, production_objective=objective)
+        assert out.category == "no_external_target" and out.agreement is None and out.note == ""
+    assert "no_external_target" in dc.REPRODUCTION_CATEGORIES
+
+
+def test_no_external_target_does_not_change_prototype_open_or_both_open():
+    assert reproduction_category(PrototypeClaim.open(), production_label="optimal", production_objective=(2, 100)).category == "prototype_open"
+    assert reproduction_category(PrototypeClaim.open(), production_label="bound_only").category == "both_open"
+    assert reproduction_category(PrototypeClaim.value((5, 800)), production_label="bound_only").category == "production_open"
+
+
+def test_no_external_target_still_refuses_a_rejected_cell_and_an_unknown_label():
+    with pytest.raises(ValueError):
+        reproduction_category(PrototypeClaim.no_target(), production_label="rejected")
+    with pytest.raises(ValueError):
+        reproduction_category(PrototypeClaim.no_target(), production_label="mostly_optimal")

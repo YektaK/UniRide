@@ -19,7 +19,13 @@ Classification of a cell (printed summary and exit code):
 * ``other``: anything else (a label, a value, a stage status, a ``bound_ceil``, a plan, a bound row, a model hash, a
   missing stage row). Each such cell is listed.
 
-The output file must lie outside ``docs/paper/results`` and must not exist yet (results are never overwritten).
+Refusals (exit 2, no CSV): a run file is missing; the cell sets differ; the header of ``day_joint.csv``,
+``day_joint_stages.csv`` or ``lb0.csv`` differs between the runs; a cell (``day_joint.csv``) or a stage row
+(``day_joint_stages.csv``) appears twice in one run.
+
+The output file must lie outside ``docs/paper/results``, its folder must exist and the file must not exist yet (results
+are never overwritten). The results-folder guard protects the ``docs/paper/results`` folder of the checkout this script
+runs from; a results folder of another checkout is not recognised.
 
 Run: python scripts/compare_exact_day_joint_runs.py FIRST_DIR RERUN_DIR --out OUT.csv
 Exit codes: 0 every cell is identical or bound_only; 1 at least one cell is ``other`` (the CSV is still written);
@@ -63,6 +69,7 @@ class Run:
     lb0: dict      # cell -> list of sorted item tuples
     plans: dict
     manifest: dict
+    headers: dict = field(default_factory=dict)  # file name -> header of the CSV
 
 
 @dataclass
@@ -72,9 +79,11 @@ class CellResult:
     stage_diffs: list = field(default_factory=list)  # (solver, stage, column or None, old, new)
 
 
-def _rows(path: Path) -> list:
+def _rows(path: Path) -> tuple:
     with path.open(encoding="utf-8", newline="") as fh:
-        return list(csv.DictReader(fh))
+        reader = csv.DictReader(fh)
+        rows = list(reader)
+        return list(reader.fieldnames or []), rows
 
 
 def cell_key(r: dict) -> str:
@@ -86,16 +95,29 @@ def load_run(path: Path) -> Run:
     missing = [name for name in RUN_FILES if not (path / name).is_file()]
     if missing:
         raise Refusal(f"{path} lacks run file(s): {', '.join(missing)}")
-    day = {cell_key(r): r for r in _rows(path / "day_joint.csv")}
+    headers: dict = {}
+    headers["day_joint.csv"], day_rows = _rows(path / "day_joint.csv")
+    day: dict = {}
+    for r in day_rows:
+        key = cell_key(r)
+        if key in day:
+            raise Refusal(f"{path / 'day_joint.csv'}: duplicate cell {key}")
+        day[key] = r
+    headers["day_joint_stages.csv"], stage_rows = _rows(path / "day_joint_stages.csv")
     stages: dict = {}
-    for r in _rows(path / "day_joint_stages.csv"):
-        stages.setdefault(cell_key(r), {})[(r["solver"], r["stage"])] = r
+    for r in stage_rows:
+        cell = stages.setdefault(cell_key(r), {})
+        if (r["solver"], r["stage"]) in cell:
+            raise Refusal(f"{path / 'day_joint_stages.csv'}: duplicate stage row {cell_key(r)} "
+                          f"{r['solver']} stage {r['stage']}")
+        cell[(r["solver"], r["stage"])] = r
+    headers["lb0.csv"], lb_rows = _rows(path / "lb0.csv")
     lb0: dict = {}
-    for r in _rows(path / "lb0.csv"):
+    for r in lb_rows:
         lb0.setdefault(cell_key(r), []).append(tuple(sorted(r.items())))
     return Run(path, day, stages, lb0,
                json.loads((path / "day_joint_plans.json").read_text(encoding="utf-8")),
-               json.loads((path / "day_joint_manifest.json").read_text(encoding="utf-8")))
+               json.loads((path / "day_joint_manifest.json").read_text(encoding="utf-8")), headers)
 
 
 def sha256_file(path: Path) -> str:
@@ -153,6 +175,9 @@ def compare_cell(first: Run, rerun: Run, key: str) -> CellResult:
 
 
 def compare_runs(first: Run, rerun: Run) -> list:
+    for name in sorted(first.headers):
+        if first.headers[name] != rerun.headers.get(name):
+            raise Refusal(f"the header of {name} differs between the runs")
     only1, only2 = sorted(set(first.day) - set(rerun.day)), sorted(set(rerun.day) - set(first.day))
     if only1 or only2:
         raise Refusal("cell sets differ: only in first run: " + (", ".join(only1) or "-")
@@ -167,12 +192,14 @@ def check_out(out: Path) -> None:
     results = RESULTS.resolve()
     if out_r == results or results in out_r.parents:
         raise Refusal("--out lies inside docs/paper/results; write the comparison elsewhere")
+    if not out_r.parent.is_dir():
+        raise Refusal(f"the folder of --out does not exist: {out_r.parent}")
     if out_r.exists():
         raise Refusal("--out exists; results are never overwritten")
 
 
 def write_csv(path: Path, results: list) -> None:
-    with Path(path).open("w", encoding="utf-8", newline="") as fh:
+    with Path(path).open("x", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(OUT_FIELDS), lineterminator="\n", extrasaction="raise")
         w.writeheader()
         w.writerows(r.row for r in results)

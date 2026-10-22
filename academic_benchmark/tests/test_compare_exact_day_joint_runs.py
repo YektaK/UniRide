@@ -28,7 +28,8 @@ CELLS = (("single_4sw5so", "2026-10-05", "50", ""), ("large+sedan", "2026-10-06"
 
 
 def make_run(folder: Path, *, day_edit=None, stage_edit=None, lb_edit=None, plan_edit=None, mps_edit=None, drop_cell=None,
-             drop_stage=None, wall=1.0, commit="aaaaaaaa", extra_week="") -> Path:
+             drop_stage=None, wall=1.0, commit="aaaaaaaa", extra_week="", day_columns=DAY_COLUMNS, stage_columns=STAGE_COLUMNS,
+             lb_columns=LB_COLUMNS, dup_day=False, dup_stage=False, dup_lb=False) -> Path:
     folder.mkdir(parents=True)
     cells = [c for c in CELLS if c != drop_cell]
     day, stages, lb, plans, mps = [], [], [], {}, {}
@@ -61,8 +62,14 @@ def make_run(folder: Path, *, day_edit=None, stage_edit=None, lb_edit=None, plan
         plan_edit(plans)
     if mps_edit:
         mps_edit(mps)
-    for name, cols, rows in (("day_joint.csv", DAY_COLUMNS, day), ("day_joint_stages.csv", STAGE_COLUMNS, stages),
-                             ("lb0.csv", LB_COLUMNS, lb)):
+    if dup_day:
+        day.append(dict(day[0]))
+    if dup_stage:
+        stages.append(dict(stages[0]))
+    if dup_lb:
+        lb.append(dict(lb[0]))
+    for name, cols, rows in (("day_joint.csv", day_columns, day), ("day_joint_stages.csv", stage_columns, stages),
+                             ("lb0.csv", lb_columns, lb)):
         with (folder / name).open("w", newline="", encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=list(cols), lineterminator="\n")
             w.writeheader()
@@ -230,3 +237,39 @@ def test_whole_file_identity_and_manifest_are_summarised(tmp_path, capsys):
     assert "day_joint_week.csv byte-identical: False" in out
     assert "lb0.csv byte-identical: True" in out
     assert "manifest git_commit aaaaaaaa -> bbbbbbbb" in out
+
+
+def test_out_with_missing_parent_folder_is_refused(tmp_path, capsys):
+    first, rerun = make_run(tmp_path / "first"), make_run(tmp_path / "rerun")
+    out = tmp_path / "no_such_folder" / "o.csv"
+    assert cmp_.main([str(first), str(rerun), "--out", str(out)]) == 2  # exit 1 is reserved for "other" cells
+    assert "no_such_folder" in capsys.readouterr().err
+    assert not out.exists()
+
+
+@pytest.mark.parametrize("name,kw", [("day_joint.csv", "day_columns"), ("day_joint_stages.csv", "stage_columns"),
+                                     ("lb0.csv", "lb_columns")])
+def test_differing_headers_are_refused(tmp_path, capsys, name, kw):
+    base = {"day_columns": DAY_COLUMNS, "stage_columns": STAGE_COLUMNS, "lb_columns": LB_COLUMNS}[kw]
+    code, rows = run(tmp_path, rerun_kw={kw: base + ("extra_column",)})
+    assert code == 2 and rows == {}
+    err = capsys.readouterr().err
+    assert name in err and "header" in err
+
+
+@pytest.mark.parametrize("kw,name", [("dup_day", "day_joint.csv"), ("dup_stage", "day_joint_stages.csv")])
+def test_duplicate_keys_are_refused(tmp_path, capsys, kw, name):
+    for side in ("first_kw", "rerun_kw"):
+        sub = tmp_path / side
+        code, rows = run(sub, **{side: {kw: True}})
+        assert code == 2 and rows == {}
+        err = capsys.readouterr().err
+        assert name in err and "duplicate" in err
+
+
+def test_csv_is_opened_exclusively(tmp_path):
+    out = tmp_path / "o.csv"
+    out.write_text("keep", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        cmp_.write_csv(out, [])
+    assert out.read_text(encoding="utf-8") == "keep"

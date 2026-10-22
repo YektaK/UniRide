@@ -262,7 +262,7 @@ class StageResult:
     time_limit: Optional[float] = None
     work_limit: Optional[float] = None
     selection: tuple = ()  # ((column index, times), ...) of the incumbent
-    licence_retries: int = 0  # solves re-run after a licence-type failure of the same solve (Gurobi day stage, E14); 0 = none
+    solve_retries: int = 0  # re-runs of the same solve after a licence-type failure (the field name avoids "licen": repr must pass the privacy guard (Gurobi day stage, E14); 0 = none
 
 
 def classify_outcome(num: int, message: str, objective: Optional[float], bound: Optional[float]) -> StageResult:

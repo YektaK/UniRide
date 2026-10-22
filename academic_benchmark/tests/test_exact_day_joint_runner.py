@@ -502,7 +502,7 @@ def _with_retries(per_stage):
     import dataclasses
 
     def hook(result):
-        stages = tuple(dataclasses.replace(s, result=dataclasses.replace(s.result, licence_retries=per_stage.get(s.stage, 0)))
+        stages = tuple(dataclasses.replace(s, result=dataclasses.replace(s.result, solve_retries=per_stage.get(s.stage, 0)))
                        for s in result.stages)
         return dataclasses.replace(result, stages=stages)
 

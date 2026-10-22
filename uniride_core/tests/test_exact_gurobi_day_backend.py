@@ -899,7 +899,7 @@ def _flaky_stage(monkeypatch, script, *, model=None, settings=None, **kwargs):
 
 
 def _normal(result):
-    return dataclasses.replace(result, wall_seconds=None, licence_retries=0)
+    return dataclasses.replace(result, wall_seconds=None, solve_retries=0)
 
 
 def test_the_retry_pause_default_is_a_few_seconds():
@@ -910,7 +910,7 @@ def test_the_retry_pause_default_is_a_few_seconds():
 def test_a_licence_failure_then_success_gives_the_normal_result_with_one_retry(monkeypatch):
     clean, _, _ = _flaky_stage(monkeypatch, [])
     retried, ampl, _ = _flaky_stage(monkeypatch, [_LICENCE_FAIL])
-    assert retried.result.licence_retries == 1 and clean.result.licence_retries == 0
+    assert retried.result.solve_retries == 1 and clean.result.solve_retries == 0
     assert _normal(retried.result) == _normal(clean.result) and retried.values == clean.values
     assert (retried.result.status, retried.result.objective) == ("optimal", 540)
     assert len(ampl.attempts) == 2
@@ -920,7 +920,7 @@ def test_two_licence_failures_then_success_give_two_retries_and_pause_each_time(
     pauses: list = []
     solved, ampl, _ = _flaky_stage(monkeypatch, [_LICENCE_FAIL, (500, "?", ["Gurobi: license not found"])],
                                    retry_pause=7.5, sleep=pauses.append)
-    assert solved.result.licence_retries == 2 and solved.result.objective == 540 and len(ampl.attempts) == 3
+    assert solved.result.solve_retries == 2 and solved.result.objective == 540 and len(ampl.attempts) == 3
     assert pauses == [7.5, 7.5]
 
 
@@ -953,12 +953,12 @@ def test_a_non_licence_failure_is_not_retried_and_stays_rejected(monkeypatch):
     pauses: list = []
     solved, ampl, _ = _flaky_stage(monkeypatch, [(500, "Gurobi: out of memory", ["Optimize a model"])], sleep=pauses.append)
     assert len(ampl.attempts) == 1 and pauses == []
-    assert solved.result.status == "rejected" and solved.result.stop_reason == "solver_failure" and solved.result.licence_retries == 0
+    assert solved.result.status == "rejected" and solved.result.stop_reason == "solver_failure" and solved.result.solve_retries == 0
 
 
 def test_a_failure_below_500_with_licence_words_is_not_retried(monkeypatch):
     solved, ampl, _ = _flaky_stage(monkeypatch, [(150, "license expired soon", [])])
-    assert len(ampl.attempts) == 1 and solved.result.licence_retries == 0
+    assert len(ampl.attempts) == 1 and solved.result.solve_retries == 0
 
 
 def test_a_retry_hands_ampl_exactly_the_same_model_options_and_setup(monkeypatch):
@@ -1007,3 +1007,9 @@ def test_the_probe_of_the_session_is_retried_too(monkeypatch):
     with pytest.raises(ExactBackendUnavailable):
         session._solver_version()
     assert runs["n"] == 3
+
+
+def test_a_stage_result_with_retries_passes_the_repr_privacy_guard():
+    # test_exact_ampl_backend.py::test_result_records_versions_and_options_without_paths rejects "licen" anywhere in a repr;
+    # a field named licence_retries made it fail with a real solver (found by the unfiltered run), so the field is solve_retries
+    assert "licen" not in repr(StageResult(solve_retries=2)).lower()

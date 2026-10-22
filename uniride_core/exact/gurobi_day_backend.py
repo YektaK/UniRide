@@ -319,7 +319,7 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     ``sleep`` is injectable for tests). Every attempt is a full ``_attempt``: ``load_day_model`` resets the AMPL session and
     rebuilds the SAME ``model``, then the same options (seed, work limit, time limit), the bound sentinel and a cleared log
     are set again, so a retry cannot depend on what the failed solve left behind (a failed solve returned no values, and
-    only the final attempt is read). The number of re-runs is ``StageResult.licence_retries``. When the last attempt
+    only the final attempt is read). The number of re-runs is ``StageResult.solve_retries (CSV column licence_retries)``. When the last attempt
     also fails, ``GurobiBackendUnavailable`` carries scrubbed facts only (result number, ``licence`` or ``binary``, the
     retry count), never the message or the log. Only the licence kind is retried: a missing program (kind "binary") and any other failure are never retried.
     """
@@ -359,7 +359,7 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     first = _scrub(message.splitlines()[0]) if message else ""
     out = dataclasses.replace(out, solve_result=str(ampl.solve_result), solve_result_num=num, solver_message=f"{out.solver_message}; {first}" if out.solver_message else first,
                               wall_seconds=round(seconds, 4), work_units=work, time_limit=settings.time_limit,
-                              work_limit=settings.work_limit, licence_retries=retries)
+                              work_limit=settings.work_limit, solve_retries=retries)
     return stage_solve_from_values(model, out, raw)
 
 

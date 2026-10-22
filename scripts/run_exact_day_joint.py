@@ -583,7 +583,7 @@ def _stage_rows(base: dict, solver: str, result) -> list:
         rows.append(dict(base, solver=solver, stage=s.stage, status=r.status, stop_reason=r.stop_reason, objective=r.objective,
                          bound=r.bound, bound_ceil=r.bound_ceil, bound_source=r.bound_source, timing_dependent=r.timing_dependent,
                          non_lexicographic=r.non_lexicographic, wall_seconds=r.wall_seconds, work_units=r.work_units,
-                         solve_result=r.solve_result, mps_sha256=s.mps_sha256, licence_retries=r.licence_retries))
+                         solve_result=r.solve_result, mps_sha256=s.mps_sha256, licence_retries=r.solve_retries))
     return rows
 
 

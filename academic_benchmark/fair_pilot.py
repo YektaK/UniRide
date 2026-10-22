@@ -6,6 +6,7 @@ validated, self-contained artifacts to a caller-selected external directory.
 """
 from __future__ import annotations
 
+import copy
 import csv
 import json
 import math
@@ -18,12 +19,14 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from academic_benchmark.committed_bytes import GitQueryFailed, run_git
+from academic_benchmark.composite_protocol import COMPOSITE_ALGORITHMS
 from academic_benchmark.fairness import (
     FairComparisonManifest,
     FairRunResult,
     validate_evaluation_budget,
     validate_scientific_alns_params,
     GA_MEMETIC_ID,
+    validate_scientific_composite_params,
     validate_scientific_ga_memetic_params,
     validate_scientific_ga_params,
     validate_scientific_pso_params,
@@ -53,7 +56,9 @@ APPROVED_ALGORITHMS = frozenset({
     "ALNS-TSP",
 })
 # C-16a/C-16b: optional members; an existing configuration without them stays valid.
-OPTIONAL_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP", "Core-GA-TSP-Memetic-2opt"})
+# C-13: the four composite IDs (GWO/HHO + final 3-opt or ALNS) are optional members too; their block holds the
+# "global"/"polish" namespaces and an explicit global_fraction (no executor default).
+OPTIONAL_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP", "Core-GA-TSP-Memetic-2opt"}) | frozenset(COMPOSITE_ALGORITHMS)
 _V1_ALGORITHM_ALIASES = {
     "Numba-2-opt": "Core-TwoOpt-TSP",
     "Numba-3-opt-bounded": "Core-ThreeOpt-TSP",
@@ -228,6 +233,13 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
             validate_scientific_pso_params(algorithms["Core-PSO-TSP"])
         except ValueError as exc:
             raise FairPilotError(f"Core-PSO-TSP: {exc}") from exc
+    for composite_id in sorted(set(algorithms) & set(COMPOSITE_ALGORITHMS)):
+        if protocol_version != V2_PROTOCOL:
+            raise FairPilotError(f"{composite_id} runs only under protocol {V2_PROTOCOL}")
+        try:
+            validate_scientific_composite_params(composite_id, algorithms[composite_id], fixed_budget=True)
+        except ValueError as exc:
+            raise FairPilotError(f"{composite_id}: {exc}") from exc
     if protocol_version == V2_PROTOCOL:
         _validate_v2_algorithm_policy(algorithms)
     runs = _strict_int(data["runs"], "runs", 1)
@@ -353,6 +365,15 @@ def _closed_cost(tour: Sequence[int], matrix: Sequence[Sequence[float]]) -> floa
     return float(sum(matrix[node][route[(index + 1) % dimension]] for index, node in enumerate(route)))
 
 
+def _composition_field(result: Any) -> Dict[str, Any]:
+    """The stage record of a composite row (C-13); other rows carry no such key.
+
+    The record holds a wall time per stage (``elapsed_sec``): timing by design, like ``elapsed_ms``.
+    A comparison or identity view of the row must drop it (``studies.smoke.comparable_row``)."""
+    composition = getattr(result, "composition", None)
+    return {"composition": copy.deepcopy(dict(composition))} if composition else {}
+
+
 def _result_record(
     result: FairRunResult,
     *, problem: Any,
@@ -410,6 +431,7 @@ def _result_record(
         "elapsed_ms": elapsed_ms,
         **_decision_metadata(decision),
         "validation_status": "passed",
+        **_composition_field(result),
     }
 
 

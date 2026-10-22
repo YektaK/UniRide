@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from academic_benchmark.composite_protocol import (
     COMPOSITE_ALGORITHMS,
+    COMPOSITE_KIND_OF,
     POLISH_OPERATORS,
     is_composite_variant,
     validate_composite_policy,
@@ -205,6 +206,20 @@ def validate_scientific_hybrid_3opt_params(
     explicit ``global_fraction`` in (0, 1); a native run has none.
     """
     return _validate_hybrid(family, params, fixed_budget=fixed_budget, polish_kind="3-opt")
+
+
+def validate_scientific_composite_params(
+    algorithm_id: str, params: Mapping[str, Any], *, fixed_budget: bool
+) -> dict[str, Any]:
+    """Strict parameter schema of a composite algorithm ID (pilot configurations and study profiles).
+
+    Dispatches on the composition kind of ``algorithm_id`` (3-opt or ALNS polish); a fixed-budget
+    block needs an explicit ``global_fraction`` and a native block refuses it."""
+    if algorithm_id not in COMPOSITE_ALGORITHMS:
+        raise ValueError(f"{algorithm_id!r} is not a composite algorithm ID")
+    family = COMPOSITE_ALGORITHMS[algorithm_id][0]
+    kind = POLISH_OPERATORS[COMPOSITE_KIND_OF[algorithm_id]]  # "3-opt" or "ALNS"
+    return _validate_hybrid(family, params, fixed_budget=fixed_budget, polish_kind=kind)
 
 
 def _validate_hybrid(

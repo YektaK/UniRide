@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+from academic_benchmark.composite_protocol import COMPOSITE_ALGORITHMS
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import (
@@ -29,6 +30,7 @@ from academic_benchmark.fairness import (
     PSO_OPTIONAL_PARAMS,
     PSO_REQUIRED_PARAMS,
     validate_scientific_alns_params,
+    validate_scientific_composite_params,
     validate_scientific_ga_memetic_params,
     validate_scientific_ga_params,
     validate_scientific_pso_params,
@@ -36,6 +38,7 @@ from academic_benchmark.fairness import (
 from academic_benchmark.fair_pilot import (
     FairPilotError,
     _closed_cost,
+    _composition_field,
     _csv_atomic,
     _environment_metadata,
     _git_metadata,
@@ -101,6 +104,8 @@ _ALLOWED_ALGORITHM_KEYS = {
     "Core-GA-TSP": GA_REQUIRED_PARAMS | GA_OPTIONAL_PARAMS,
     "Core-GA-TSP-Memetic-2opt": GA_MEMETIC_REQUIRED_PARAMS,
     "Core-PSO-TSP": PSO_REQUIRED_PARAMS | PSO_OPTIONAL_PARAMS,
+    # composite IDs: two namespaces; a native block has no global_fraction
+    **{composite_id: frozenset({"global", "polish"}) for composite_id in COMPOSITE_ALGORITHMS},
 }
 _REQUIRED_ALGORITHM_KEYS = {
     "Core-GWO-TSP-Pure": frozenset({
@@ -129,6 +134,7 @@ _REQUIRED_ALGORITHM_KEYS = {
     "Core-GA-TSP": GA_REQUIRED_PARAMS,
     "Core-GA-TSP-Memetic-2opt": GA_MEMETIC_REQUIRED_PARAMS,
     "Core-PSO-TSP": PSO_REQUIRED_PARAMS,
+    **{composite_id: frozenset({"global", "polish"}) for composite_id in COMPOSITE_ALGORITHMS},
 }
 _REPLAY_FIELDS = (
     "tour",
@@ -235,6 +241,12 @@ def _validate_algorithm_parameters(
                 validate_scientific_ga_memetic_params(block)
             except ValueError as exc:
                 raise NativePilotError(f"{GA_MEMETIC_ID}: {exc}") from exc
+            continue
+        if algorithm_id in COMPOSITE_ALGORITHMS:
+            try:
+                validate_scientific_composite_params(algorithm_id, block, fixed_budget=False)
+            except ValueError as exc:
+                raise NativePilotError(f"{algorithm_id}: {exc}") from exc
             continue
         if algorithm_id == "Core-PSO-TSP":
             try:
@@ -465,6 +477,7 @@ def _native_result_record(
         "elapsed_ms": elapsed_ms,
         **_decision_metadata(decision),
         "validation_status": "passed",
+        **_composition_field(result),
     }
 
 

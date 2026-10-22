@@ -244,8 +244,8 @@ def test_fixed_runs_pass_global_fraction_explicitly_and_native_runs_never_do(tmp
         replicates=1, gateway_executor=gateway,
     )
     assert report.status == "passed", report.text
-    fixed = [p for proto, p in seen if proto == "fixed_evaluation_budget"]
-    native = [p for proto, p in seen if proto == "algorithm_native_termination"]
+    fixed = [p for proto, p in seen if proto == "fixed_budget"]
+    native = [p for proto, p in seen if proto == "native_termination"]
     assert len(fixed) == len(native) == len(COMPOSITES)
     assert all(p["global_fraction"] == 0.8 for p in fixed)
     assert all("global_fraction" not in p for p in native)

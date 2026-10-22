@@ -1,0 +1,82 @@
+{
+  "schema_version": "uniride-study/v1",
+  "study_id": "yaem2026",
+  "title": "YAEM 2026 Canonical TSP Draft Profile (smoke only)",
+  "status": "draft",
+  "algorithm_ids": [
+    "Core-TwoOpt-TSP",
+    "Core-ThreeOpt-TSP",
+    "Core-OrOpt-TSP",
+    "Core-GWO-TSP-Pure",
+    "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt",
+    "Core-HHO-TSP-Memetic-2opt",
+    "Core-GWO-TSP-Memetic-3opt",
+    "Core-HHO-TSP-Memetic-3opt",
+    "Core-GWO-TSP-Memetic-ALNS",
+    "Core-HHO-TSP-Memetic-ALNS"
+  ],
+  "algorithm_parameters": {
+    "Core-TwoOpt-TSP": {"max_iterations": 1000, "first_improvement": false},
+    "Core-ThreeOpt-TSP": {"max_iterations": 1000, "first_improvement": false, "window": 12},
+    "Core-OrOpt-TSP": {"max_iterations": 1000, "first_improvement": false, "window": 3},
+    "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 1237500, "max_no_improvement": 1237500},
+    "Core-HHO-TSP-Pure": {"hawks": 4, "dive_count": 0, "max_iterations": 1237500, "max_no_improvement": 1237500},
+    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "polish_interval": 25, "final_polish_iters": 1},
+    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "polish_interval": 25, "final_polish_iters": 1},
+    "Core-GWO-TSP-Memetic-3opt": {
+      "global": {"pack_size": 4, "max_iterations": 1237500, "initial_a": 2.0, "exploration_rate": 0.4, "max_no_improvement": 1237500},
+      "polish": {"max_iterations": 1000, "first_improvement": false, "window": 12},
+      "global_fraction": 0.80
+    },
+    "Core-HHO-TSP-Memetic-3opt": {
+      "global": {"hawks": 4, "max_iterations": 1237500, "initial_energy": 1.0, "jump_probability": 0.5, "max_no_improvement": 1237500, "dive_count": 0, "levy_scale": 0.3},
+      "polish": {"max_iterations": 1000, "first_improvement": false, "window": 12},
+      "global_fraction": 0.80
+    },
+    "Core-GWO-TSP-Memetic-ALNS": {
+      "global": {"pack_size": 4, "max_iterations": 1237500, "initial_a": 2.0, "exploration_rate": 0.4, "max_no_improvement": 1237500},
+      "polish": {"max_iterations": 5000, "max_no_improvement": 500, "remove_ratio": 0.2, "min_remove": 2, "segment_length": 100, "weight_update_factor": 0.8, "use_sa": true, "sa_start_temp": 100.0, "sa_cooling_rate": 0.995},
+      "global_fraction": 0.80
+    },
+    "Core-HHO-TSP-Memetic-ALNS": {
+      "global": {"hawks": 4, "max_iterations": 1237500, "initial_energy": 1.0, "jump_probability": 0.5, "max_no_improvement": 1237500, "dive_count": 0, "levy_scale": 0.3},
+      "polish": {"max_iterations": 5000, "max_no_improvement": 500, "remove_ratio": 0.2, "min_remove": 2, "segment_length": 100, "weight_update_factor": 0.8, "use_sa": true, "sa_start_temp": 100.0, "sa_cooling_rate": 0.995},
+      "global_fraction": 0.80
+    }
+  },
+  "dataset_manifest_refs": [
+    "academic_benchmark/datasets/berlin52.json",
+    "academic_benchmark/datasets/eil51.json",
+    "academic_benchmark/datasets/st70.json",
+    "academic_benchmark/datasets/kroA100.json"
+  ],
+  "primary_protocol": {
+    "protocol_id": "fixed_evaluation_budget",
+    "protocol_version": "uniride-fair-tsp-v2",
+    "budget_policy": "atomic_upper_bound_v1"
+  },
+  "secondary_protocol": {
+    "protocol_id": "algorithm_native_termination",
+    "protocol_version": "uniride-native-tsp-v1",
+    "algorithm_ids": null,
+    "termination": {"max_iterations": 2}
+  },
+  "scaled_fixed_budget_levels": {
+    "rule": "two_opt_scan_multiples_v1",
+    "scan_multipliers": [50, 250],
+    "levels_by_dataset": {
+      "tsplib-berlin52": [66300, 331500],
+      "tsplib-eil51": [63750, 318750],
+      "tsplib-st70": [120750, 603750],
+      "tsplib-kroa100": [247500, 1237500]
+    }
+  },
+  "run_count": 3,
+  "base_seed": 2026,
+  "seed_protocol_version": "sha256-seed-v1",
+  "problem_families": ["TSP"],
+  "analysis_plan_id": "yaem2026-draft-v1",
+  "output_policy": {"repository_outputs": "smoke_only", "paper_scale_location": "external"},
+  "paper_metadata": {"paper_id": "yaem2026", "year": 2026, "venue": "draft"}
+}

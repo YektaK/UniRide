@@ -26,12 +26,14 @@ turned into a numeric observation.
 
 from __future__ import annotations
 
+import copy
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
+from academic_benchmark.composite_protocol import is_composite_algorithm, validate_composite_result
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import RuntimeBackendAvailability, probe_runtime_backends
@@ -91,6 +93,29 @@ _RANKING_PATTERN = re.compile(
 
 class StudySmokeError(ValueError):
     """A smoke run was refused (identity mismatch, mixed pooling groups or levels, bad wording)."""
+
+
+# Fields that are wall-clock timing by design: they stay in the exported rows (the run time is
+# a result of the run) but never enter an identity or comparison view (``comparable_row``).
+ROW_TIMING_FIELDS = ("elapsed_ms",)
+STAGE_TIMING_FIELDS = ("elapsed_sec",)
+
+
+def comparable_row(row: Mapping[str, Any]) -> Dict[str, Any]:
+    """A copy of an exported row without its timing fields (comparison and identity view).
+
+    Drops ``elapsed_ms`` and the per-stage ``elapsed_sec`` of a composite row's ``composition``
+    record, nothing else. Two smoke runs with the same seed give identical comparable rows."""
+    view = copy.deepcopy(dict(row))
+    for name in ROW_TIMING_FIELDS:
+        view.pop(name, None)
+    composition = view.get("composition")
+    if isinstance(composition, dict):
+        for stage in composition.get("stages") or ():
+            if isinstance(stage, dict):
+                for name in STAGE_TIMING_FIELDS:
+                    stage.pop(name, None)
+    return view
 
 
 class _RowFailure(Exception):
@@ -223,6 +248,43 @@ def _native_config(plan: StudyPlan, problem_name: str) -> NativePilotConfig:
     )
 
 
+def _row_params(study: Any, row: PlanRow) -> Dict[str, Any]:
+    """Parameters of one plan row: the study's block, plus the protocol's termination for native rows.
+
+    Composite IDs (GWO/HHO + final 3-opt or ALNS) keep their ``global``/``polish`` namespaces. A
+    fixed-budget composite row needs ``global_fraction`` written explicitly in the study (A17 C-08:
+    the executor has no default, so smoke does not supply one either); a native row never passes
+    it, and the native termination keys apply to both stages (an unbounded native polish would make a smoke run last hours)."""
+    params: Dict[str, Any] = copy.deepcopy(dict(study.algorithm_parameters[row.algorithm_id]))
+    fixed = row.protocol is ExecutionProtocol.FIXED_BUDGET
+    composite = is_composite_algorithm(row.algorithm_id)
+    if composite and fixed and "global_fraction" not in params:
+        raise StudySmokeError(
+            f"{row.algorithm_id}: a fixed-budget composite run needs global_fraction written "
+            "explicitly in the study's algorithm_parameters (no default, A17 C-08)"
+        )
+    if fixed:
+        return params
+    termination = copy.deepcopy(dict(study.secondary_protocol.termination))
+    if composite:
+        params.pop("global_fraction", None)  # native runs refuse it
+        for stage in ("global", "polish"):  # the native stopping rule bounds every stage
+            params[stage] = {**params.get(stage, {}), **termination}
+    else:
+        params.update(termination)
+    return params
+
+
+def _composite_row_errors(record: Mapping[str, Any], row: PlanRow, protocol_version: str) -> list:
+    """Errors of the exported composite row, validated as written (not the in-memory result)."""
+    result = SimpleNamespace(**record, evaluations=record.get("objective_evaluations"))
+    return validate_composite_result(
+        result,
+        fixed_budget=row.budget_level if row.protocol is ExecutionProtocol.FIXED_BUDGET else None,
+        protocol_version=protocol_version,
+    )
+
+
 def _run_row(
     row: PlanRow, problem: Any, dataset: ResolvedDataset, plan: StudyPlan, independent, *,
     registered: frozenset, runtime_backends: RuntimeBackendAvailability,
@@ -230,13 +292,12 @@ def _run_row(
 ) -> Dict[str, Any]:
     study = plan.study
     fixed = row.protocol is ExecutionProtocol.FIXED_BUDGET
-    params: Dict[str, Any] = dict(study.algorithm_parameters[row.algorithm_id])
+    params = _row_params(study, row)
     if fixed:
         config: Any = _fixed_config(plan, row.problem_name, row.budget_level)
         params["fair_comparison"] = config.fair_comparison
     else:
         config = _native_config(plan, row.problem_name)
-        params.update(study.secondary_protocol.termination)
         params["native_comparison"] = config.native_comparison
     if row.seed != config.manifest.paired_seed(problem.name, row.replicate):
         raise StudySmokeError("plan seed differs from the contract seed of the problem and replicate")
@@ -263,6 +324,11 @@ def _run_row(
         stage = "hamiltonian_validation"
         n, cost = independent
         _hamiltonian_check(record, n, cost)
+        if is_composite_algorithm(row.algorithm_id):
+            stage = "composite_validation"
+            errors = _composite_row_errors(record, row, config.protocol_version)
+            if errors:
+                raise ValueError("; ".join(errors))
     except StudySmokeError:
         raise
     except Exception as exc:  # recorded, never converted to a numeric observation
@@ -361,7 +427,8 @@ def run_study_smoke(
     datasets = {d.dataset_id: d for d in plan.datasets}
     problems: Dict[str, Any] = {}
     independent: Dict[str, Any] = {}
-    for row in rows:  # identity first: nothing runs or is written on a mismatch
+    for row in rows:  # parameters and identity first: nothing runs or is written on a refusal
+        _row_params(plan.study, row)
         if row.problem_name not in problems:
             problems[row.problem_name] = problem_loader(row.problem_name)
         _check_identity(problems[row.problem_name], row)
@@ -415,6 +482,7 @@ def run_study_smoke(
 
 
 __all__ = [
-    "SmokeReport", "StudySmokeError", "assert_no_ranking_words", "run_study_smoke",
+    "ROW_TIMING_FIELDS", "STAGE_TIMING_FIELDS", "SmokeReport", "StudySmokeError",
+    "assert_no_ranking_words", "comparable_row", "run_study_smoke",
     "select_smoke_rows", "write_rows_file",
 ]

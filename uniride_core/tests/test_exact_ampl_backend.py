@@ -28,6 +28,14 @@ ORACLE_DEFAULT = 500 if os.environ.get("UNIRIDE_EXACT_FULL_ORACLE") == "1" else 
 SOLVERS = ("gurobi", "highs")
 
 
+@pytest.fixture(autouse=True)
+def _no_real_probe_pause(monkeypatch):
+    """E14: a licence-type probe failure is re-run after a pause (5 s); the fake probes here never sleep for real."""
+    from uniride_core.exact import ampl_backend
+
+    monkeypatch.setattr(ampl_backend.AmplSession, "PROBE_PAUSE_SECONDS", 0.0)
+
+
 def _enum(inst):
     from uniride_core.exact.route_enumeration import enumerate_routes
 

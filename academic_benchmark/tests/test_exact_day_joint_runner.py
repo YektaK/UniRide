@@ -518,7 +518,7 @@ def test_a_clean_run_writes_licence_retries_zero_and_keeps_the_old_columns_in_pl
     stages = read_csv(out / "day_joint_stages.csv")
     assert stages and {s["licence_retries"] for s in stages} == {"0"}
     manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
-    assert manifest["run_history"]["licence_retries_total"] == 0
+    assert manifest["run_history"]["retried_solves_total"] == 0
     assert protocol.validate_day_joint_manifest(manifest) == [] and rj.strict_manifest_problems(manifest) == []
 
 
@@ -533,7 +533,7 @@ def test_licence_retries_reach_the_stage_csv_and_the_manifest_total(tmp_path):
     assert by[("large+sedan", "gurobi", "2")] == "0" and by[("large+sedan", "highs", "1")] == "0"
     assert by[(rj.HOMOGENEOUS, "gurobi", "1")] == "1" and (rj.HOMOGENEOUS, "gurobi", "3") not in by  # two stages, no stage 3
     manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
-    assert manifest["run_history"]["licence_retries_total"] == 1 + 1 + 2
+    assert manifest["run_history"]["retried_solves_total"] == 1 + 1 + 2
     assert protocol.validate_day_joint_manifest(manifest) == [] and rj.strict_manifest_problems(manifest) == []
     for name, sha in manifest["output_sha256"].items():
         assert rj.sha256_file(out / name) == sha
@@ -541,9 +541,9 @@ def test_licence_retries_reach_the_stage_csv_and_the_manifest_total(tmp_path):
 
 def test_a_bool_or_negative_retry_total_is_a_manifest_problem():
     for bad in (True, -1, 1.5, "2"):
-        problems = rj.strict_manifest_problems({"run_history": {"licence_retries_total": bad}})
-        assert any("licence_retries_total" in p for p in problems), bad
-    assert rj.strict_manifest_problems({"run_history": {"licence_retries_total": 3}}) == []
+        problems = rj.strict_manifest_problems({"run_history": {"retried_solves_total": bad}})
+        assert any("retried_solves_total" in p for p in problems), bad
+    assert rj.strict_manifest_problems({"run_history": {"retried_solves_total": 3}}) == []
 
 
 def test_three_licence_failures_through_the_real_gurobi_path_stop_the_run_with_exit_3(tmp_path, monkeypatch):

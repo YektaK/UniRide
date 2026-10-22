@@ -155,9 +155,19 @@ def backend_absent(solver: str, text: str) -> bool:
     or the captured log) when ``solve_result_num >= 500``. Anything else that mentions "can't find"
     or "licen" (a normal start-up log names the licence) is a backend defect and must fail, not skip.
     """
+    return backend_absent_kind(solver, text) is not None
+
+
+def backend_absent_kind(solver: str, text: str) -> Optional[str]:
+    """``"binary"`` (the solver program is missing), ``"licence"`` (a missing or invalid licence) or ``None``.
+
+    The same test as ``backend_absent``; the kind is a scrubbed fact (a fixed word, never the text) for a failure note.
+    """
     name = re.escape(solver)
     missing = re.compile(rf"can.t find (file )?\W?{name}\b|cannot invoke {name}\b", re.I)
-    return bool(missing.search(text) or _LICENSE_ABSENT.search(text))
+    if missing.search(text):
+        return "binary"
+    return "licence" if _LICENSE_ABSENT.search(text) else None
 
 
 @dataclass(frozen=True)
@@ -252,6 +262,7 @@ class StageResult:
     time_limit: Optional[float] = None
     work_limit: Optional[float] = None
     selection: tuple = ()  # ((column index, times), ...) of the incumbent
+    licence_retries: int = 0  # solves re-run after a licence-type failure of the same solve (Gurobi day stage, E14); 0 = none
 
 
 def classify_outcome(num: int, message: str, objective: Optional[float], bound: Optional[float]) -> StageResult:
@@ -454,6 +465,9 @@ class AmplSession:
     """One AMPL process reused across solves (tests and calibration). Raises
     ``ExactBackendUnavailable`` from ``open``; use ``solve_columns`` for the non-raising API."""
 
+    PROBE_RETRIES = 2  # E14: re-runs of a probe that failed with a licence-type message, before the backend is called absent
+    PROBE_PAUSE_SECONDS = 5.0
+
     def __init__(self, settings: Optional[SolverSettings] = None, environ: Optional[Mapping[str, str]] = None):
         self.settings = settings or SolverSettings()
         self._environ = environ
@@ -509,23 +523,30 @@ class AmplSession:
     def _solver_version(self) -> Optional[str]:
         """'<Solver> x.y.z' from a two-variable solve the AMPL presolve cannot settle (license check too)."""
         a = self._ampl
-        a.reset()
-        a.eval("var x {1..2} binary; minimize o: x[1] + 2 * x[2]; subject to c: x[1] + x[2] >= 1;")
-        a.option["solver"] = self.settings.solver
-        a.option[f"{self.settings.solver}_options"] = solver_option_string(self.settings, peak=False)
         solver = self.settings.solver
-        try:
-            # the solve command's own output: AMPL reports a missing solver only there
-            # ("Cannot invoke <solver>: no such program.", solve_result_num 999, solve_message "?")
-            output = a.solve(return_output=True) or ""
-        except Exception as exc:  # noqa: BLE001 - classified below
-            if backend_absent(solver, str(exc)):
-                raise ExactBackendUnavailable(f"{solver} could not run (solver or license missing)") from exc
-            raise
-        msg = str(a.get_value("solve_message"))
-        num = int(a.get_value("solve_result_num"))
-        if num >= 500 and backend_absent(solver, f"{msg}\n{output}"):
-            raise ExactBackendUnavailable(f"{solver}: solver or license missing")
+        retries = 0
+        while True:  # E14: a licence-type failure of the probe is re-run (same model and options) before the backend is called absent
+            a.reset()
+            a.eval("var x {1..2} binary; minimize o: x[1] + 2 * x[2]; subject to c: x[1] + x[2] >= 1;")
+            a.option["solver"] = solver
+            a.option[f"{solver}_options"] = solver_option_string(self.settings, peak=False)
+            try:
+                # the solve command's own output: AMPL reports a missing solver only there
+                # ("Cannot invoke <solver>: no such program.", solve_result_num 999, solve_message "?")
+                output = a.solve(return_output=True) or ""
+            except Exception as exc:  # noqa: BLE001 - classified below
+                if backend_absent(solver, str(exc)):
+                    raise ExactBackendUnavailable(f"{solver} could not run (solver or license missing)") from exc
+                raise
+            msg = str(a.get_value("solve_message"))
+            num = int(a.get_value("solve_result_num"))
+            if num >= 500 and backend_absent(solver, f"{msg}\n{output}"):
+                if retries < self.PROBE_RETRIES:
+                    retries += 1
+                    time.sleep(self.PROBE_PAUSE_SECONDS)
+                    continue
+                raise ExactBackendUnavailable(f"{solver}: solver or license missing (after {retries} probe retries)")
+            break
         if num >= 500:
             # an AMPL/solver that starts but fails on a trivial model is a backend defect, not absence
             raise RuntimeError(f"{self.settings.solver} failed on the probe model: {_scrub(msg.splitlines()[0] if msg else '')}")

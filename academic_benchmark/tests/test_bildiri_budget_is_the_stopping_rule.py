@@ -14,9 +14,12 @@ C-19 report. Here:
    - pure GA, PSO, memetic GA, pure GWO and pure HHO: ``max_iterations`` and
      ``max_no_improvement`` >= the largest level; every generation/iteration of these
      algorithms spends at least one objective evaluation, so such a limit cannot fire first;
-   - memetic GWO/HHO keep the C-04 limit 60000: the iterations per evaluation measured on eil51
-     (smallest n, so the cheapest polish and the most iterations per evaluation of all profile
-     instances) times the largest level stay below 60000;
+   - memetic GWO/HHO keep the C-04 limit 60000: an ESTIMATE, not a bound. The iterations per
+     evaluation measured on eil51 at its lowest level (smallest n, so the cheapest polish) times
+     the largest level must stay below 60000. Measured once by script: GWO 1150 iterations per
+     63750 evaluations at eil51/50 x (estimate about 22300 at 1237500); the ratio at eil51/250 x
+     was about 5 % higher (6050 per 318750, about 23500 at 1237500); the real count at the largest
+     level was 6125 (kroA100/250 x). The margin to 60000 is therefore about 2.5 x on the estimate;
    - 2-opt, 3-opt, Or-opt: one iteration is at least one full scan of n(n-1)/2 candidates, so an
      iteration limit of at least 250 (the largest scan multiplier) cannot fire first.
 """

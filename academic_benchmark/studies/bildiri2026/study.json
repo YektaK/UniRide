@@ -16,9 +16,9 @@
     "Core-HHO-TSP-Memetic-2opt"
   ],
   "algorithm_parameters": {
-    "Core-TwoOpt-TSP": {},
-    "Core-ThreeOpt-TSP": {},
-    "Core-OrOpt-TSP": {},
+    "Core-TwoOpt-TSP": {"max_iterations": 1000, "first_improvement": false},
+    "Core-ThreeOpt-TSP": {"max_iterations": 1000, "first_improvement": false, "window": 12},
+    "Core-OrOpt-TSP": {"max_iterations": 1000, "first_improvement": false, "window": 3},
     "Core-GA-TSP": {"population_size": 20, "max_iterations": 1237500, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2, "tournament_size": 3, "max_no_improvement": 1237500},
     "Core-PSO-TSP": {"swarm_size": 50, "max_iterations": 1237500, "inertia_weight": 0.729, "cognitive_coeff": 1.49445, "social_coeff": 1.49445, "max_velocity_size": 5, "max_no_improvement": 1237500, "reinit_interval": 50},
     "Core-GA-TSP-Memetic-2opt": {"population_size": 20, "max_iterations": 1237500, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2, "tournament_size": 3, "max_no_improvement": 1237500, "initial_polish_iters": 1, "final_polish_iters": 1},

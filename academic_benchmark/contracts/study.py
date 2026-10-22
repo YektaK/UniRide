@@ -115,8 +115,30 @@ class ScaledFixedBudgetLevelsV1(StrictContract):
         return self
 
 
+# Exactly one budget declaration (C-19), stated in the JSON schema too: a present key must hold a
+# value and the other key must be absent or null (the model treats null as absent).
+_EXACTLY_ONE_BUDGET_DECLARATION = [
+    {
+        "required": ["fixed_budget_levels"],
+        "properties": {
+            "fixed_budget_levels": {"type": "array"},
+            "scaled_fixed_budget_levels": {"type": "null"},
+        },
+    },
+    {
+        "required": ["scaled_fixed_budget_levels"],
+        "properties": {
+            "scaled_fixed_budget_levels": {"type": "object"},
+            "fixed_budget_levels": {"type": "null"},
+        },
+    },
+]
+
+
 class StudyManifestV1(StrictContract):
-    model_config = StrictContract.model_config | {"json_schema_extra": {"$id": "uniride-study/v1"}}
+    model_config = StrictContract.model_config | {
+        "json_schema_extra": {"$id": "uniride-study/v1", "oneOf": _EXACTLY_ONE_BUDGET_DECLARATION}
+    }
 
     schema_version: Literal["uniride-study/v1"]
     study_id: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9._-]*$")

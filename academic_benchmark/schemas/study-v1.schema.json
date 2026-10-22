@@ -165,6 +165,34 @@
   "$id": "uniride-study/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "fixed_budget_levels": {
+          "type": "array"
+        },
+        "scaled_fixed_budget_levels": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "fixed_budget_levels"
+      ]
+    },
+    {
+      "properties": {
+        "fixed_budget_levels": {
+          "type": "null"
+        },
+        "scaled_fixed_budget_levels": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "scaled_fixed_budget_levels"
+      ]
+    }
+  ],
   "properties": {
     "algorithm_ids": {
       "items": {

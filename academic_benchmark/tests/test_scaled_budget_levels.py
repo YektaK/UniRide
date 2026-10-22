@@ -22,6 +22,7 @@ from academic_benchmark.studies.service import (
     build_study_plan,
     expand_plan,
     fixed_budget_levels_for,
+    load_study,
     resolve_datasets,
 )
 from academic_benchmark.studies.smoke import StudySmokeError, select_smoke_rows, write_rows_file
@@ -149,6 +150,57 @@ def test_service_refuses_a_table_that_does_not_match_the_dataset(tmp_path, table
         _plan(_tiny_repo(tmp_path, table, multipliers=multipliers))
 
 
+TINY2_BYTES = b"NAME: TinyTwo\nTYPE: ATSP\nDIMENSION: 4\nEDGE_WEIGHT_SECTION\n"
+
+
+def _two_dataset_repo(root: Path, table: dict) -> Path:
+    """Two datasets (tiny n = 3, tiny2 n = 4) and a scaled table given by the caller."""
+    _tiny_repo(root, {"tiny": [150, 750]}, multipliers=(50, 250))
+    (root / "data" / "tiny2.atsp").write_bytes(TINY2_BYTES)
+    dataset = json.loads((root / "datasets" / "tiny.json").read_text(encoding="utf-8"))
+    dataset.update(dataset_id="tiny2", artifact_path="data/tiny2.atsp", dimension=4,
+                   checksum={"algorithm": "sha256", "value": hashlib.sha256(TINY2_BYTES).hexdigest()})
+    (root / "datasets" / "tiny2.json").write_text(json.dumps(dataset), encoding="utf-8")
+    payload = json.loads((root / "studies" / "study.json").read_text(encoding="utf-8"))
+    payload["dataset_manifest_refs"] = ["datasets/tiny.json", "datasets/tiny2.json"]
+    payload["scaled_fixed_budget_levels"]["levels_by_dataset"] = table
+    (root / "studies" / "study.json").write_text(json.dumps(payload), encoding="utf-8")
+    return root
+
+
+def test_two_dataset_study_with_a_complete_table_expands(tmp_path):
+    plan = _plan(_two_dataset_repo(tmp_path, {"tiny": [150, 750], "tiny2": [300, 1500]}))
+    fixed = {(r.dataset_id, r.budget_level) for r in plan.rows if r.protocol is ExecutionProtocol.FIXED_BUDGET}
+    assert fixed == {("tiny", 150), ("tiny", 750), ("tiny2", 300), ("tiny2", 1500)}
+
+
+def test_a_table_missing_one_of_two_datasets_is_refused_and_never_filled_from_the_rule(tmp_path):
+    root = _two_dataset_repo(tmp_path, {"tiny": [150, 750]})  # tiny2 missing, no extra key
+    with pytest.raises(StudyServiceError, match="dataset ids|no entry for dataset 'tiny2'"):
+        _plan(root)
+    # the direct path refuses it too, with the datasets resolved by the service
+    study = load_study("studies/study.json", repository_root=root)
+    datasets = resolve_datasets(study, repository_root=root)
+    with pytest.raises(StudyServiceError, match="dataset ids|no entry for dataset 'tiny2'"):
+        expand_plan(study, datasets)
+    with pytest.raises(StudyServiceError, match="no entry for dataset 'tiny2'"):
+        fixed_budget_levels_for(study, next(d for d in datasets if d.dataset_id == "tiny2"))
+
+
+def test_json_schema_states_the_exactly_one_budget_rule():
+    schema = json.loads(
+        (REPOSITORY_ROOT / "academic_benchmark/schemas/study-v1.schema.json").read_text(encoding="utf-8")
+    )
+    assert schema["oneOf"] == [
+        {"required": ["fixed_budget_levels"],
+         "properties": {"fixed_budget_levels": {"type": "array"}, "scaled_fixed_budget_levels": {"type": "null"}}},
+        {"required": ["scaled_fixed_budget_levels"],
+         "properties": {"scaled_fixed_budget_levels": {"type": "object"}, "fixed_budget_levels": {"type": "null"}}},
+    ]
+    assert "fixed_budget_levels" not in schema.get("required", [])
+    assert "scaled_fixed_budget_levels" not in schema.get("required", [])
+
+
 def test_manifest_dimension_must_match_the_artifact_header_in_scaled_mode(tmp_path):
     # manifest says n = 4 and the table is consistent with it, the artifact says DIMENSION: 3
     with pytest.raises(StudyServiceError, match="DIMENSION"):
@@ -173,7 +225,7 @@ EXPECTED_SCANS = {  # n(n-1)/2 per dataset id
 }
 
 
-def test_live_profile_levels_are_20_and_100_scans_of_every_instance():
+def test_live_profile_levels_are_50_and_250_scans_of_every_instance():
     plan = build_study_plan(BILDIRI_STUDY, repository_root=REPOSITORY_ROOT)
     scaled = plan.study.scaled_fixed_budget_levels
     assert plan.study.fixed_budget_levels is None

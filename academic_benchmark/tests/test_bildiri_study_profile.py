@@ -137,7 +137,7 @@ class TestStudyManifest:
         assert set(study_manifest.algorithm_parameters) == set(PRIMARY_ALGORITHM_IDS)
         assert study_manifest.primary_protocol.protocol_id == "fixed_evaluation_budget"
 
-    def test_budget_levels_are_20_and_100_two_opt_scans_per_instance(
+    def test_budget_levels_are_50_and_250_two_opt_scans_per_instance(
         self, study_manifest: StudyManifestV1
     ):
         assert study_manifest.fixed_budget_levels is None
@@ -157,6 +157,12 @@ class TestStudyManifest:
             "population_size": 20, **GA_C16A_DEFAULTS,
             "initial_polish_iters": 1, "final_polish_iters": 1,
         }
+
+    def test_local_search_entries_state_the_registry_defaults(self, study_manifest: StudyManifestV1):
+        params = study_manifest.algorithm_parameters
+        assert params["Core-TwoOpt-TSP"] == {"max_iterations": 1000, "first_improvement": False}
+        assert params["Core-ThreeOpt-TSP"] == {"max_iterations": 1000, "first_improvement": False, "window": 12}
+        assert params["Core-OrOpt-TSP"] == {"max_iterations": 1000, "first_improvement": False, "window": 3}
 
     def test_memetic_entries_use_one_scan_per_polish(self, study_manifest: StudyManifestV1):
         params = study_manifest.algorithm_parameters

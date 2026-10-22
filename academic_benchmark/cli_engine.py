@@ -152,9 +152,14 @@ try:
     from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg
     import academic_benchmark.core.registry_setup  # Ensure registry is populated in worker processes
     _HAS_NUMBA_REGISTRY = True
-except ImportError:
-    _AlgoReg = None
-    _HAS_NUMBA_REGISTRY = False
+except ImportError as _registry_import_error:
+    # Fail closed: a swallowed import error left the CLI with a partial (or empty) academic
+    # registry, and a later import then raised a misleading "already registered" error.
+    raise ImportError(
+        "academic registry failed to load (partial registry refused): "
+        f"{_registry_import_error}"
+    ) from _registry_import_error
+_HAS_NUMBA_REGISTRY = True
 
 try:
     from academic_benchmark.tsplib_manager import (
@@ -863,8 +868,8 @@ def _evaluate_param_combo(task: Tuple[Any, ...]) -> Dict[str, Any]:
             import warnings
             warnings.warn(
                 f"Algorithm '{strategy_name}' uses the legacy Numba path. "
-                f"Use 'Numba-{strategy_name}' or 'Core-{strategy_name}-TSP' for canonical "
-                f"matrix-solver execution.",
+                f"Use 'Core-{strategy_name}-TSP-Pure' or 'Core-{strategy_name}-TSP-Memetic-2opt' "
+                f"for canonical matrix-solver execution.",
                 DeprecationWarning,
                 stacklevel=2,
             )

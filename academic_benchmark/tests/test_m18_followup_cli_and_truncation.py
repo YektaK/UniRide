@@ -102,7 +102,7 @@ def _dist_problem(matrix) -> ProblemInstance:
     )
 
 
-@pytest.mark.parametrize("algorithm", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_legacy_executor_does_not_truncate_fractional_distance_matrix(algorithm: str) -> None:
     matrix = _fractional()
     result = AlgorithmRegistry.get_executor(algorithm)(
@@ -115,7 +115,7 @@ def test_legacy_executor_does_not_truncate_fractional_distance_matrix(algorithm:
     assert result.matrix_kind == "distance"
 
 
-@pytest.mark.parametrize("algorithm", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_legacy_executor_integer_distance_instance_stays_int(algorithm: str) -> None:
     for matrix in (_integer(), np.array(_integer(), dtype=np.int32)):
         problem = _dist_problem(matrix)

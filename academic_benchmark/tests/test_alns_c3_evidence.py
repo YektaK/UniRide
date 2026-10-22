@@ -547,7 +547,8 @@ def test_alns_protocol_mode_rejects_routing_before_solver_construction() -> None
         name="c3-alns-routing", problem_type="cvrp", dist_matrix=DIRECTED_ATSP.dist_matrix,
     )
 
-    with pytest.raises(ValueError, match="fair TSP comparison mode"):
+    # Gate C follow-up: the catalog ID refuses routing on every path, before the protocol check.
+    with pytest.raises(ValueError, match="ALNS-TSP is a TSP/ATSP algorithm and refuses CVRP"):
         AlgorithmRegistry.get_executor("ALNS-TSP")(routing, _fixed_params(4), seed=1, run_idx=0)
 
 def test_alns_fixed_protocol_preserves_fractional_directed_cost() -> None:

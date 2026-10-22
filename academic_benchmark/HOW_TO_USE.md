@@ -98,12 +98,17 @@ python -m pytest academic_benchmark/tests/ -v
 The active GWO/HHO identities resolve to the canonical classes in
 `uniride_core/algorithms/tsp_matrix_metaheuristics/`:
 
-| CLI Name       | Canonical class | Guidance |
-| -------------- | --------------- | -------- |
-| `Numba-GWO`    | `GWOOptimizer`  | Compatibility registry identity |
-| `Numba-HHO`    | `HHOOptimizer`  | Compatibility registry identity |
-| `Core-GWO-TSP` | `GWOOptimizer`  | Canonical core identity |
-| `Core-HHO-TSP` | `HHOOptimizer`  | Canonical core identity |
+| CLI Name                    | Canonical class | Guidance |
+| --------------------------- | --------------- | -------- |
+| `Core-GWO-TSP-Pure`         | `GWOOptimizer`  | Canonical registry identity (no polish) |
+| `Core-GWO-TSP-Memetic-2opt` | `GWOOptimizer`  | Canonical registry identity (2-opt polish) |
+| `Core-HHO-TSP-Pure`         | `HHOOptimizer`  | Canonical registry identity (no polish) |
+| `Core-HHO-TSP-Memetic-2opt` | `HHOOptimizer`  | Canonical registry identity (2-opt polish) |
+
+`Numba-GWO`, `Core-GWO-TSP`, `Numba-HHO` and `Core-HHO-TSP` are deprecated CLI aliases of the
+two memetic identities. They have no registry entry of their own: the resolver maps them to
+`Core-GWO-TSP-Memetic-2opt` / `Core-HHO-TSP-Memetic-2opt`. Catalog identities refuse CVRP/CVRPTW
+problems; routing variants are served under the `CVRP-*` / `CVRPTW-*` names.
 
 `B-GA` and `B-PSO` are retired aliases. Do not route them to archived Bildiri
 classes or revive top-level `core.*` fallback imports. Select explicit canonical

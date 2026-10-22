@@ -20,7 +20,7 @@ from dataclasses import dataclass
 import pytest
 
 from academic_benchmark.core import registry_setup
-from academic_benchmark.engine_core import ProblemInstance
+from academic_benchmark.engine_core import AlgorithmRegistry, ProblemInstance
 from academic_benchmark.fairness import FairComparisonManifest, FairnessValidationError
 from academic_benchmark.native_protocol import NativeComparisonManifest
 
@@ -458,7 +458,18 @@ TINY_CVRP = ProblemInstance(
 )
 
 
-def test_memetic_routing_call_builds_the_ga_engine_not_the_greedy_default(monkeypatch):
+def test_memetic_routing_call_is_refused_before_any_engine_is_built(monkeypatch):
+    # Gate C follow-up (owner 2026-10-21): the memetic ID is TSP/ATSP only. It used to build
+    # the Matrix-GA-TSP-legacy engine here and label the routing row with the memetic ID.
+    built: list[str] = []
+    monkeypatch.setattr(registry_setup, "create_matrix_engine", lambda name: built.append(name))
+    executor = AlgorithmRegistry.get_executor(MEMETIC_ID)
+    with pytest.raises(registry_setup.CoreRoutingRefusedError, match="CVRP-Core-GA-TSP"):
+        executor(TINY_CVRP, {}, 42, 0)
+    assert built == []
+
+
+def test_cvrp_alias_of_the_ga_builds_the_ga_engine_under_its_own_name(monkeypatch):
     real_create = registry_setup.create_matrix_engine
     built: list[tuple[str, str]] = []
 
@@ -468,9 +479,9 @@ def test_memetic_routing_call_builds_the_ga_engine_not_the_greedy_default(monkey
         return engine
 
     monkeypatch.setattr(registry_setup, "create_matrix_engine", recording_create)
-    result = _executor()(TINY_CVRP, {}, 42, 0)
+    result = AlgorithmRegistry.get_executor("CVRP-Core-GA-TSP")(TINY_CVRP, {}, 42, 0)
     assert built == [("Matrix-GA-TSP-legacy", "TSPMetaMatrixEngine")]
-    assert result.algorithm == MEMETIC_ID
+    assert result.algorithm == "CVRP-Core-GA-TSP"
     assert result.routes
 
 

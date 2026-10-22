@@ -170,6 +170,9 @@ class StudyManifestV1(StrictContract):
     def validate_algorithm_parameter_keys(self) -> "StudyManifestV1":
         if len(set(self.algorithm_ids)) != len(self.algorithm_ids):
             raise ValueError("algorithm_ids must be unique")
+        # a false or retired label used only as a parameter key is refused with its replacement named
+        # (the same canonical-ID rule as algorithm_ids), not as a mere key mismatch
+        _validate_manifest_algorithm_ids(list(self.algorithm_parameters))
         if set(self.algorithm_parameters) != set(self.algorithm_ids):
             raise ValueError("algorithm_parameters keys must exactly match algorithm_ids")
         if (self.fixed_budget_levels is None) == (self.scaled_fixed_budget_levels is None):

@@ -21,6 +21,7 @@ from uniride_core.algorithms import numba_accel as _nb
 from uniride_core.algorithms.objective_budget import (
     ObjectiveEvaluationBudget,
     StageCappedBudget,
+    budget_share_spent,
     improve_two_opt_budgeted,
     two_opt_evaluation_upper_bound,
 )
@@ -53,6 +54,22 @@ class GWOOptimizer(BaseTSPSolver):
     counter starting at 0, so there the absolute cap equals the stage
     allowance. ``stage_cap`` requires ``shared_budget`` and cannot be combined
     with ``evaluation_budget``.
+
+    Schedule (owner decision 2026-10-22). In FIXED-BUDGET runs (a finite
+    objective-evaluation limit: ``evaluation_budget`` or an injected counter
+    with a stage cap or total limit) the coefficient ``a`` decays with the share
+    of the budget spent, ``a = initial_a * (1 - p)`` with ``p = (used - start) /
+    (limit - start)``, so every instance and budget gets the full arc from
+    ``initial_a`` down to 0 when the budget is used up; ``max_iterations`` then
+    only stops a run. ``used`` is the counter the run spends on, so a memetic
+    run counts its polish evaluations (init, periodic, final) in the arc, which
+    spans the whole run. ``limit`` is the effective ceiling, the smaller of the
+    stage cap and the shared total limit: a composite hybrid's global stage
+    therefore spans its own ``global_stage_cap``, not the run budget, and the
+    arc ends when the global stage ends. ``start`` is the counter value when
+    ``solve()`` begins (0 unless an injected counter was spent on before). In
+    NATIVE runs (no limit) the schedule is unchanged,
+    ``a = initial_a * (1 - iteration / max_iterations)``.
     """
 
     def __init__(
@@ -147,6 +164,14 @@ class GWOOptimizer(BaseTSPSolver):
         if not keep:
             keep = [self._rng.choice(swaps)]
         return self._apply_swaps(wolf, keep)
+
+    def _schedule_decay(self, iteration: int, start_used: int) -> float:
+        """Decay factor of ``a``: ``1 - share of the budget spent`` in fixed mode,
+        ``1 - iteration / max_iterations`` in native mode (see the class docstring)."""
+        share = budget_share_spent(self._objective_budget, start_used)
+        if share is None:
+            return 1.0 - iteration / max(1, self.max_iterations)
+        return 1.0 - share
 
     def _evaluate(self, route: List[int]) -> float:
         self._objective_budget.consume()
@@ -262,7 +287,7 @@ class GWOOptimizer(BaseTSPSolver):
                 budget_terminated = True
                 break
             history.append(float(best_len))
-            a = self.initial_a * (1.0 - it / max(1, self.max_iterations))
+            a = self.initial_a * self._schedule_decay(it, start_used)
             improved = False
 
             # Replace leaders in the working pack so the loop iterates over a

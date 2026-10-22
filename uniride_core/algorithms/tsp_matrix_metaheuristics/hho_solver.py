@@ -26,6 +26,7 @@ from uniride_core.algorithms import numba_accel as _nb
 from uniride_core.algorithms.objective_budget import (
     ObjectiveEvaluationBudget,
     StageCappedBudget,
+    budget_share_spent,
     improve_two_opt_budgeted,
     two_opt_evaluation_upper_bound,
 )
@@ -59,6 +60,23 @@ class HHOOptimizer(BaseTSPSolver):
     counter starting at 0, so there the absolute cap equals the stage
     allowance. ``stage_cap`` requires ``shared_budget`` and cannot be combined
     with ``evaluation_budget``.
+
+    Schedule (owner decision 2026-10-22). In FIXED-BUDGET runs (a finite
+    objective-evaluation limit: ``evaluation_budget`` or an injected counter
+    with a stage cap or total limit) the escape-energy factor decays with the
+    share of the budget spent, ``E = 2 * e0 * (1 - p) * initial_energy`` with
+    ``p = (used - start) / (limit - start)`` and ``e0`` drawn per iteration as
+    before, so every instance and budget gets the full explore-to-exploit arc,
+    down to 0 when the budget is used up; ``max_iterations`` then only stops a
+    run. ``used`` is the counter the run spends on, so a memetic run counts its
+    polish evaluations (init, periodic, final) in the arc, which spans the whole
+    run. ``limit`` is the effective ceiling, the smaller of the stage cap and the
+    shared total limit: a composite hybrid's global stage therefore spans its own
+    ``global_stage_cap``, not the run budget, and the arc ends when the global
+    stage ends. ``start`` is the counter value when ``solve()`` begins (0 unless
+    an injected counter was spent on before). In NATIVE runs (no limit) the
+    schedule is unchanged, ``E = 2 * e0 * (1 - iteration / max_iterations) *
+    initial_energy``.
     """
 
     def __init__(
@@ -262,9 +280,18 @@ class HHOOptimizer(BaseTSPSolver):
         self._backend_observation.polish.add("python")
         return polished
 
+    def _schedule_decay(self, iteration: int, start_used: int) -> float:
+        """Decay factor of the escape energy: ``1 - share of the budget spent`` in
+        fixed mode, ``1 - iteration / max_iterations`` in native mode (see the
+        class docstring)."""
+        share = budget_share_spent(self._objective_budget, start_used)
+        if share is None:
+            return 1 - iteration / max(1, self.max_iterations)
+        return 1.0 - share
+
     @staticmethod
-    def _escape_energy(e0: float, iteration: int, max_iterations: int) -> float:
-        return 2 * e0 * (1 - iteration / max(1, max_iterations))
+    def _escape_energy(e0: float, decay: float) -> float:
+        return 2 * e0 * decay
 
     # ----- Main solve ---------------------------------------------
     def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
@@ -323,7 +350,7 @@ class HHOOptimizer(BaseTSPSolver):
                 break
             history.append(float(best_len))
             e0 = 2 * self._rng.random() - 1
-            E = self._escape_energy(e0, it, self.max_iterations) * self.initial_energy
+            E = self._escape_energy(e0, self._schedule_decay(it, start_used)) * self.initial_energy
             improved = False
 
             for hawk in population:

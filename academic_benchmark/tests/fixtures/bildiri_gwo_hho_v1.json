@@ -87,17 +87,17 @@
       "iterations": 1,
       "normalized_tour": [
         0,
+        2,
         4,
         3,
         5,
-        2,
         1
       ],
       "objective_evaluations": 83,
       "observed_execution_backend": "mixed-numba-objective-python-polish",
       "seed": 1729,
       "termination_reason": "max_iterations",
-      "tour_length": 29.0,
+      "tour_length": 28.0,
       "variant": "memetic_2opt"
     },
     "hho_memetic_2opt_symmetric_tsp": {

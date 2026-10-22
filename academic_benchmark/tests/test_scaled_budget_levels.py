@@ -1,0 +1,298 @@
+"""C-19: instance-scaled fixed budget levels (owner 2026-10-21, DECISION_LOG A17).
+
+Each level is a number of full 2-opt scans: ``multiplier x n(n-1)/2`` objective evaluations, with
+``n`` the dataset dimension. The study states the rule, the multipliers and the resulting table;
+the contract checks its internal consistency and the study service recomputes every entry from the
+dataset manifest (and the artifact's DIMENSION header) and refuses a mismatch.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from copy import deepcopy
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+from academic_benchmark.contracts import StudyManifestV1
+from academic_benchmark.studies.service import (
+    StudyServiceError,
+    build_study_plan,
+    expand_plan,
+    fixed_budget_levels_for,
+    load_study,
+    resolve_datasets,
+)
+from academic_benchmark.studies.smoke import StudySmokeError, select_smoke_rows, write_rows_file
+from uniride_core.algorithms.capabilities import ExecutionProtocol
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+BILDIRI_STUDY = "academic_benchmark/studies/bildiri2026/study.json"
+TINY_BYTES = b"NAME: TinyName\nTYPE: ATSP\nDIMENSION: 3\nEDGE_WEIGHT_SECTION\n"
+
+
+def _base_payload() -> dict:
+    payload = json.loads((REPOSITORY_ROOT / BILDIRI_STUDY).read_text(encoding="utf-8"))
+    payload.pop("scaled_fixed_budget_levels", None)
+    payload.pop("fixed_budget_levels", None)
+    return payload
+
+
+def _scaled(table: dict, multipliers=(50, 250)) -> dict:
+    return {
+        "rule": "two_opt_scan_multiples_v1",
+        "scan_multipliers": list(multipliers),
+        "levels_by_dataset": table,
+    }
+
+
+def _contract(scaled=None, levels=None) -> dict:
+    payload = _base_payload()
+    if scaled is not None:
+        payload["scaled_fixed_budget_levels"] = scaled
+    if levels is not None:
+        payload["fixed_budget_levels"] = levels
+    return payload
+
+
+# ---------------------------------------------------------------- contract (no file access)
+
+def test_scaled_levels_are_accepted_and_fixed_levels_stay_valid():
+    study = StudyManifestV1.model_validate(_contract(_scaled({"tsplib-ft53": [68900, 344500]})))
+    assert study.fixed_budget_levels is None
+    assert study.scaled_fixed_budget_levels.levels_by_dataset == {"tsplib-ft53": [68900, 344500]}
+    legacy = StudyManifestV1.model_validate(_contract(levels=[10000, 50000]))
+    assert legacy.fixed_budget_levels == [10000, 50000]
+    assert legacy.scaled_fixed_budget_levels is None
+
+
+@pytest.mark.parametrize(
+    "payload,match",
+    [
+        (_contract(_scaled({"tsplib-ft53": [68900, 344500]}), [100]), "exactly one"),
+        (_contract(), "exactly one"),
+        (_contract(_scaled({"tsplib-ft53": [344500, 68900]}, (250, 50))), "increasing"),
+        (_contract(_scaled({"tsplib-ft53": [68900, 68900]}, (50, 50))), "increasing"),
+        (_contract(_scaled({"tsplib-ft53": [68900]})), "one level per multiplier"),
+        (_contract(_scaled({"tsplib-ft53": [68900, 344501]})), "multiplier x n\\(n-1\\)/2"),
+        (_contract(_scaled({"tsplib-ft53": [68900, 350000]})), "multiplier x n\\(n-1\\)/2"),
+        (_contract(_scaled({"x": [80, 400]})), "n\\(n-1\\)/2"),  # k = 4 is not n(n-1)/2
+        (_contract(_scaled({})), "levels_by_dataset"),
+    ],
+)
+def test_inconsistent_scaled_tables_are_refused_by_the_contract(payload, match):
+    with pytest.raises(ValidationError, match=match):
+        StudyManifestV1.model_validate(payload)
+
+
+def test_unknown_rule_is_refused():
+    scaled = _scaled({"tsplib-ft53": [68900, 344500]})
+    scaled["rule"] = "something_else"
+    with pytest.raises(ValidationError):
+        StudyManifestV1.model_validate(_contract(scaled))
+
+
+# ---------------------------------------------------------------- service (recomputation)
+
+def _tiny_repo(root: Path, table: dict, *, multipliers=(20, 100), manifest_dimension: int = 3,
+               artifact: bytes = TINY_BYTES) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    for name in ("data", "datasets", "studies"):
+        (root / name).mkdir(exist_ok=True)
+    (root / "data" / "tiny.atsp").write_bytes(artifact)
+    dataset = {
+        "schema_version": "uniride-dataset/v1",
+        "dataset_id": "tiny",
+        "artifact_path": "data/tiny.atsp",
+        "source": {"authority_url": "https://example.invalid/tiny", "retrieved_on": "2026-10-21"},
+        "checksum": {"algorithm": "sha256", "value": hashlib.sha256(artifact).hexdigest()},
+        "problem_type": "ATSP",
+        "dimension": manifest_dimension,
+        "matrix_semantics": {
+            "directed": True, "edge_weight_type": "EXPLICIT",
+            "edge_weight_format": "FULL_MATRIX", "diagonal_semantics": "sentinel",
+        },
+        "best_known": {"status": "unknown", "value": None, "provenance": "none"},
+    }
+    (root / "datasets" / "tiny.json").write_text(json.dumps(dataset), encoding="utf-8")
+    payload = _contract(_scaled(table, multipliers))
+    payload["dataset_manifest_refs"] = ["datasets/tiny.json"]
+    payload["problem_families"] = ["ATSP"]
+    (root / "studies" / "study.json").write_text(json.dumps(payload), encoding="utf-8")
+    return root
+
+
+def _plan(root: Path):
+    return build_study_plan("studies/study.json", repository_root=root)
+
+
+def test_scaled_plan_rows_carry_the_recomputed_levels(tmp_path):
+    plan = _plan(_tiny_repo(tmp_path, {"tiny": [60, 300]}))  # n = 3 -> 3 candidates per scan
+    fixed = [r for r in plan.rows if r.protocol is ExecutionProtocol.FIXED_BUDGET]
+    assert {r.budget_level for r in fixed} == {60, 300}
+    assert len(fixed) == 2 * len(plan.study.algorithm_ids) * plan.study.run_count
+    assert fixed_budget_levels_for(plan.study, plan.datasets[0]) == (60, 300)
+
+
+@pytest.mark.parametrize(
+    "table,multipliers,match",
+    [
+        ({"tiny": [120, 600]}, (20, 100), "n\\(n-1\\)/2 = 3"),  # table built for n = 4
+        ({"tiny": [60, 300]}, (10, 50), "n\\(n-1\\)/2 = 3"),  # wrong multipliers for n = 3
+        ({"other": [60, 300]}, (20, 100), "dataset ids"),
+        ({"tiny": [60, 300], "other": [60, 300]}, (20, 100), "dataset ids"),
+    ],
+)
+def test_service_refuses_a_table_that_does_not_match_the_dataset(tmp_path, table, multipliers, match):
+    with pytest.raises(StudyServiceError, match=match):
+        _plan(_tiny_repo(tmp_path, table, multipliers=multipliers))
+
+
+TINY2_BYTES = b"NAME: TinyTwo\nTYPE: ATSP\nDIMENSION: 4\nEDGE_WEIGHT_SECTION\n"
+
+
+def _two_dataset_repo(root: Path, table: dict) -> Path:
+    """Two datasets (tiny n = 3, tiny2 n = 4) and a scaled table given by the caller."""
+    _tiny_repo(root, {"tiny": [150, 750]}, multipliers=(50, 250))
+    (root / "data" / "tiny2.atsp").write_bytes(TINY2_BYTES)
+    dataset = json.loads((root / "datasets" / "tiny.json").read_text(encoding="utf-8"))
+    dataset.update(dataset_id="tiny2", artifact_path="data/tiny2.atsp", dimension=4,
+                   checksum={"algorithm": "sha256", "value": hashlib.sha256(TINY2_BYTES).hexdigest()})
+    (root / "datasets" / "tiny2.json").write_text(json.dumps(dataset), encoding="utf-8")
+    payload = json.loads((root / "studies" / "study.json").read_text(encoding="utf-8"))
+    payload["dataset_manifest_refs"] = ["datasets/tiny.json", "datasets/tiny2.json"]
+    payload["scaled_fixed_budget_levels"]["levels_by_dataset"] = table
+    (root / "studies" / "study.json").write_text(json.dumps(payload), encoding="utf-8")
+    return root
+
+
+def test_two_dataset_study_with_a_complete_table_expands(tmp_path):
+    plan = _plan(_two_dataset_repo(tmp_path, {"tiny": [150, 750], "tiny2": [300, 1500]}))
+    fixed = {(r.dataset_id, r.budget_level) for r in plan.rows if r.protocol is ExecutionProtocol.FIXED_BUDGET}
+    assert fixed == {("tiny", 150), ("tiny", 750), ("tiny2", 300), ("tiny2", 1500)}
+
+
+def test_a_table_missing_one_of_two_datasets_is_refused_and_never_filled_from_the_rule(tmp_path):
+    root = _two_dataset_repo(tmp_path, {"tiny": [150, 750]})  # tiny2 missing, no extra key
+    with pytest.raises(StudyServiceError, match="dataset ids|no entry for dataset 'tiny2'"):
+        _plan(root)
+    # the direct path refuses it too, with the datasets resolved by the service
+    study = load_study("studies/study.json", repository_root=root)
+    datasets = resolve_datasets(study, repository_root=root)
+    with pytest.raises(StudyServiceError, match="dataset ids|no entry for dataset 'tiny2'"):
+        expand_plan(study, datasets)
+    with pytest.raises(StudyServiceError, match="no entry for dataset 'tiny2'"):
+        fixed_budget_levels_for(study, next(d for d in datasets if d.dataset_id == "tiny2"))
+
+
+def test_json_schema_states_the_exactly_one_budget_rule():
+    schema = json.loads(
+        (REPOSITORY_ROOT / "academic_benchmark/schemas/study-v1.schema.json").read_text(encoding="utf-8")
+    )
+    assert schema["oneOf"] == [
+        {"required": ["fixed_budget_levels"],
+         "properties": {"fixed_budget_levels": {"type": "array"}, "scaled_fixed_budget_levels": {"type": "null"}}},
+        {"required": ["scaled_fixed_budget_levels"],
+         "properties": {"scaled_fixed_budget_levels": {"type": "object"}, "fixed_budget_levels": {"type": "null"}}},
+    ]
+    assert "fixed_budget_levels" not in schema.get("required", [])
+    assert "scaled_fixed_budget_levels" not in schema.get("required", [])
+
+
+def test_manifest_dimension_must_match_the_artifact_header_in_scaled_mode(tmp_path):
+    # manifest says n = 4 and the table is consistent with it, the artifact says DIMENSION: 3
+    with pytest.raises(StudyServiceError, match="DIMENSION"):
+        _plan(_tiny_repo(tmp_path, {"tiny": [120, 600]}, manifest_dimension=4))
+
+
+def test_expand_plan_recomputes_even_when_called_directly(tmp_path):
+    root = _tiny_repo(tmp_path, {"tiny": [60, 300]})
+    plan = _plan(root)
+    payload = plan.study.model_dump(mode="json")
+    payload["scaled_fixed_budget_levels"]["levels_by_dataset"] = {"tiny": [120, 600]}
+    forged = StudyManifestV1.model_validate(payload)
+    with pytest.raises(StudyServiceError, match="n\\(n-1\\)/2 = 3"):
+        expand_plan(forged, plan.datasets)
+
+
+# ---------------------------------------------------------------- the live Bildiri profile
+
+EXPECTED_SCANS = {  # n(n-1)/2 per dataset id
+    "tsplib-berlin52": 1326, "tsplib-eil51": 1275, "tsplib-st70": 2415,
+    "tsplib-kroa100": 4950, "tsplib-rd100": 4950, "tsplib-eil76": 2850, "tsplib-ft53": 1378,
+}
+
+
+def test_live_profile_levels_are_50_and_250_scans_of_every_instance():
+    plan = build_study_plan(BILDIRI_STUDY, repository_root=REPOSITORY_ROOT)
+    scaled = plan.study.scaled_fixed_budget_levels
+    assert plan.study.fixed_budget_levels is None
+    assert scaled.rule == "two_opt_scan_multiples_v1" and scaled.scan_multipliers == [50, 250]
+    for dataset in plan.datasets:
+        k = EXPECTED_SCANS[dataset.dataset_id]
+        assert fixed_budget_levels_for(plan.study, dataset) == (50 * k, 250 * k)
+        rows = [r for r in plan.rows if r.dataset_id == dataset.dataset_id
+                and r.protocol is ExecutionProtocol.FIXED_BUDGET]
+        assert {r.budget_level for r in rows} == {50 * k, 250 * k}
+        for level in (50 * k, 250 * k):  # every algorithm gets the same budget on the instance
+            assert {r.algorithm_id for r in rows if r.budget_level == level} == set(plan.study.algorithm_ids)
+
+
+def test_live_profile_smoke_slice_takes_the_lowest_level_per_dataset():
+    plan = build_study_plan(BILDIRI_STUDY, repository_root=REPOSITORY_ROOT)
+    rows = select_smoke_rows(plan, replicates=1)
+    by_dataset = {}
+    for row in rows:
+        if row.protocol is ExecutionProtocol.FIXED_BUDGET:
+            by_dataset.setdefault(row.dataset_id, set()).add(row.budget_level)
+    assert by_dataset == {d: {50 * k} for d, k in EXPECTED_SCANS.items()}
+    one = select_smoke_rows(plan, replicates=1, budget_level=250 * 1378)
+    assert {(r.dataset_id, r.budget_level) for r in one if r.protocol is ExecutionProtocol.FIXED_BUDGET} == {
+        ("tsplib-ft53", 344500)
+    }
+    with pytest.raises(StudySmokeError, match="budget level"):
+        select_smoke_rows(plan, replicates=1, budget_level=10000)
+
+
+def test_profile_ga_entries_really_run_with_population_20_on_ft53():
+    """The profile's population 20 reaches the solver (owner 2026-10-21), seen through the counts."""
+    from academic_benchmark.core import registry_setup  # noqa: F401
+    from academic_benchmark.engine_core import AlgorithmRegistry, ProblemInstance
+    from uniride_core.algorithms.tsplib_parser import parse_atsp_text
+
+    payload = json.loads((REPOSITORY_ROOT / BILDIRI_STUDY).read_text(encoding="utf-8"))
+    text = (REPOSITORY_ROOT / "academic_benchmark" / "tsplib_data" / "ft53.atsp").read_text(encoding="utf-8")
+    matrix = parse_atsp_text(text, "ft53")["explicit_matrix"]
+    problem = ProblemInstance(name="ft53", dimension=53, coordinates=[], problem_type="atsp",
+                              dist_matrix=matrix, optimal=6905.0)
+    budget = 50 * 1378
+    results = {}
+    for algorithm_id in ("Core-GA-TSP", "Core-GA-TSP-Memetic-2opt"):
+        params = dict(payload["algorithm_parameters"][algorithm_id])
+        params["fair_comparison"] = {"evaluation_budget": budget, "base_seed": payload["base_seed"]}
+        results[algorithm_id] = AlgorithmRegistry.get_executor(algorithm_id)(problem, params, seed=1, run_idx=0)
+    pure = results["Core-GA-TSP"]
+    # 20 initial evaluations, then generations of 20 - 2 elites = 18 children until the next one does
+    # not fit; population 100 would give 100 + 98 g instead
+    assert pure.termination_reason == "evaluation_budget_exhausted"
+    assert pure.objective_evaluations == 20 + 18 * ((budget - 20) // 18)
+    memetic = results["Core-GA-TSP-Memetic-2opt"]
+    # one full 2-opt scan (1378 candidates) on each of the 20 initial chromosomes; population 100
+    # would need 137800 > budget
+    assert memetic.polish_policy["evaluations"]["initial"] == 20 * 1378
+    assert memetic.termination_reason == "evaluation_budget_exhausted"
+    assert budget - memetic.objective_evaluations < 20
+
+
+def test_rows_file_allows_one_level_per_dataset_only_when_asked(tmp_path):
+    fixed = {"comparison_regime": "fixed_evaluation_budget", "protocol_version": "uniride-fair-tsp-v2"}
+    rows = [dict(fixed, dataset_id="a", evaluation_budget=60), dict(fixed, dataset_id="b", evaluation_budget=120)]
+    with pytest.raises(StudySmokeError, match="budget level"):
+        write_rows_file(tmp_path / "x.jsonl", rows, expected_group="fixed_budget")
+    write_rows_file(tmp_path / "y.jsonl", rows, expected_group="fixed_budget", per_dataset_levels=True)
+    mixed = rows + [dict(fixed, dataset_id="a", evaluation_budget=300)]
+    with pytest.raises(StudySmokeError, match="budget level"):
+        write_rows_file(tmp_path / "z.jsonl", mixed, expected_group="fixed_budget", per_dataset_levels=True)
+    assert not (tmp_path / "x.jsonl").exists() and not (tmp_path / "z.jsonl").exists()

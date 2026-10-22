@@ -52,6 +52,7 @@ from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.native_pilot import NativePilotConfig, _native_result_record
 from academic_benchmark.native_protocol import NATIVE_PROTOCOL, NATIVE_TERMINATION_REGIME
 from academic_benchmark.protocol_registry import assert_single_pooling_group
+from academic_benchmark.studies.service import fixed_budget_levels_for
 from academic_benchmark.studies.service import PlanRow, ResolvedDataset, StudyPlan
 from academic_benchmark.validation.hamiltonian_cycle import (
     coordinate_cost,
@@ -103,7 +104,7 @@ class SmokeReport:
     status: str  # "passed" or "failed"
     output_dir: str
     study_id: str
-    budget_level: int
+    budget_level: Any  # int, or {dataset_id: level} when the levels differ per dataset (C-19)
     replicates: int
     rows_written: Dict[str, int]
     planned_rows: int
@@ -122,28 +123,51 @@ def assert_no_ranking_words(text: str) -> None:
 def select_smoke_rows(
     plan: StudyPlan, *, replicates: int = SMOKE_MAX_REPLICATES, budget_level: Optional[int] = None
 ) -> tuple:
-    """Smoke slice: at most ``SMOKE_MAX_REPLICATES`` replicates, one fixed-budget level (lowest by default)."""
+    """Smoke slice: at most ``SMOKE_MAX_REPLICATES`` replicates and one fixed-budget level per dataset.
+
+    By default each dataset's lowest level (the same level for all datasets when the study has one
+    level list); an explicit ``budget_level`` keeps the fixed rows of exactly that level (with
+    instance-scaled levels, only the datasets that have it)."""
     if isinstance(replicates, bool) or not isinstance(replicates, int) or replicates < 1:
         raise StudySmokeError("replicates must be an integer >= 1")
     cap = min(replicates, SMOKE_MAX_REPLICATES, plan.study.run_count)
-    levels = list(plan.study.fixed_budget_levels)
-    level = min(levels) if budget_level is None else budget_level
-    if level not in levels:
-        raise StudySmokeError(f"budget level {level!r} is not a level of the study {sorted(levels)}")
+    by_dataset = {d.dataset_id: fixed_budget_levels_for(plan.study, d) for d in plan.datasets}
+    every_level = sorted({level for levels in by_dataset.values() for level in levels})
+    if budget_level is None:
+        chosen = {dataset_id: min(levels) for dataset_id, levels in by_dataset.items()}
+    else:
+        if budget_level not in every_level:
+            raise StudySmokeError(f"budget level {budget_level!r} is not a level of the study {every_level}")
+        chosen = {d: budget_level for d, levels in by_dataset.items() if budget_level in levels}
     return tuple(
         row for row in plan.rows
         if row.replicate < cap
-        and (row.protocol is not ExecutionProtocol.FIXED_BUDGET or row.budget_level == level)
+        and (
+            row.protocol is not ExecutionProtocol.FIXED_BUDGET
+            or chosen.get(row.dataset_id) == row.budget_level
+        )
     )
 
 
-def write_rows_file(path: Path, rows: Sequence[Mapping[str, Any]], *, expected_group: str) -> None:
-    """Write one rows file; refuse rows of two pooling groups, of the wrong group or of two budget levels."""
+def write_rows_file(
+    path: Path, rows: Sequence[Mapping[str, Any]], *, expected_group: str, per_dataset_levels: bool = False
+) -> None:
+    """Write one rows file; refuse rows of two pooling groups, of the wrong group or of two budget levels.
+
+    ``per_dataset_levels`` (instance-scaled studies, C-19): the fixed rows of each ``dataset_id``
+    must share exactly one level, different datasets may have different levels."""
     group = assert_single_pooling_group(rows)  # ValueError when groups meet
     if group != expected_group:
         raise StudySmokeError(f"{path.name}: rows belong to pooling group {group!r}, expected {expected_group!r}")
     levels = {row.get("evaluation_budget") for row in rows}
-    if expected_group == FIXED_GROUP and (len(levels) != 1 or None in levels):
+    if expected_group == FIXED_GROUP and per_dataset_levels:
+        by_dataset: Dict[Any, set] = {}
+        for row in rows:
+            by_dataset.setdefault(row.get("dataset_id"), set()).add(row.get("evaluation_budget"))
+        bad = {str(d): sorted(map(str, v)) for d, v in by_dataset.items() if len(v) != 1 or None in v}
+        if bad or None in by_dataset:
+            raise StudySmokeError(f"{path.name}: fixed-budget rows must share exactly one budget level per dataset, found {bad}")
+    elif expected_group == FIXED_GROUP and (len(levels) != 1 or None in levels):
         raise StudySmokeError(f"{path.name}: fixed-budget rows must share exactly one budget level, found {sorted(map(str, levels))}")
     if expected_group == NATIVE_GROUP and levels != {None}:
         raise StudySmokeError(f"{path.name}: native rows carry no evaluation budget")
@@ -274,14 +298,15 @@ def _failed_record(row: PlanRow, failure: _RowFailure, plan: StudyPlan) -> Dict[
 
 
 def _report_text(
-    plan: StudyPlan, status: str, level: int, replicates: int, written: Mapping[str, int],
+    plan: StudyPlan, status: str, level: Any, replicates: int, written: Mapping[str, int],
     failed: Sequence[Mapping[str, Any]], git: Mapping[str, Any],
 ) -> str:
     lines = [
         "UniRide study smoke run (smoke mode, no claim)",
         f"Study: {plan.study.study_id} (status {plan.study.status})",
         f"Slice: up to {replicates} replicate(s) per cell (cap {SMOKE_MAX_REPLICATES}); "
-        f"fixed-budget level {level}",
+        + (f"fixed-budget level {level}" if not isinstance(level, Mapping) else
+         "fixed-budget level per dataset: " + ", ".join(f"{d} {v}" for d, v in level.items())),
     ]
     if git.get("dirty") or git.get("dirty") is None:
         lines.append("WARNING: the working tree is dirty or its state is unknown; "
@@ -326,7 +351,12 @@ def run_study_smoke(
     rows = select_smoke_rows(plan, replicates=replicates, budget_level=budget_level)
     if not rows:
         raise StudySmokeError("the smoke slice selects no plan row")
-    level = min(plan.study.fixed_budget_levels) if budget_level is None else budget_level
+    chosen = {r.dataset_id: r.budget_level for r in rows if r.protocol is ExecutionProtocol.FIXED_BUDGET}
+    if budget_level is not None or len(set(chosen.values())) <= 1:
+        level: Any = budget_level if budget_level is not None else next(iter(chosen.values()), None)
+    else:
+        level = dict(sorted(chosen.items()))
+    scaled = plan.study.scaled_fixed_budget_levels is not None
     cap = min(replicates, SMOKE_MAX_REPLICATES, plan.study.run_count)
     datasets = {d.dataset_id: d for d in plan.datasets}
     problems: Dict[str, Any] = {}
@@ -359,7 +389,7 @@ def run_study_smoke(
         (fixed_rows if row.protocol is ExecutionProtocol.FIXED_BUDGET else native_rows).append(record)
     written: Dict[str, int] = {}
     if fixed_rows:
-        write_rows_file(output / FIXED_FILE, fixed_rows, expected_group=FIXED_GROUP)
+        write_rows_file(output / FIXED_FILE, fixed_rows, expected_group=FIXED_GROUP, per_dataset_levels=scaled)
         written[FIXED_FILE] = len(fixed_rows)
     if native_rows:
         write_rows_file(output / NATIVE_FILE, native_rows, expected_group=NATIVE_GROUP)

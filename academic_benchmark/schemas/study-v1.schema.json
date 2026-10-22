@@ -122,11 +122,77 @@
       ],
       "title": "PaperMetadataV1",
       "type": "object"
+    },
+    "ScaledFixedBudgetLevelsV1": {
+      "additionalProperties": false,
+      "description": "Per-dataset fixed budget levels from a declared rule (C-19, owner 2026-10-21).\n\n``two_opt_scan_multiples_v1``: level ``i`` of a dataset is ``scan_multipliers[i] x n(n-1)/2``\nobjective evaluations, ``n`` the dataset dimension (one full 2-opt scan per unit). The table is\nstated in full so that the study says which budgets run; the contract checks that it is\ninternally consistent and the study service recomputes every entry from the dataset manifest.\nKeys are dataset ids.",
+      "properties": {
+        "levels_by_dataset": {
+          "additionalProperties": {
+            "items": {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "title": "Levels By Dataset",
+          "type": "object"
+        },
+        "rule": {
+          "const": "two_opt_scan_multiples_v1",
+          "title": "Rule",
+          "type": "string"
+        },
+        "scan_multipliers": {
+          "items": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Scan Multipliers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rule",
+        "scan_multipliers",
+        "levels_by_dataset"
+      ],
+      "title": "ScaledFixedBudgetLevelsV1",
+      "type": "object"
     }
   },
   "$id": "uniride-study/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "fixed_budget_levels": {
+          "type": "array"
+        },
+        "scaled_fixed_budget_levels": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "fixed_budget_levels"
+      ]
+    },
+    {
+      "properties": {
+        "fixed_budget_levels": {
+          "type": "null"
+        },
+        "scaled_fixed_budget_levels": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "scaled_fixed_budget_levels"
+      ]
+    }
+  ],
   "properties": {
     "algorithm_ids": {
       "items": {
@@ -165,13 +231,21 @@
       "type": "array"
     },
     "fixed_budget_levels": {
-      "items": {
-        "exclusiveMinimum": 0,
-        "type": "integer"
-      },
-      "minItems": 1,
-      "title": "Fixed Budget Levels",
-      "type": "array"
+      "anyOf": [
+        {
+          "items": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fixed Budget Levels"
     },
     "output_policy": {
       "$ref": "#/$defs/OutputPolicyV1"
@@ -201,6 +275,17 @@
       "exclusiveMinimum": 0,
       "title": "Run Count",
       "type": "integer"
+    },
+    "scaled_fixed_budget_levels": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScaledFixedBudgetLevelsV1"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "schema_version": {
       "const": "uniride-study/v1",
@@ -253,7 +338,6 @@
     "algorithm_parameters",
     "dataset_manifest_refs",
     "primary_protocol",
-    "fixed_budget_levels",
     "run_count",
     "base_seed",
     "seed_protocol_version",

@@ -297,10 +297,39 @@ python -m academic_benchmark.tsplib_manager verify
 
 The removed `run_numba_with_bildiri_params.py` runner is quarantined and must
 not be executed. The active, reviewable contract is
-`academic_benchmark/studies/bildiri2026/study.json`, which pins the ft53 ATSP
-dataset manifest, canonical GWO/HHO variant IDs, paired seeds, fixed-budget
-primary protocol, native-termination secondary protocol, and smoke-only
-repository output policy.
+`academic_benchmark/studies/bildiri2026/study.json` (status `draft`, Gate C
+item C-19). It declares:
+
+- ten canonical IDs: `Core-TwoOpt-TSP`, `Core-ThreeOpt-TSP`, `Core-OrOpt-TSP`,
+  `Core-GA-TSP`, `Core-PSO-TSP`, `Core-GA-TSP-Memetic-2opt`,
+  `Core-GWO-TSP-Pure`, `Core-HHO-TSP-Pure`, `Core-GWO-TSP-Memetic-2opt`,
+  `Core-HHO-TSP-Memetic-2opt`; the budget, stop and polish parameters are
+  written out (the local searches state the registry defaults:
+  `max_iterations` 1000, best improvement, window 12 for 3-opt and 3 for
+  Or-opt), and the other GWO/HHO settings (GWO `initial_a`,
+  `exploration_rate`; HHO `initial_energy`, `jump_probability`,
+  `levy_scale`) use the solver defaults;
+- seven dataset manifests: the TSP instances berlin52, eil51, st70, kroA100,
+  rd100 and eil76, and the ATSP instance ft53;
+- fixed budget levels scaled per instance (`scaled_fixed_budget_levels`, rule
+  `two_opt_scan_multiples_v1`): 50 x and 250 x n(n-1)/2 objective evaluations,
+  one full 2-opt scan per unit; the study service recomputes the table from
+  each dataset manifest and refuses a mismatch. All algorithms get the same
+  levels on a given instance, and the budget is the stopping rule: iteration
+  and stagnation limits are set so that they do not stop a run first, except
+  that 2-opt and Or-opt stop at a local optimum (`no_improving_move`, their
+  documented stop, fairness design rule 6) when they reach one before the
+  budget;
+- GWO/HHO schedule: in fixed-budget runs the GWO and HHO explore-to-exploit
+  schedules follow the share of the budget spent, so `max_iterations` is only
+  a stop limit (DECISION_LOG A17, 2026-10-22; implemented on the branch
+  `feat/gwo-hho-budget-schedule`, which is merged before this profile);
+- paired seeds, the fixed-budget primary protocol, a native-termination
+  secondary protocol for the pure GWO/HHO entries, a smoke placeholder
+  `run_count` and the smoke-only repository output policy.
+
+Rows from earlier versions of this profile (other levels or parameters) are
+not pooled with rows from this one.
 
 Validate the profile and quarantine before preparing any run:
 
@@ -425,8 +454,9 @@ Current authority is split deliberately:
 
 - Solver code: `uniride_core/algorithms/tsp_matrix_metaheuristics/`.
 - Study contract: `academic_benchmark/studies/bildiri2026/study.json`.
-- Dataset contract: `academic_benchmark/datasets/ft53.json` plus the pinned
-  `academic_benchmark/tsplib_data/ft53.atsp` artifact.
+- Dataset contracts: the seven manifests under `academic_benchmark/datasets/`
+  listed in the study (six TSP instances plus `ft53.json`) and the artifacts
+  they pin by sha256.
 - Quarantine integrity: `archive/academic_benchmark/bildiri2026_legacy/manifest.json`.
 
 Do not import from `academic_benchmark.bildiri2026`, top-level `core.*`, or any
@@ -481,9 +511,9 @@ canonical registry executor.
 ### Flow 3: Prepare a Bildiri2026 Reproduction Study
 
 ```
-1. Validate the canonical study and ft53 dataset manifests.
+1. Validate the canonical study and its seven dataset manifests.
 2. Verify the 233-entry legacy quarantine manifest.
-3. Use only the canonical GWO/HHO IDs declared in study.json.
+3. Use only the canonical IDs declared in study.json.
 4. Keep repository runs smoke-only; place paper-scale artifacts externally.
 5. Report the exact commands, environment, seeds, and validation results.
 ```

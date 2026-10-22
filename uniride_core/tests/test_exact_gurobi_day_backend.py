@@ -847,3 +847,153 @@ def test_the_comparison_uses_the_solvers_bound_not_the_snapped_one(monkeypatch):
     r = solved.result
     assert r.objective == 540 and r.bound_ceil == 540
     assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT)
+
+
+# ---------------------------------------------------------------- E14 (2026-10-22): licence-type failures are retried
+@pytest.fixture(autouse=True)
+def _no_real_pause(monkeypatch):
+    """The retry pause is a module constant (5 s); the tests never sleep for real (raising=False: red-phase safe)."""
+    monkeypatch.setattr(gb, "LICENCE_RETRY_PAUSE_SECONDS", 0.0, raising=False)
+
+
+_LICENCE_FAIL = (500, "?", ["Gurobi: license expired"])
+_SECRET = "ZX-SECRET-4711 someone@example.org"
+
+
+class _FlakyAmpl(_ValueAmpl):
+    """Scripted solves: each ``script`` entry ``(num, message, log_lines)`` is one failing solve; later solves succeed.
+
+    Every solve snapshots what the stage code handed to AMPL (model object, option values, eval texts), so a test can
+    compare the first attempt with each retry.
+    """
+
+    def __init__(self, script):
+        super().__init__(_NOISY_OBJECTIVE, _noisy_values())
+        self.script, self.loaded, self.evals, self.attempts = list(script), [], [], []
+        self.session_log = None
+
+    def eval(self, text):
+        super().eval(text)
+        self.evals.append(text)
+
+    def solve(self):
+        self.attempts.append({"model": self.loaded[-1], "options": dict(self.option), "evals": list(self.evals)})
+        self.evals.clear()
+        if self.script:
+            self.num, self.message, log = self.script.pop(0)
+            self.session_log.extend(log)
+        else:
+            self.num, self.message = 0, "Gurobi 13.0.3: optimal solution; objective 540"
+
+
+def _flaky_stage(monkeypatch, script, *, model=None, settings=None, **kwargs):
+    ampl = _FlakyAmpl(script)
+    monkeypatch.setattr(gb, "load_day_model", lambda a, m: a.loaded.append(m))
+    session = _FakeSession(ampl)
+    ampl.session_log = session._log
+    model = model or _noise_model()
+    try:
+        return gb.gurobi_solve_stage(session, model, settings or GurobiSettings(), **kwargs), ampl, model
+    except GurobiBackendUnavailable as exc:
+        return exc, ampl, model
+
+
+def _normal(result):
+    return dataclasses.replace(result, wall_seconds=None, licence_retries=0)
+
+
+def test_the_retry_pause_default_is_a_few_seconds():
+    assert 5.0 <= gb.LICENCE_RETRY_PAUSE_SECONDS <= 10.0 or gb.LICENCE_RETRY_PAUSE_SECONDS == 0.0  # 0.0: the fixture above
+    assert gb.LICENCE_RETRIES == 2
+
+
+def test_a_licence_failure_then_success_gives_the_normal_result_with_one_retry(monkeypatch):
+    clean, _, _ = _flaky_stage(monkeypatch, [])
+    retried, ampl, _ = _flaky_stage(monkeypatch, [_LICENCE_FAIL])
+    assert retried.result.licence_retries == 1 and clean.result.licence_retries == 0
+    assert _normal(retried.result) == _normal(clean.result) and retried.values == clean.values
+    assert (retried.result.status, retried.result.objective) == ("optimal", 540)
+    assert len(ampl.attempts) == 2
+
+
+def test_two_licence_failures_then_success_give_two_retries_and_pause_each_time(monkeypatch):
+    pauses: list = []
+    solved, ampl, _ = _flaky_stage(monkeypatch, [_LICENCE_FAIL, (999, "Cannot invoke gurobi: no such program.", [])],
+                                   retry_pause=7.5, sleep=pauses.append)
+    assert solved.result.licence_retries == 2 and solved.result.objective == 540 and len(ampl.attempts) == 3
+    assert pauses == [7.5, 7.5]
+
+
+def test_three_licence_failures_raise_with_scrubbed_facts_only(monkeypatch):
+    fail = (500, f"Gurobi 13.0.3: license expired {_SECRET}", [f"license error {_SECRET}"])
+    exc, ampl, _ = _flaky_stage(monkeypatch, [fail, fail, fail])
+    assert isinstance(exc, GurobiBackendUnavailable) and len(ampl.attempts) == 3
+    text = str(exc)
+    assert "500" in text and "licence" in text and "2" in text
+    assert "ZX-SECRET" not in text and "example.org" not in text and "expired" not in text and "error" not in text
+
+
+def test_the_branch_in_the_final_message_is_binary_for_a_missing_program(monkeypatch):
+    gone = (999, "Cannot invoke gurobi: no such program.", [])
+    exc, _, _ = _flaky_stage(monkeypatch, [gone, gone, gone])
+    assert isinstance(exc, GurobiBackendUnavailable) and "999" in str(exc) and "binary" in str(exc)
+
+
+def test_a_non_licence_failure_is_not_retried_and_stays_rejected(monkeypatch):
+    pauses: list = []
+    solved, ampl, _ = _flaky_stage(monkeypatch, [(500, "Gurobi: out of memory", ["Optimize a model"])], sleep=pauses.append)
+    assert len(ampl.attempts) == 1 and pauses == []
+    assert solved.result.status == "rejected" and solved.result.stop_reason == "solver_failure" and solved.result.licence_retries == 0
+
+
+def test_a_failure_below_500_with_licence_words_is_not_retried(monkeypatch):
+    solved, ampl, _ = _flaky_stage(monkeypatch, [(150, "license expired soon", [])])
+    assert len(ampl.attempts) == 1 and solved.result.licence_retries == 0
+
+
+def test_a_retry_hands_ampl_exactly_the_same_model_options_and_setup(monkeypatch):
+    settings = GurobiSettings(time_limit=12.0, work_limit=34.0, seed=7, threads=1)
+    _, ampl, model = _flaky_stage(monkeypatch, [_LICENCE_FAIL, _LICENCE_FAIL], settings=settings)
+    assert len(ampl.attempts) == 3 and len(ampl.loaded) == 3
+    assert all(m is model for m in ampl.loaded)
+    first = ampl.attempts[0]
+    assert "tech:seed=7" in first["options"]["gurobi_options"] and "lim:work=34" in first["options"]["gurobi_options"]
+    assert first["options"]["solver"] == "gurobi" and first["evals"]  # the bestbound sentinel was written
+    for later in ampl.attempts[1:]:
+        assert later == first
+
+
+def test_the_probe_of_the_session_is_retried_too(monkeypatch):
+    from uniride_core.exact import ampl_backend as ab
+
+    runs = {"n": 0}
+
+    class Probe:
+        def __init__(self, fail):
+            self.fail, self.option = fail, {}
+
+        def reset(self):
+            pass
+
+        def eval(self, text):
+            pass
+
+        def solve(self, return_output=False):
+            runs["n"] += 1
+            return "" if return_output else None
+
+        def get_value(self, name):
+            fails = runs["n"] <= self.fail
+            return {"solve_result_num": 500 if fails else 0,
+                    "solve_message": "?" if fails else "Gurobi 13.0.3: optimal solution"}[name]
+
+    session = ab.AmplSession.__new__(ab.AmplSession)
+    session.settings = SolverSettings()
+    session._ampl = Probe(fail=2)
+    monkeypatch.setattr(ab, "backend_absent", lambda solver, text: True)
+    monkeypatch.setattr(ab.AmplSession, "PROBE_PAUSE_SECONDS", 0.0, raising=False)
+    assert session._solver_version() == "Gurobi 13.0.3" and runs["n"] == 3
+    runs["n"], session._ampl = 0, Probe(fail=3)
+    with pytest.raises(ExactBackendUnavailable):
+        session._solver_version()
+    assert runs["n"] == 3

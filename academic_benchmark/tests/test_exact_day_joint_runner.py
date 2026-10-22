@@ -491,6 +491,98 @@ def test_a_full_crosschecked_run_is_not_a_development_run(tmp_path):
     assert "stopped_on_backend_unavailable" not in manifest["run_history"]
 
 
+# ---------------------------------------------------------------- E14 (2026-10-22): licence retries are evidence
+OLD_STAGE_FIELDS = ("fleet", "date", "R", "L", "solver", "stage", "status", "stop_reason", "objective", "bound", "bound_ceil",
+                    "bound_source", "timing_dependent", "non_lexicographic", "wall_seconds", "work_units", "solve_result",
+                    "mps_sha256")
+
+
+def _with_retries(per_stage):
+    """A Gurobi fake whose stages carry ``licence_retries`` from ``per_stage`` (stage number -> count)."""
+    import dataclasses
+
+    def hook(result):
+        stages = tuple(dataclasses.replace(s, result=dataclasses.replace(s.result, licence_retries=per_stage.get(s.stage, 0)))
+                       for s in result.stages)
+        return dataclasses.replace(result, stages=stages)
+
+    return make_fake_day_solver("gurobi", hook=hook)
+
+
+def test_a_clean_run_writes_licence_retries_zero_and_keeps_the_old_columns_in_place(tmp_path):
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET)
+    assert rc == 0
+    assert rj.STAGE_FIELDS[:-1] == OLD_STAGE_FIELDS and rj.STAGE_FIELDS[-1] == "licence_retries"
+    with (out / "day_joint_stages.csv").open(encoding="utf-8", newline="") as fh:
+        assert next(csv.reader(fh)) == list(OLD_STAGE_FIELDS) + ["licence_retries"]
+    stages = read_csv(out / "day_joint_stages.csv")
+    assert stages and {s["licence_retries"] for s in stages} == {"0"}
+    manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert manifest["run_history"]["licence_retries_total"] == 0
+    assert protocol.validate_day_joint_manifest(manifest) == [] and rj.strict_manifest_problems(manifest) == []
+
+
+def test_licence_retries_reach_the_stage_csv_and_the_manifest_total(tmp_path):
+    deps = rj.Deps(highs_run=make_fake_day_solver("highs"), gurobi_run=_with_retries({1: 1, 3: 2}),
+                   wave_solver=make_fake_wave_solver(), cli=fake_cli)
+    rc, out = run(tmp_path, "--fleets", f"{rj.HOMOGENEOUS},large+sedan", *SUBSET, deps=deps)
+    assert rc == 0
+    stages = read_csv(out / "day_joint_stages.csv")
+    by = {(s["fleet"], s["solver"], s["stage"]): s["licence_retries"] for s in stages}
+    assert by[("large+sedan", "gurobi", "1")] == "1" and by[("large+sedan", "gurobi", "3")] == "2"
+    assert by[("large+sedan", "gurobi", "2")] == "0" and by[("large+sedan", "highs", "1")] == "0"
+    assert by[(rj.HOMOGENEOUS, "gurobi", "1")] == "1" and (rj.HOMOGENEOUS, "gurobi", "3") not in by  # two stages, no stage 3
+    manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert manifest["run_history"]["licence_retries_total"] == 1 + 1 + 2
+    assert protocol.validate_day_joint_manifest(manifest) == [] and rj.strict_manifest_problems(manifest) == []
+    for name, sha in manifest["output_sha256"].items():
+        assert rj.sha256_file(out / name) == sha
+
+
+def test_a_bool_or_negative_retry_total_is_a_manifest_problem():
+    for bad in (True, -1, 1.5, "2"):
+        problems = rj.strict_manifest_problems({"run_history": {"licence_retries_total": bad}})
+        assert any("licence_retries_total" in p for p in problems), bad
+    assert rj.strict_manifest_problems({"run_history": {"licence_retries_total": 3}}) == []
+
+
+def test_three_licence_failures_through_the_real_gurobi_path_stop_the_run_with_exit_3(tmp_path, monkeypatch):
+    from uniride_core.exact import gurobi_day_backend as gdb
+
+    monkeypatch.setattr(gdb, "LICENCE_RETRY_PAUSE_SECONDS", 0.0, raising=False)
+    monkeypatch.setattr(gdb, "load_day_model", lambda ampl, model: None)
+    solves = {"n": 0}
+
+    class Ampl:
+        option: dict = {}
+
+        def eval(self, text):
+            pass
+
+        def solve(self):
+            solves["n"] += 1
+            session._log.append("license expired")
+
+        def get_value(self, name):
+            return {"solve_result_num": 500, "solve_message": "?"}.get(name, -1e30)
+
+    class Session:
+        solver_version = "Gurobi 0.0.0"
+        ampl = Ampl()
+        _log: list = []
+
+        def close(self):
+            pass
+
+    session = Session()
+    deps = rj.Deps(highs_run=make_fake_day_solver("highs"),
+                   gurobi_run=lambda instance, **kw: gdb.run_day_stages_gurobi(instance, session=session, **kw),
+                   wave_solver=make_fake_wave_solver(), cli=fake_cli)
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET, deps=deps)
+    assert rc == 3 and not out.exists()
+    assert solves["n"] == 3  # the first solve and two retries, then the run stops (E06)
+
+
 def test_menu_that_differs_from_the_loader_refuses_the_cell(tmp_path, monkeypatch):
     real = rj.read_json
 

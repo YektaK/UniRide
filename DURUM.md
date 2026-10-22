@@ -1,6 +1,6 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-22 (WIP `30646ecd` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
+Son güncelleme: 2026-10-22 (WIP `bc80645e` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
 
 ## Çalışan işler
 
@@ -12,7 +12,7 @@ Son güncelleme: 2026-10-22 (WIP `30646ecd` sonrası). Kararlar `docs/DECISION_L
 
 ## Sıradaki
 
-- Gate C kapanışı (C-15): bütün önkoşullar birleşti; sıradaki iş.
+- Gate C SAĞLANDI (`bc80645e`). Sıradaki büyük adım: Gate D (Paket D: analiz, belgeleme, yayın) için ayrı plan — sahibin onayıyla.
 - WP-E11 makale ve yöntem metni: yazı hattından (yazar + olgu denetçisi).
 
 ## Sahibin kararını bekleyenler
@@ -22,6 +22,8 @@ Son güncelleme: 2026-10-22 (WIP `30646ecd` sonrası). Kararlar `docs/DECISION_L
 - Birleştirilmiş worktree'lerin ve `C:\wt` geçici klasörlerinin silinmesi (bazılarında testlerin açtığı boş `tsplib.db` var).
 
 ## Ertelenen küçük işler
+- `uniride_core/tests/test_exact_tsp_runner.py` boş tsplib.db taslağında atlanmak yerine hata veriyor (C-01 koruması eklenmeli).
+- 42 AMPL testi (çekirdek): lisans işi bitince şef çalıştıracak, sonucu A17'ye eklenecek.
 
 - Tamsayılık payı sınır testi (bound = raw + 5e-7).
 - `Numba-Swap`, `Numba-Hybrid`, `SOTA-*` rota problemlerinde kendi adlarıyla açgözlü yönlendiriciyi kullanıyor; bunu sabitleyen test yok.

@@ -335,7 +335,7 @@ Model and review guidance per CLAUDE.md: Lane A items are small (one developer, 
 
 ### C-15: Close Gate C
 
-- [ ] **Goal:** add `test_gate_c_normative_catalog.py` (section 2, criterion 1: 14 normative rows, no deferred row, plus the listed design addition `Core-GA-TSP-Memetic-2opt`), run the full acceptance block, record counts, update Appendix J rows, add a DECISION_LOG entry ("Gate C met at `<sha>`"), update `docs/UNIRIDE_WORKSTATE.md` (ACAD-01 row).
+- [x] **Goal:** add `test_gate_c_normative_catalog.py` (section 2, criterion 1: 14 normative rows, no deferred row, plus the listed design addition `Core-GA-TSP-Memetic-2opt`), run the full acceptance block, record counts, update Appendix J rows, add a DECISION_LOG entry ("Gate C met at `<sha>`"), update `docs/UNIRIDE_WORKSTATE.md` (ACAD-01 row).
 - **Red test first:** the conformance test fails while any row is PLANNED or CANDIDATE or lacks a native claim.
 - **Depends on:** C-01 to C-14, C-16a, C-16b, C-16c, C-18, C-19. **Acceptance:** section 2 criteria 1-9 hold on one commit. **Risk:** low. **Changes academic results:** no.
 

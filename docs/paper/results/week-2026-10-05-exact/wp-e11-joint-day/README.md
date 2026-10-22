@@ -2,7 +2,7 @@
 
 Design: [`JOINT_DAY_MODEL_DESIGN.md`](../../../../designs/JOINT_DAY_MODEL_DESIGN.md) (section 4.3 labels, 5.3 blocking checks, 6 files and reproduction); plan item J11 in `docs/superpowers/plans/2026-10-20-wp-e11-joint-day-model.md`; decisions DECISION_LOG E13 and E14 (the notes on J9b, J9c, the J10 work limit, the J11 first run, the integrality fix and the licence retry). Protocol `exact_day_joint_v1`, its own pooling group: never pooled with `exact_reference_v1` wave rows, `union_day_v1` (WP-E4b) rows or heuristic rows. This README describes the files; it is not paper text (the paper text goes through the writing line later).
 
-The tables are printed from the files: those of the J11 record by `scripts/report_exact_day_joint.py --tables`, and the rerun-versus-first-run tables by a check script that is not part of the repository (it reads only committed files through `git show` and runs no solver).
+The tables are printed from the files: those of the J11 record by `scripts/report_exact_day_joint.py --tables`, and the rerun-versus-first-run tables by a check script that is not part of the repository (`compare_runs.py`, sha256 `e90d4f91ef41dc6d9e189d1eabc2edbc92fde7036bb4aec41b38ce2b9119b7fb`; it runs no solver). It reads this folder and a local folder holding the six raw files of the first run. That folder was extracted from commit `2ea2c5a2`, and each of its files has the same sha256 as the file in that commit.
 
 ## This folder is the J11 record; the first run is superseded
 
@@ -47,7 +47,15 @@ Stage statuses:
 
 crosscheck_status: {'agree': 125, 'not_run': 15}; wave_values_status: {'agree': 140}.
 
-No stage row is `timing_dependent`. No call came near the 600 s limit or the work limit of 200.
+No stage row is `timing_dependent`. No stage call came near the 600 s limit or the work limit of 200.
+
+The stage rows hold only the day-MIP calls. The wave SP calls behind the wave values (both solvers through AMPL, `wave_values` `sp`) are not in the stage files, and the manifest records neither their settings nor their times. In the code, the runner's wave solver (`_RealWaveSolver`, `scripts/run_exact_day_joint.py:228-243`) uses the defaults of `ampl_backend.SolverSettings` (`uniride_core/exact/ampl_backend.py:41-49, 164-173`):
+
+- 60 s and work limit 20 per call;
+- 600 s and work limit 200 on a peak wave;
+- threads 1, seed 0, gap 0, absolute gap 0.99.
+
+The cell wall time also includes enumeration, certification and the checks. Summed per cell, the time outside the stage rows reaches 327.3 s (large+sedan 2026-10-05 R = 90, L = 3: 480.39 s per cell, of which 153.0 s is in stage rows). The longest large+sedan cell, 2026-10-05 R = 90, L = 2, takes 568.31 s, of which 241.7 s is in stage rows.
 
 ## Cells and labels
 
@@ -174,11 +182,15 @@ The two cells under "joint value, union menu infeasible" are large+sedan 2026-10
 | large+doblo_cap3 | 90 | 1 | 5 | 4 | 15 | 0 | 0 |
 | large+doblo_cap3 | 90 | 2 | 5 | 2 | 8 | 0 | 0 |
 
+For large+sedan at L = 2, `weekly_fleet_max` and `vehicle_days_sum` cover only the dates that have a plan: 2 of 5 dates at R = 50, and 4 of 5 at R = 60, 70 and 90 (`cells_without_value` 3 and 1). The week as a whole has no plan at that L, so these figures are not weekly fleets. At L = 1, no date has a plan.
+
 ## Reproduction against the prototype (design 6.3)
 
 The prototype values come from the Claude Science comparison in `docs/science_review/2026-10-19_cs_cc_karsilastirma/`. They are read as data, not as verified truth, and were never an input of the run. The mapping is the one of the report script's docstring, and is unchanged from the first run. The prototype plans are not in the repository, so the checker of design 5.1 was not run on them (`prototype_plan_checked = not_run`). An unchecked prototype plan can never raise the disagreement defect, and no prototype value is better than a production value. large+Doblò cap3 has no external reproduction target (E14 Q1) and gets the category `no_external_target`, so every cell has a reproduction row (E14, J11 first-run note, decision 3).
 
 `category` compares the objective tuple (K or S, then total minutes) on the components the prototype reports; `fleet_category` compares K or S only.
+
+Note on the single type: `category` compares minutes there too, although the two tie-break orders differ (prototype: K, then routes, then minutes; production, H06 and owner decision Q2: K, then minutes). Under Q2, minutes are compared only where the orders agree, so for the single type only `fleet_category` is a like-for-like comparison. This has no effect here: in all 19 single-type cells where minutes are compared, they are equal.
 
 #### Reproduction by category (objective tuple)
 
@@ -229,7 +241,10 @@ Per cell, all non-timing columns are compared: `wall_seconds` of `day_joint.csv`
 
 Cells with any other difference (day_joint.csv non-timing column, stage field, lb0 row, plan or MPS hash): 114
 
-- 113 cells differ only in the raw `bound` column of Gurobi stage rows (199 stage rows over all cells; stage keys gurobi2, gurobi3); in none of them does `bound_ceil`, `status`, `objective` or `bound_source` change.
+- 113 cells differ only in the raw `bound` column of Gurobi stage rows: 197 rows (Gurobi stages 2 and 3). In none of them do `bound_ceil`, `status`, `objective` or `bound_source` change.
+- The Doblò cell below has 2 more Gurobi rows with a changed raw `bound`, which makes 199 in total:
+  - stage 2: `bound_ceil` unchanged at 1499;
+  - stage 3: `bound_ceil` goes from empty to 540.
 - 1 cell(s) differ in anything else:
 
 | cell | day_joint.csv columns differing | stage fields differing |

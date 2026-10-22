@@ -973,14 +973,20 @@ def test_a_retry_hands_ampl_exactly_the_same_model_options_and_setup(monkeypatch
         assert later == first
 
 
-def test_the_probe_of_the_session_is_retried_too(monkeypatch):
+_PROBE_LICENCE = (500, "?", "Gurobi: license expired")  # (solve_result_num, solve_message, the solve command's own output)
+_PROBE_BINARY = (999, "?", "Cannot invoke gurobi: no such program.")
+_PROBE_OK = (0, "Gurobi 13.0.3: optimal solution", "")
+
+
+def _probe_session(monkeypatch, script):
+    """An ``AmplSession`` whose probe solves are scripted ``(num, message, output)`` triples (the last one repeats);
+    the REAL ``backend_absent_kind`` classifies them. Returns ``(session, solves, pauses)``."""
     from uniride_core.exact import ampl_backend as ab
 
-    runs = {"n": 0}
+    solves, pauses = [], []
 
     class Probe:
-        def __init__(self, fail):
-            self.fail, self.option = fail, {}
+        option: dict = {}
 
         def reset(self):
             pass
@@ -989,24 +995,47 @@ def test_the_probe_of_the_session_is_retried_too(monkeypatch):
             pass
 
         def solve(self, return_output=False):
-            runs["n"] += 1
-            return "" if return_output else None
+            solves.append(1)
+            return script[min(len(solves), len(script)) - 1][2]
 
         def get_value(self, name):
-            fails = runs["n"] <= self.fail
-            return {"solve_result_num": 500 if fails else 0,
-                    "solve_message": "?" if fails else "Gurobi 13.0.3: optimal solution"}[name]
+            num, message, _ = script[min(len(solves), len(script)) - 1]
+            return {"solve_result_num": num, "solve_message": message}[name]
 
     session = ab.AmplSession.__new__(ab.AmplSession)
     session.settings = SolverSettings()
-    session._ampl = Probe(fail=2)
-    monkeypatch.setattr(ab, "backend_absent", lambda solver, text: True)
-    monkeypatch.setattr(ab.AmplSession, "PROBE_PAUSE_SECONDS", 0.0, raising=False)
-    assert session._solver_version() == "Gurobi 13.0.3" and runs["n"] == 3
-    runs["n"], session._ampl = 0, Probe(fail=3)
+    session._ampl = Probe()
+    monkeypatch.setattr(ab.time, "sleep", pauses.append)
+    return session, solves, pauses
+
+
+def test_a_probe_licence_failure_is_retried_and_the_retries_are_kept_on_the_session(monkeypatch):
+    session, solves, pauses = _probe_session(monkeypatch, [_PROBE_LICENCE, _PROBE_LICENCE, _PROBE_OK])
+    assert session._solver_version() == "Gurobi 13.0.3" and len(solves) == 3
+    assert session.probe_retries == 2 and pauses == [session.PROBE_PAUSE_SECONDS] * 2
+    clean, _, _ = _probe_session(monkeypatch, [_PROBE_OK])
+    assert clean._solver_version() == "Gurobi 13.0.3" and clean.probe_retries == 0
+
+
+def test_three_probe_licence_failures_raise_after_two_retries(monkeypatch):
+    session, solves, _ = _probe_session(monkeypatch, [_PROBE_LICENCE])
+    with pytest.raises(ExactBackendUnavailable, match="2 probe retries"):
+        session._solver_version()
+    assert len(solves) == 3
+
+
+def test_a_probe_with_a_missing_program_is_raised_at_once_without_retry_or_pause(monkeypatch):
+    session, solves, pauses = _probe_session(monkeypatch, [_PROBE_BINARY])
     with pytest.raises(ExactBackendUnavailable):
         session._solver_version()
-    assert runs["n"] == 3
+    assert len(solves) == 1 and pauses == []
+
+
+def test_a_probe_failure_without_absence_evidence_is_a_defect_and_is_not_retried(monkeypatch):
+    session, solves, pauses = _probe_session(monkeypatch, [(500, "Gurobi: out of memory", "")])
+    with pytest.raises(RuntimeError):
+        session._solver_version()
+    assert len(solves) == 1 and pauses == []
 
 
 def test_a_stage_result_with_retries_passes_the_repr_privacy_guard():

@@ -733,3 +733,33 @@ def test_wave_values_status_takes_the_worst_verdict():
     assert status([rec("not_run"), rec("inconclusive"), rec("agree"), rec("blocking")]) == "blocking"  # blocking beats all
     assert status([rec("inconclusive"), rec("blocking")]) == "blocking"
     assert status([rec("blocking"), rec("agree")]) == "blocking"
+
+
+# ---------------------------------------------------------------- E14 round 1: probe retries are evidence too
+def test_a_clean_run_writes_probe_retries_zero(tmp_path):
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET)
+    manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert rc == 0 and manifest["run_history"]["probe_retries"] == 0
+    assert protocol.validate_day_joint_manifest(manifest) == [] and rj.strict_manifest_problems(manifest) == []
+
+
+def test_probe_retries_of_the_sessions_reach_the_manifest_separately_from_the_stage_total(tmp_path):
+    deps = make_deps()
+    deps.probe_retries = lambda: 3
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET, deps=deps)
+    manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert rc == 0 and manifest["run_history"]["probe_retries"] == 3 and manifest["run_history"]["retried_solves_total"] == 0
+    assert protocol.validate_day_joint_manifest(manifest) == [] and rj.strict_manifest_problems(manifest) == []
+
+
+def test_a_bad_probe_retries_value_is_a_manifest_problem():
+    for bad in (True, -1, 1.5, "2"):
+        problems = rj.strict_manifest_problems({"run_history": {"probe_retries": bad}})
+        assert any("probe_retries" in p for p in problems), bad
+    assert rj.strict_manifest_problems({"run_history": {"probe_retries": 2}}) == []
+
+
+def test_the_wave_solver_sums_the_probe_retries_of_its_sessions():
+    waves = rj._RealWaveSolver()
+    waves._sessions = {"gurobi": type("S", (), {"probe_retries": 1})(), "highs": type("S", (), {"probe_retries": 2})()}
+    assert waves.probe_retries() == 3 and rj._RealWaveSolver().probe_retries() == 0

@@ -73,7 +73,7 @@
     }
   },
   "run_count": 3,
-  "base_seed": 2026,
+  "base_seed": 2027,
   "seed_protocol_version": "sha256-seed-v1",
   "problem_families": ["TSP"],
   "analysis_plan_id": "yaem2026-draft-v1",

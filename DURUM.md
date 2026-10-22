@@ -1,6 +1,6 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-22 (WIP `94f160b9` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
+Son güncelleme: 2026-10-22 (WIP `c42a79e0` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
 
 ## Çalışan işler
 
@@ -8,7 +8,7 @@ Son güncelleme: 2026-10-22 (WIP `94f160b9` sonrası). Kararlar `docs/DECISION_L
 |---|---|---|
 | WP-E11 Gurobi lisans hatasında tekrar deneme (E14, en fazla 2) | `fix/wp-e11-gurobi-licence-retry` | Opus denetimi DUZELT tur 1: probe yalnızca lisans türünü yeniden denemeli; probe tekrarları manifestte (`run_history.probe_retries`) kayda geçmeli. Geliştiricide. |
 | Gate C: birleşik (composite) ID'ler pilot listelerinde ve smoke dışa aktarımında + C-13 YAEM profili | `feat/gatec-c13-yaem` | Geliştiricide (TDD). Sonra Opus denetimi. |
-| WP-E11 J12 kayıtlar: ilk koşu / yeniden koşu karşılaştırma betiği, tasarım §6.1 ve §6.3, durum paragrafları | `docs/wp-e11-j12-records` | Geliştiricide. Sonra denetçi + olgu denetçisi. |
+| WP-E11 J12 kayıtlar | — | BİRLEŞTİ `c42a79e0` (karşılaştırma betiği, tasarım §6.1/§6.3, durum paragrafları). Açık: J11 README’den betiğe işaret. |
 
 ## Sıradaki
 

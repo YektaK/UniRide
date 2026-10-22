@@ -18,7 +18,7 @@ Son güncelleme: 2026-10-22 (WIP `30646ecd` sonrası). Kararlar `docs/DECISION_L
 ## Sahibin kararını bekleyenler
 
 - YAEM profilindeki taslak değerler (seviyeler 50x/250x, 3 koşu, tohum 2026 = Bildiri ile aynı, global pay 0,80, birleşik algoritma ayarları): makale planından önce onay.
-- AMPL lisansı: çözücüler (Gurobi dahil) 2027-10-05, AMPL'in kendisi 2026-11-05 bitiyor. Gurobi'ye AMPL üzerinden eriştiğimiz için 11-05'ten sonra Gurobi çapraz kontrolü durur; AMPL kısmı yenilenmeli ya da yol değiştirilmeli (karar sahibin).
+- AMPL lisansı: AMPL kısmı 2026-11-05 gösteriyor, ama bu büyük olasılıkla internet üzerinden kendiliğinden yenilenen kısa kiralama (sahibin bulduğu AMPL açıklaması). 2026-11-01 civarı tarihi yeniden kontrol; ileri kaydıysa sorun yok. Koşularda bilgisayar çevrimiçi olmalı.
 - `max_no_improvement=75` varsayılanı, anahtar yazılmamış sabit bütçeli koşuları erken bitirebilir: sabit bütçede zorunlu mu olsun, yalnızca belgelensin mi?
 - Birleştirilmiş worktree'lerin ve `C:\wt` geçici klasörlerinin silinmesi (bazılarında testlerin açtığı boş `tsplib.db` var).
 

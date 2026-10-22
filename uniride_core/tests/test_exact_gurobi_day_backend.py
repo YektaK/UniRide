@@ -689,7 +689,9 @@ def test_a_correct_plan_is_not_blocking_against_an_upward_noise_gurobi_bound_on_
 
 def test_a_gurobi_bound_above_the_incumbent_beyond_the_snap_carries_the_note_and_withholds_the_claim(monkeypatch):
     # optimal stage with objective 540 and bound 540.00001: 1e-5 above, beyond the snap allowance (5.4e-6): the ceiling is 541,
-    # clipped to the incumbent 540, and the clip note is written like HiGHS does (J9b flag)
+    # clipped to the incumbent 540, and the clip note is written like HiGHS does (J9b flag). The values are exactly integral
+    # here, so the RAW objective is exactly 540 and 540.00001 is above it by more than the reconcile allowance (about
+    # 1.5e-6, no deviation to explain): it is not noise of the objective, the note stays (round 3 rule, pinned).
     solved = _solve_noise_stage(monkeypatch, 540.0, [4.0, 3.0, 0.0], bound=540.00001)
     r = solved.result
     assert r.bound_ceil == 540 and r.objective == 540
@@ -712,3 +714,65 @@ def test_a_solved_gurobi_stage_with_a_consistent_bound_has_no_note_and_keeps_its
 def test_a_gurobi_bound_only_stage_is_snapped_too():
     out = classify_gurobi_outcome(450, "Gurobi 13.0.3: time limit, no solution", None, 540.000003)
     assert (out.status, out.bound_ceil, out.objective) == ("bound_only", 540, None)
+
+
+# ------------------------------------------------------------------ 8. a bound that is the solver's own raw objective (gap 0) cannot contradict the incumbent
+def _model_for(coefficients, targets):
+    """Integer variables with the given objective coefficients and every value fixed by a cover row."""
+    from uniride_core.exact.day_joint import JointModel, MipRow, MipVariable
+
+    variables = tuple(MipVariable(f"x{i}", 0, 20, c, "column") for i, c in enumerate(coefficients))
+    rows = tuple(MipRow(f"r{i}", "E", t, ((i, 1),), "cover") for i, t in enumerate(targets))
+    return JointModel("mirror", "homogeneous", 3, "Obj", variables, rows, {})
+
+
+def _solve_model_stage(monkeypatch, model, objective, values, bound):
+    monkeypatch.setattr(gb, "load_day_model", lambda ampl, m: None)
+    return gb.gurobi_solve_stage(_FakeSession(_ValueAmpl(objective, values, bound=bound)), model, GurobiSettings())
+
+
+def _claim_kept(result):
+    day = _fake_day({1: result, 2: _opt(30), 3: _opt(12)})
+    return label_cell(enumeration_complete=True, result=day, crosscheck="agree", checker_ok=True)
+
+
+@pytest.mark.parametrize("coefficients,targets,devs,objective", [
+    # J11 mirror: 81*4 + 72*3 = 540, deviations add 1.23e-5 on the upward side
+    ((81, 72, 66), (4, 3, 0), (1e-7, 5.8333333e-8, 0.0), 540.0000123),
+    # a smaller upward excursion of the same kind
+    ((81, 72, 66), (4, 3, 0), (1e-7, 0.0, 0.0), 540.0000081),
+    # a larger objective: 100*10 + 50*10 = 1500, deviations add 2e-5
+    ((100, 50), (10, 10), (1e-7, 2e-7), 1500.00002),
+])
+def test_a_bound_equal_to_the_solvers_own_noisy_raw_objective_writes_no_note_and_keeps_the_claim(
+        monkeypatch, coefficients, targets, devs, objective):
+    values = [t + d for t, d in zip(targets, devs)]
+    assert abs(sum(c * x for c, x in zip(coefficients, values)) - objective) < 2e-9  # the solver's raw objective
+    solved = _solve_model_stage(monkeypatch, _model_for(coefficients, targets), objective, values, bound=objective)
+    r = solved.result
+    assert r.status == "optimal" and r.objective == round(objective) and r.bound_ceil == round(objective)
+    assert not str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT), r.solver_message
+    label = _claim_kept(r)
+    assert label.proof_claim_allowed and not [f for f in label.flags if f.startswith(BOUND_ABOVE_INCUMBENT)]
+
+
+def test_the_j11_downward_case_still_writes_no_note(monkeypatch):
+    # raw objective 539.9999877, bound 539.9999877417731 (below 540): never a note, as before
+    r = _solve_model_stage(monkeypatch, _noise_model(), _NOISY_OBJECTIVE, _noisy_values(), _NOISY_BOUND).result
+    assert not str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT) and r.objective == 540 and r.bound_ceil == 540
+
+
+@pytest.mark.parametrize("bound", [541.0, 540.3, 542.5])
+def test_a_bound_genuinely_above_the_raw_objective_still_writes_the_note_and_withholds_the_claim(monkeypatch, bound):
+    solved = _solve_model_stage(monkeypatch, _model_for((81, 72, 66), (4, 3, 0)), 540.0, [4.0, 3.0, 0.0], bound)
+    r = solved.result
+    assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT) and r.bound_ceil == 540
+    label = _claim_kept(r)
+    assert not label.proof_claim_allowed and label.proof_claim_reason == BOUND_ABOVE_INCUMBENT
+
+
+def test_a_bound_above_the_noisy_raw_objective_beyond_the_allowance_still_writes_the_note(monkeypatch):
+    # raw objective 540.0000123 explained by deviations of 1.23e-5; a bound 1e-4 above that is not the solver's number for this plan
+    values = [4 + 1e-7, 3 + 5.8333333e-8, 0.0]
+    solved = _solve_model_stage(monkeypatch, _model_for((81, 72, 66), (4, 3, 0)), 540.0000123, values, bound=540.0001123)
+    assert str(solved.result.solver_message).startswith(BOUND_ABOVE_INCUMBENT)

@@ -100,7 +100,7 @@ def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None,
     row = {
         "protocol_version": FAIR_V2, "comparison_regime": "fixed_evaluation_budget", "problem": problem,
         "algorithm_id": algorithm, "variant": "pure", "study_id": "bildiri2026", "evaluation_budget": levels[0],
-        "termination_policy": f"atomic_upper_bound_v1;max_iterations={levels[0]};max_no_improvement={levels[0]}",
+        "termination_policy": "atomic_upper_bound_v1;max_iterations=1237500;max_no_improvement=1237500",
         "polish_policy": {"enabled": False, "initial": False, "periodic": False, "final": False, "operator": None},
         "objective_cost": 500.0 + gap, "elapsed_ms": 1.0, "replicate": replicate,
         "gap_to_exact_reference": gap, "gap_unit": "percent", "exact_reference_value": 426, "gap_missing_reason": None,
@@ -299,7 +299,8 @@ def test_per_instance_family_reproduces_the_hand_computed_values(active):
         assert pair.test == "mann_whitney_u" and pair.n_a == pair.n_b == 5
         assert pair.p_value == pytest.approx(1 / 126, abs=1e-12)
         assert pair.p_holm == pytest.approx(1 / 42, abs=1e-12) and pair.significant is True
-        assert pair.effect_size_name == "vargha_delaney_a12" and pair.effect_size == 0.0
+        assert pair.effect_size_name == "vargha_delaney_a12"
+        assert pair.effect_size == (1.0 if SEPARATED[pair.algorithm_a][0] > SEPARATED[pair.algorithm_b][0] else 0.0)
     names = {(p.algorithm_a, p.algorithm_b) for p in result.inference.pairs}
     assert names == set(itertools.combinations(sorted(SEPARATED), 2))
     assert {c.algorithm_id: c.summary["n"] for c in result.cells} == {name: 5 for name in SEPARATED}

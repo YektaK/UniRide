@@ -39,10 +39,22 @@ _ROUTING_ALTERNATIVE_BASES = {
 }
 
 
+# Owner decision 4 (2026-10-23): TSP/ATSP IDs that are not capability-catalog IDs but used to run
+# the greedy router on routing problems under their own labels. They refuse routing like the
+# Core-* IDs. No truthful routing variant exists: there is no CVRP-SOTA-* alias, and the
+# CVRP-/CVRPTW-Numba-Swap and -Hybrid aliases run the legacy 2-opt matrix engine.
+_ROUTING_REFUSING_NONCATALOG_IDS = frozenset({
+    "Numba-Swap", "Numba-Hybrid",
+    "SOTA-E2BSO-TSP", "SOTA-R2DMA-TSP", "SOTA-P-AOEA-TSP", "SOTA-CGO-TSP", "SOTA-RUN-TSP",
+})
+
+
 def _refuse_routing(canonical_id, problem):
     problem_type = str(getattr(problem, "problem_type", "tsp") or "tsp").lower()
     base = _ROUTING_ALTERNATIVE_BASES.get(canonical_id)
-    if base is None:
+    if canonical_id in _ROUTING_REFUSING_NONCATALOG_IDS:
+        advice = "no truthful CVRP-/CVRPTW- alternative exists for this ID."
+    elif base is None:
         advice = "no CVRP-/CVRPTW- alternative exists for this ID."
     else:
         advice = (
@@ -55,19 +67,23 @@ def _refuse_routing(canonical_id, problem):
 
 
 def _refuse_catalog_routing(algorithm_name, problem):
-    """Guard at the top of every factory executor that serves a capability-catalog ID.
+    """Guard at the top of every factory executor that serves a routing-refusing ID.
 
-    The registry wrapper (``_register_catalog_executor``) refuses too; this keeps the raw
+    Refusing IDs are the capability-catalog IDs and ``_ROUTING_REFUSING_NONCATALOG_IDS``. The
+    registry wrapper (``_register_catalog_executor``) refuses too; this keeps the raw
     executor honest when it is reached without the wrapper (``inspect.unwrap``, a factory call).
     """
     from uniride_core.algorithms.capabilities import get_algorithm_capability
 
-    if _is_routing_problem(problem) and get_algorithm_capability(algorithm_name) is not None:
+    if _is_routing_problem(problem) and (
+        algorithm_name in _ROUTING_REFUSING_NONCATALOG_IDS
+        or get_algorithm_capability(algorithm_name) is not None
+    ):
         _refuse_routing(algorithm_name, problem)
 
 
 def _register_catalog_executor(canonical_id, executor):
-    """Register a capability-catalog executor behind the routing refusal (all paths)."""
+    """Register a capability-catalog or routing-refusing executor behind the refusal (all paths)."""
     import functools
 
     @functools.wraps(executor)
@@ -401,8 +417,7 @@ def _run_native_local_search(problem, params, run_idx, algorithm_name, strategy_
 # 1. Register Numba (Legacy) Algorithms
 def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_name: str):
     def executor(problem, params, seed, run_idx):
-        # Core-TwoOpt/ThreeOpt/OrOpt are catalog IDs and refuse routing; Numba-Swap and
-        # Numba-Hybrid (not catalog IDs) keep their own routing branch below.
+        # Core-TwoOpt/ThreeOpt/OrOpt (catalog IDs) and Numba-Swap/Numba-Hybrid refuse routing.
         _refuse_catalog_routing(algorithm_name, problem)
         import time
         from academic_benchmark.engine_core import RunResult
@@ -426,9 +441,6 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_
                 problem, params, run_idx, algorithm_name, strategy_payload,
                 native_manifest,
             )
-        if _is_routing_problem(problem):
-            return _run_core_routing_executor(problem, params, seed, run_idx, algorithm_name)
-        
         # Build duration func
         from uniride_core.algorithms.numba_utils import create_np_duration_func, convert_route_to_indices
         from uniride_core.algorithms.local_search_numba import apply_local_search
@@ -526,7 +538,11 @@ for name, payload, default_params in STRATEGIES:
         # Gate C follow-up: deprecated aliases of Core-TwoOpt/ThreeOpt/OrOpt reach only the
         # canonical executor through the resolver; they have no executor of their own.
         continue
-    AlgorithmRegistry.register(public_name)(_make_legacy_executor(payload, algo_type, public_name))
+    _legacy_executor = _make_legacy_executor(payload, algo_type, public_name)
+    if public_name in _ROUTING_REFUSING_NONCATALOG_IDS:
+        _register_catalog_executor(public_name, _legacy_executor)
+    else:
+        AlgorithmRegistry.register(public_name)(_legacy_executor)
     # We could register param spaces here too, but for simplicity we rely on the old _build_doe_space inside cli_engine
 
 # 2. Register SOTA Algorithms
@@ -535,7 +551,7 @@ SOTA_ALGOS = [name for name in list_algorithm_names("sota_tsp") if name in _SUPP
 def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
     public_id = reported_algorithm_id or f"SOTA-{algo}"
     def executor(problem, params, seed, run_idx):
-        _refuse_catalog_routing(public_id, problem)  # only ALNS-TSP is a catalog ID here
+        _refuse_catalog_routing(public_id, problem)  # ALNS-TSP (catalog) and SOTA-*-TSP refuse
         import time
         import math
         from academic_benchmark.engine_core import RunResult
@@ -563,9 +579,6 @@ def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
                 native=native_manifest is not None,
             )
 
-        if _is_routing_problem(problem):
-            return _run_core_routing_executor(problem, params, seed, run_idx, f"{public_id}:core-greedy-routing")
-        
         # Map SOTA algorithm names to their actual module, class, and config names
         mod_map = {
             "E2BSO-TSP": ("e2bso_tsp", "E2BSO_TSP", "E2BSOTSPConfig"),
@@ -660,7 +673,7 @@ for algo in SOTA_ALGOS:
     if algo == "ALNS-TSP":
         # SOTA-ALNS-TSP is a deprecated alias of the catalog ID ALNS-TSP: no entry of its own.
         continue
-    AlgorithmRegistry.register(f"SOTA-{algo}")(_make_sota_executor(algo))
+    _register_catalog_executor(f"SOTA-{algo}", _make_sota_executor(algo))
 _register_catalog_executor("ALNS-TSP", _make_sota_executor("ALNS-TSP", "ALNS-TSP"))
 
 
@@ -1683,6 +1696,11 @@ def _verify_catalog_routing_refusal() -> None:
             raise RuntimeError(
                 f"catalog ID '{canonical_id}' was registered without the routing refusal"
             )
+    for refusing_id in sorted(_ROUTING_REFUSING_NONCATALOG_IDS):
+        if refusing_id not in registered:
+            raise RuntimeError(f"routing-refusing ID '{refusing_id}' has no registered executor")
+        if not getattr(AlgorithmRegistry.get_executor(refusing_id), "refuses_routing", False):
+            raise RuntimeError(f"ID '{refusing_id}' was registered without the routing refusal")
     for canonical_id, base in _ROUTING_ALTERNATIVE_BASES.items():
         for prefix in ("CVRP", "CVRPTW"):
             if f"{prefix}-{base}" not in registered:

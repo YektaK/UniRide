@@ -202,16 +202,17 @@ def test_cli_never_evaluates_these_ids_on_a_routing_problem(algorithm_id, evalua
     with pytest.raises(Exception) as excinfo:
         cli_engine._evaluate_param_combo((problem_dict, algorithm_id, algorithm_id, {}, 0, 1, None))
     assert not isinstance(excinfo.value, AssertionError)
+    assert "refuses CVRP routing" in str(excinfo.value)
     assert evaluation_spies == []
 
 
 @pytest.mark.parametrize("algorithm_id", ["Numba-Hybrid", "SOTA-E2BSO-TSP"])
-def test_smart_registry_path_returns_an_error_row_for_these_ids_on_routing(
-    algorithm_id, evaluation_spies
-) -> None:
+def test_smart_never_evaluates_these_ids_on_a_routing_problem(algorithm_id, evaluation_spies) -> None:
+    """Smart already stops these uncataloged IDs at the worker boundary (any problem type);
+    the registry executor behind it refuses routing as well (tests above)."""
+    from academic_benchmark.core.algorithm_errors import ExecutorUnavailableError
+
     task = smart_benchmark.BenchmarkTask("tiny-cvrp", algorithm_id, 1, 42, {})
-    result = smart_benchmark._run_single_task((task, _cvrp()))
-    # the executor's refusal text is the row's error (an AssertionError from a spy would read
-    # "evaluation reached" and is also caught into the row, so check the text)
-    assert result.error and "refuses CVRP routing" in result.error
+    with pytest.raises(ExecutorUnavailableError):
+        smart_benchmark._run_single_task((task, _cvrp()))
     assert evaluation_spies == []

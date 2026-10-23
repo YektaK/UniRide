@@ -49,7 +49,8 @@ def _dataset(dataset_id="tsplib-eil51", dimension=51):
 
 def make_manifest(*, study_id="bildiri2026", protocol_version=FAIR_V2, algorithm_id="Core-PSO-TSP",
                   configuration=None, levels=(63750, 318750), policy="atomic_upper_bound_v1", base_seed=2026,
-                  commit=COMMIT_A, dirty=False, dataset_id="tsplib-eil51", dimension=51) -> RunManifestV1:
+                  commit=COMMIT_A, dirty=False, dataset_id="tsplib-eil51", dimension=51,
+                  backend_policy="prefer_numba", backend_profile=None) -> RunManifestV1:
     return RunManifestV1.model_validate({
         "schema_version": "uniride-run/v1", "run_id": "run-0001", "study_id": study_id,
         "protocol_version": protocol_version, "git": {"commit": commit, "dirty": dirty},
@@ -57,8 +58,9 @@ def make_manifest(*, study_id="bildiri2026", protocol_version=FAIR_V2, algorithm
                         "numba": "0.66.0", "llvmlite": "0.48.0", "statistics_library": "none"},
         "dataset": _dataset(dataset_id, dimension),
         "algorithm": {
-            "algorithm_id": algorithm_id, "capabilities": {}, "backend_policy": "prefer_numba",
-            "backend_profile": {"objective": "numba", "polish": "none"}, "capability_evidence_ids": ["fixture"],
+            "algorithm_id": algorithm_id, "capabilities": {}, "backend_policy": backend_policy,
+            "backend_profile": backend_profile or {"objective": "numba", "polish": "none"},
+            "capability_evidence_ids": ["fixture"],
             "configuration": configuration if configuration is not None
             else {"swarm_size": 50, "max_iterations": 1237500, "reinit_interval": 50},
             "composition_stages": [],
@@ -159,7 +161,9 @@ def test_a_row_without_a_run_manifest_such_as_a_pre_c16a_core_ga_row_is_refused(
 CHANGES = {
     "protocol_version": ({"protocol_version": FAIR_V1}, {"protocol_version": FAIR_V1}),
     "study_id": ({"study_id": "yaem2026"}, {"study_id": "yaem2026"}),
-    "dataset_identity": ({"problem": "st70"}, {}),
+    "dataset_identity": ({"problem": "st70"}, {"dataset_id": "tsplib-st70", "dimension": 70}),
+    "backend_policy": ({}, {"backend_policy": "python_only"}),
+    "backend_profile": ({}, {"backend_profile": {"objective": "python", "polish": "none"}}),
     "budget_level_index": ({"budget": 318750}, {}),
     "algorithm_id": ({"algorithm_id": "Core-GA-TSP"}, {"algorithm_id": "Core-GA-TSP"}),
     "configuration_hash": ({}, {"configuration": {"swarm_size": 20, "max_iterations": 1237500}}),
@@ -344,3 +348,73 @@ def test_the_key_is_deterministic_hashable_and_does_not_mutate_its_inputs():
 def test_the_seed_protocol_constant_equals_the_one_the_study_service_implements():
     from academic_benchmark.studies.service import SUPPORTED_SEED_PROTOCOL
     assert identity.SEED_PROTOCOL_VERSION == SUPPORTED_SEED_PROTOCOL
+
+
+# ------------------------------------------------------------------ DUZELT round 1 (Opus review of D-01)
+def test_a_row_for_one_instance_with_another_instances_manifest_is_refused():
+    """Pilot and CLI rows carry no dataset_id; the problem name must match the manifest's dataset (tsplib-<name>)."""
+    with pytest.raises(ComparisonIdentityError, match="dataset"):
+        comparison_cell_key(make_row(problem="st70"), make_manifest())  # eil51 manifest, st70 row
+    with pytest.raises(ComparisonIdentityError, match="dataset"):
+        assert_single_comparison_family([pair({"problem": "st70"})], vary=("dataset",))
+
+
+def test_a_row_without_dataset_id_is_matched_to_its_manifest_by_the_normalised_tsplib_name():
+    row = make_row(problem="kroA100")
+    assert "dataset_id" not in row
+    key = comparison_cell_key(row, make_manifest(dataset_id="tsplib-kroa100", dimension=100))
+    assert key.dataset_identity == "kroa100"
+    # a manifest dataset id that is not tsplib-<name> cannot be verified from the problem name alone
+    with pytest.raises(ComparisonIdentityError, match="dataset"):
+        comparison_cell_key(row, make_manifest(dataset_id="my-own-set", dimension=100))
+    # an explicit row dataset_id that equals the manifest's is the check (smoke rows)
+    assert comparison_cell_key(make_row(dataset_id="my-own-set"), make_manifest(dataset_id="my-own-set"))
+
+
+def test_a_fixed_budget_row_needs_the_atomic_upper_bound_budget_policy():
+    """``RunManifestV1.budget.policy`` allows two values; a fixed row under the native one is a contradiction."""
+    with pytest.raises(ComparisonIdentityError, match="budget.policy"):
+        comparison_cell_key(*pair(manifest_kw={"policy": "native_uncapped"}))
+    assert comparison_cell_key(*pair(manifest_kw={"policy": "atomic_upper_bound_v1"}))
+
+
+def test_a_native_row_needs_the_native_uncapped_budget_policy():
+    row, manifest = native_pair()
+    bad = make_manifest(protocol_version=NATIVE, policy="atomic_upper_bound_v1", levels=(1,))
+    with pytest.raises(ComparisonIdentityError, match="budget.policy"):
+        comparison_cell_key(row, bad)
+    assert comparison_cell_key(row, manifest).budget_level_index is None
+
+
+def test_python_and_numba_backend_rows_never_share_a_cell_until_the_owner_decides_otherwise():
+    numba = pair()
+    python = pair(manifest_kw={"backend_policy": "python_only", "backend_profile": {"objective": "python", "polish": "none"}})
+    key_n, key_p = comparison_cell_key(*numba), comparison_cell_key(*python)
+    assert key_n.backend_policy == "prefer_numba" and key_n.backend_profile == "objective=numba;polish=none"
+    assert key_p.backend_profile == "objective=python;polish=none"
+    with pytest.raises(ComparisonIdentityError, match="backend"):
+        assert_single_comparison_family([numba, python], vary=("algorithm",))
+
+
+def test_a_family_built_with_allow_dirty_says_so():
+    clean = assert_single_comparison_family([pair(), pair()])
+    assert clean.contains_dirty is False
+    dirty = [(make_row(), make_manifest(dirty=True)), (make_row(replicate=1), make_manifest(dirty=True))]
+    family = assert_single_comparison_family(dirty, allow_dirty=True)
+    assert family.contains_dirty is True and family.shared["tree_dirty"] is True
+    with pytest.raises(ComparisonIdentityError, match="dirty"):
+        assert_single_comparison_family(dirty)
+
+
+@pytest.mark.parametrize("marker", [{"record_kind": "failed_run"}, {"validation_status": "failed"}])
+def test_a_failed_run_row_is_refused_with_its_own_message(marker):
+    row = make_row(**marker)
+    with pytest.raises(ComparisonIdentityError, match="failed run"):
+        comparison_cell_key(row, make_manifest())
+    with pytest.raises(ComparisonIdentityError, match="failed run"):
+        assert_single_comparison_family([(row, make_manifest())])
+    # a failed-run record from the smoke runner has no termination_policy at all; the message must still name the failure
+    bare = {**marker, "protocol_version": FAIR_V2, "comparison_regime": "fixed_evaluation_budget",
+            "problem": "eil51", "algorithm_id": "Core-PSO-TSP"}
+    with pytest.raises(ComparisonIdentityError, match="failed run"):
+        comparison_cell_key(bare, make_manifest())

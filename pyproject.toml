@@ -31,6 +31,8 @@ include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]
 [tool.setuptools.package-data]
 "academic_benchmark.schemas" = ["*.schema.json"]
 "uniride_core.exact" = ["models/*.mod"]
+"academic_benchmark.studies" = ["*/study.json"]
+"academic_benchmark.datasets" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["uniride_core/tests", "optimizer_api/tests", "academic_benchmark/tests"]

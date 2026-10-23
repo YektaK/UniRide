@@ -1,0 +1,18 @@
+# Optional extra for the Gate D statistical analysis (D-04a; DECISION_LOG A18: OQ-7 b SciPy + statsmodels, OQ-17 a setuptools).
+# For academic analysis and packaging checks only; NOT an operational or runtime dependency: optimizer_api requirements and pyproject stay unchanged.
+# Install (the constraints file keeps numpy/numba/llvmlite at the JIT pin; numpy is deliberately not listed here):
+#   pip install -r requirements-analysis.txt -c academic_benchmark/jit-benchmark-constraints.txt
+# Every line is the version verified in .venv-jit. statsmodels' dependencies are pinned explicitly because the resolver
+# otherwise selects a release candidate. Effect sizes (A12, epsilon-squared, matched-pairs rank-biserial, Kendall's W) are
+# local code in D-05, tested against published examples; neither library provides them under a public name
+# (statsmodels exposes A12 only as rank_compare_2indep(...).prob1).
+# Keep PINNED_STATISTICS_LIBRARIES in academic_benchmark/analysis/environment.py equal to the scipy and statsmodels lines.
+scipy==1.18.1
+statsmodels==0.15.0
+patsy==1.0.3
+formulaic==1.2.2
+interface_meta==2.0.1
+narwhals==2.27.1
+wrapt==2.5.1
+# Build backend for the D-14 packaging smoke (pyproject.toml names setuptools.build_meta); test-only.
+setuptools==84.2.1

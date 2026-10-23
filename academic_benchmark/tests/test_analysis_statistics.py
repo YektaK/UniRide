@@ -47,6 +47,7 @@ from academic_benchmark.analysis.statistics import (
     vargha_delaney_a12,
 )
 from academic_benchmark.analysis.identity import comparison_cell_key
+from academic_benchmark.analysis.manifests import make_run_id
 from academic_benchmark.contracts import RunManifestV1
 from academic_benchmark.contracts.run_index import RunIndexV1
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
@@ -81,11 +82,11 @@ def _levels(problem):
     return (base, base * 5)
 
 
-def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None, **row_extra):
+def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None, level=0, **row_extra):
     levels = _levels(problem)
     dataset_id = f"tsplib-{normalize_problem(problem)}"
     manifest = RunManifestV1.model_validate({
-        "schema_version": "uniride-run/v1", "run_id": f"run-{dataset_id}-{algorithm}-{replicate}".lower(),
+        "schema_version": "uniride-run/v1", "run_id": make_run_id("bildiri2026", dataset_id, algorithm, level, replicate),
         "study_id": "bildiri2026", "protocol_version": FAIR_V2, "git": {"commit": COMMIT, "dirty": dirty},
         "environment": {"python": "3.13", "operating_system": "test", "cpu": "test", "numpy": "2.4.6",
                         "numba": "0.66.0", "llvmlite": "0.48.0", "statistics_library": "none"},
@@ -100,7 +101,7 @@ def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None,
     })
     row = {
         "protocol_version": FAIR_V2, "comparison_regime": "fixed_evaluation_budget", "problem": problem,
-        "algorithm_id": algorithm, "variant": "pure", "study_id": "bildiri2026", "evaluation_budget": levels[0],
+        "algorithm_id": algorithm, "variant": "pure", "study_id": "bildiri2026", "evaluation_budget": levels[level],
         "termination_policy": "atomic_upper_bound_v1;max_iterations=1237500;max_no_improvement=1237500",
         "polish_policy": {"enabled": False, "initial": False, "periodic": False, "final": False, "operator": None},
         "objective_cost": 500.0 + gap, "elapsed_ms": 1.0, "replicate": replicate,
@@ -814,8 +815,7 @@ def test_the_family_algorithms_come_from_the_run_index_not_from_the_completed_ro
     result = analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=elsewhere))
     assert result.inference is not None
     # a PSO run of another budget level does not make PSO an algorithm of this level
-    other_level = [make_item("eil76", "Core-PSO-TSP", r, 1.0) for r in range(3)]
-    other_level = [({**row, "evaluation_budget": _levels("eil76")[1]}, manifest) for row, manifest in other_level]
+    other_level = [make_item("eil76", "Core-PSO-TSP", r, 1.0, level=1) for r in range(3)]
     with pytest.raises(StatisticsRefusal, match="run index"):
         analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=other_level))
 

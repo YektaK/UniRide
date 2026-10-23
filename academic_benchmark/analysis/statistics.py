@@ -30,12 +30,14 @@ statsmodels ``multipletests``; the omnibus and pairwise tests from SciPy. Output
 from __future__ import annotations
 
 import itertools
+import re
 import math
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
 from academic_benchmark.analysis.environment import require_analysis_environment, statistics_library_identifier
 from academic_benchmark.analysis.identity import ComparisonIdentityError, assert_single_comparison_family, comparison_cell_key
+from academic_benchmark.analysis.manifests import make_run_id
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1, ComparisonFamilyV1, DescriptiveV1
 from academic_benchmark.contracts.run_index import RunIndexV1
 from academic_benchmark.fairness import normalize_problem
@@ -124,6 +126,7 @@ class FamilyAnalysis:
     exclusions: tuple
     inference_refused: tuple
     inference: Optional[InferenceResult]
+    excluded_pairs: tuple  # per-instance pairs that left the Holm family because a cell was excluded (OQ-9)
     text: str
 
 
@@ -479,6 +482,8 @@ def _render(values: dict, plan: AnalysisPlanV1, family: ComparisonFamilyV1) -> s
     for item in exclusions:
         who = f"{item['algorithm_id']} on {item['dataset_identity']}" if item.get("algorithm_id") else f"instance {item['dataset_identity']}"
         lines.append(f"  excluded from inference: {who} ({item['reason']})")
+    for item in values["excluded_pairs"]:
+        lines.append(f"  pair excluded from the Holm family: {item['algorithm_a']} vs {item['algorithm_b']} ({item['reason']})")
     if inference is None:
         lines.append("Inference not performed (descriptive output only): " + "; ".join(refused))
     else:
@@ -524,6 +529,28 @@ def _render(values: dict, plan: AnalysisPlanV1, family: ComparisonFamilyV1) -> s
     )
     lines.append("Statistical results describe these runs only; the report states no ordering of the algorithms.")
     return "\n".join(lines)
+
+
+def _algorithm_token(algorithm: str, level_index: Optional[int]) -> str:
+    """The algorithm part of a run id (``manifests.make_run_id`` lower-cases and sanitises it)."""
+    run_id = make_run_id("s", "d", algorithm, level_index, 0)
+    protocol = "native" if level_index is None else f"fixed-l{level_index}"
+    return run_id[len(f"s.d.{protocol}."):-len(".r0")]
+
+
+def _campaign_algorithm_tokens(run_index: RunIndexV1, study_id: str, level_index: Optional[int]) -> set:
+    """The algorithms that the verified campaign ran for this study and budget level (native: no level), read from the run ids of the
+    index: ``<study>.<dataset>.<protocol>.<algorithm>.r<replicate>``. A fully failed cell has no manifest, but its algorithm has runs
+    on other instances of the campaign, so the family's algorithm set does not depend on which cells completed (OQ-9)."""
+    protocol = "native" if level_index is None else f"fixed-l{level_index}"
+    study = make_run_id(study_id, "d", "a", level_index, 0).split(".d.", 1)[0]
+    pattern = re.compile(rf"^{re.escape(study)}\..+?\.{re.escape(protocol)}\.(?P<algorithm>.+)\.r\d+$")
+    tokens = set()
+    for entry in run_index.runs:
+        match = pattern.match(entry.run_id)
+        if match:
+            tokens.add(match.group("algorithm"))
+    return tokens
 
 
 def _check_conventions(plan: AnalysisPlanV1) -> None:
@@ -619,15 +646,18 @@ def analyse_family(items: Iterable[tuple], *, plan: AnalysisPlanV1, family_id: s
     budgets: dict = {}
     for row, _ in good:
         budgets.setdefault(normalize_problem(row["problem"]), set()).add(row.get("evaluation_budget"))
-    family_algorithms = set(identity_family.varied["algorithm_id"])
+    level_index = identity_family.shared["budget_level_index"]
+    campaign_algorithms = _campaign_algorithm_tokens(run_index, study_id, level_index)
     protocol_version = identity_family.shared["protocol_version"]
     failed_counts: dict = {}
     for row in failed:
         problem, algorithm = row.get("problem"), row.get("algorithm_id")
         if not isinstance(problem, str) or not isinstance(algorithm, str):
             raise StatisticsRefusal("a failed run needs its algorithm_id and problem name to be reported")
-        if algorithm not in family_algorithms:
-            raise StatisticsRefusal(f"a failed run names algorithm_id {algorithm!r}, which is not among the family's algorithms {sorted(family_algorithms)}")
+        if _algorithm_token(algorithm, level_index) not in campaign_algorithms:
+            raise StatisticsRefusal(
+                f"a failed run names algorithm_id {algorithm!r}, which the run index does not list for study {study_id!r} at this budget level"
+            )
         if row.get("study_id") != study_id:
             raise StatisticsRefusal(f"a failed run of {algorithm!r} has study_id {row.get('study_id')!r}, the family's is {study_id!r}")
         if row.get("protocol_version") != protocol_version:
@@ -644,8 +674,19 @@ def analyse_family(items: Iterable[tuple], *, plan: AnalysisPlanV1, family_id: s
          "reason": "failed run(s): the cell is excluded from inference and reported (plan failure policy)"}
         for (dataset, algorithm), count in sorted(failed_counts.items())
     ]
+    seen_algorithms = sorted({a for _, a in samples} | {a for _, a in failed_counts})
     for key in failed_counts:
         samples.pop(key, None)
+    excluded_pairs: list = []
+    if family.scope == "per_instance":
+        out = {a for _, a in failed_counts}
+        for a, b in itertools.combinations(seen_algorithms, 2):
+            if a in out or b in out:
+                who = " and ".join(sorted({a, b} & out))
+                excluded_pairs.append({
+                    "algorithm_a": a, "algorithm_b": b,
+                    "reason": f"the cell of {who} is excluded after failed run(s); the pair is not in the Holm family",
+                })
     absent: list = []
     if family.scope == "across_instances":
         present = {dataset for dataset, _ in samples} | {dataset for dataset, _ in failed_counts}
@@ -726,6 +767,7 @@ def analyse_family(items: Iterable[tuple], *, plan: AnalysisPlanV1, family_id: s
         "analysis_plan_id": plan.analysis_plan_id, "plan_status": plan.status,
         "statistics_library": statistics_library_identifier(), "conventions": conventions.model_dump(mode="json"),
         "cells": cells, "exclusions": tuple(exclusions), "inference_refused": tuple(reasons), "inference": inference,
+        "excluded_pairs": tuple(excluded_pairs),
     }
     return FamilyAnalysis(**values, text=_render(values, plan, family))
 

@@ -33,7 +33,16 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
+from academic_benchmark.analysis.manifests import (
+    INDEX_FILE,
+    build_run_manifest,
+    collect_environment,
+    file_sha256,
+    write_run_campaign,
+)
 from academic_benchmark.composite_protocol import is_composite_algorithm, validate_composite_result
+from academic_benchmark.contracts import OutputChecksumV1
+from academic_benchmark.contracts.run import EnvironmentV1
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import RuntimeBackendAvailability, probe_runtime_backends
@@ -367,9 +376,47 @@ def _failed_record(row: PlanRow, failure: _RowFailure, plan: StudyPlan) -> Dict[
     }
 
 
+_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _write_run_manifests(
+    plan: StudyPlan, output: Path, completed: Sequence[tuple], written: Mapping[str, int], status: str,
+    git: Mapping[str, Any], environment: EnvironmentV1,
+) -> Optional[Dict[str, Any]]:
+    """Run manifests, campaign index and detached checksums (D-02); ``None`` when the git state is unknown.
+
+    A manifest needs the commit (``GitStateV1``): when git cannot answer, nothing is written and the report says so."""
+    revision, dirty = git.get("revision"), git.get("dirty")
+    if not isinstance(revision, str) or not _COMMIT_PATTERN.match(revision) or not isinstance(dirty, bool):
+        return None
+    study = plan.study
+    datasets = {d.dataset_id: d for d in plan.datasets}
+    result_files = {
+        name: OutputChecksumV1(path=name, checksum={"algorithm": "sha256", "value": file_sha256(output / name)})
+        for name in (FIXED_FILE, NATIVE_FILE) if name in written
+    }
+    runs = []
+    for row, record in completed:
+        fixed = row.protocol is ExecutionProtocol.FIXED_BUDGET
+        dataset = datasets[row.dataset_id]
+        manifest = build_run_manifest(
+            record, study_id=study.study_id, dataset=dataset.manifest, base_seed=study.base_seed,
+            levels=fixed_budget_levels_for(study, dataset), configuration=_row_params(study, row),
+            git={"commit": revision, "dirty": dirty}, environment=environment,
+            outputs=[result_files[FIXED_FILE if fixed else NATIVE_FILE]],
+        )
+        runs.append((record, manifest))
+    index = write_run_campaign(
+        output, mode="smoke", study_id=study.study_id, seed_protocol_version=study.seed_protocol_version,
+        base_seed=study.base_seed, git={"commit": revision, "dirty": dirty}, environment=environment, status=status,
+        runs=runs, output_files=list(written),
+    )
+    return {"path": INDEX_FILE, "sha256": file_sha256(output / INDEX_FILE), "manifests": len(index.runs)}
+
+
 def _report_text(
     plan: StudyPlan, status: str, level: Any, replicates: int, written: Mapping[str, int],
-    failed: Sequence[Mapping[str, Any]], git: Mapping[str, Any],
+    failed: Sequence[Mapping[str, Any]], git: Mapping[str, Any], run_index: Optional[Mapping[str, Any]] = None,
 ) -> str:
     lines = [
         "UniRide study smoke run (smoke mode, no claim)",
@@ -394,6 +441,16 @@ def _report_text(
         )
     for name, count in written.items():
         lines.append(f"File {name}: {count} row(s)")
+    if run_index is not None:
+        lines.append(
+            f"Run manifests: {run_index['manifests']} in manifests/ with detached checksums; index {run_index['path']} "
+            f"sha256 {run_index['sha256']}"
+        )
+    else:
+        lines.append(
+            "Run manifests: not written because the git state is unknown (a run manifest records the commit); "
+            "the result files are not covered by checksums"
+        )
     lines.append(
         "This smoke run checks only that runs complete and that the output files are well formed. "
         "It makes no comparison between algorithms and supports no claim. Fixed-budget and native "
@@ -415,6 +472,8 @@ def run_study_smoke(
     runtime_probe: Callable[[], RuntimeBackendAvailability] = probe_runtime_backends,
     registered_algorithms_provider: Callable[[], Iterable[str]] = _registered_algorithm_ids,
     gateway_executor: Callable[..., Any] = execute_preflighted,
+    git_provider: Callable[[Path], Mapping[str, Any]] = _git_metadata,
+    environment_provider: Callable[[], EnvironmentV1] = collect_environment,
 ) -> SmokeReport:
     """Run the smoke slice of ``plan``. ``problem_loader(problem_name)`` returns the problem object."""
     root = (repository_root or Path(__file__).resolve().parents[2]).resolve()
@@ -444,6 +503,7 @@ def run_study_smoke(
     fixed_rows: List[Dict[str, Any]] = []
     native_rows: List[Dict[str, Any]] = []
     failed: List[Dict[str, Any]] = []
+    completed: List[tuple] = []
     for row in rows:
         dataset = datasets[row.dataset_id]
         try:
@@ -457,6 +517,7 @@ def run_study_smoke(
         except _RowFailure as failure:
             failed.append(_failed_record(row, failure, plan))
             break  # aggregation stops at the first failure
+        completed.append((row, record))
         (fixed_rows if row.protocol is ExecutionProtocol.FIXED_BUDGET else native_rows).append(record)
     written: Dict[str, int] = {}
     if fixed_rows:
@@ -469,14 +530,15 @@ def run_study_smoke(
         _jsonl_atomic(output / FAILED_FILE, failed)
         written[FAILED_FILE] = len(failed)
     status = "failed" if failed else "passed"
-    git = _git_metadata(root)
-    text = _report_text(plan, status, level, cap, written, failed, git)
+    git = dict(git_provider(root))
+    run_index = _write_run_manifests(plan, output, completed, written, status, git, environment_provider())
+    text = _report_text(plan, status, level, cap, written, failed, git, run_index)
     assert_no_ranking_words(text)
     (output / REPORT_TEXT_FILE).write_text(text, encoding="utf-8")
     _json_atomic(output / REPORT_JSON_FILE, {
         "status": status, "study_id": plan.study.study_id, "mode": "smoke", "claims": "none",
         "budget_level": level, "replicates": cap, "planned_rows": len(rows), "rows_written": written,
-        "git": git, "environment": _environment_metadata(), "statement": text,
+        "git": git, "environment": _environment_metadata(), "run_index": run_index, "statement": text,
     })
     return SmokeReport(
         status=status, output_dir=str(output), study_id=plan.study.study_id, budget_level=level,

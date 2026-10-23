@@ -394,6 +394,13 @@ def test_a_tsplib_dataset_id_must_match_the_problem_name(campaign):
     plan, _report, out = campaign
     manifest = next(iter(_manifests(out).values()))
     row = _read_rows(out / "fixed_runs.jsonl")[0]
+    with pytest.raises(ManifestError, match="differs from the dataset manifest"):  # study rows carry their dataset id
+        build_run_manifest(
+            row, study_id=manifest.study_id, dataset=manifest.dataset.model_copy(update={"dataset_id": "other"}),
+            base_seed=1, levels=list(manifest.budget.levels), configuration={}, git=manifest.git,
+            environment=manifest.environment, outputs=[],
+        )
+    row = {k: v for k, v in row.items() if k != "dataset_id"}  # pilot-style row: matched by its problem name
     tsplib = manifest.dataset.model_copy(update={"dataset_id": "tsplib-kroa100"})
     with pytest.raises(ManifestError, match="tsplib-tiny10"):
         build_run_manifest(
@@ -477,3 +484,36 @@ def test_run_v1_schema_is_not_changed_by_d02():
     """seed_protocol_version lives in the index; uniride-run/v1 stays as published (design: a schema change is a new version)."""
     schema = json.loads(render_schemas()["run-v1.schema.json"])
     assert "seed_protocol_version" not in schema["properties"]
+
+
+# ------------------------------------------------------------------ the real Bildiri profile (D-01 requirements for D-02)
+def test_real_bildiri_ft53_manifests_carry_the_datasets_own_levels_and_tsplib_dataset_id(tmp_path):
+    import dataclasses
+
+    import test_study_smoke as ft
+    from academic_benchmark.studies import build_study_plan
+    from academic_benchmark.studies.smoke import select_smoke_rows
+
+    full = build_study_plan(ft.BILDIRI_STUDY, repository_root=ft.REPOSITORY_ROOT)
+    datasets = tuple(d for d in full.datasets if d.dataset_id == "tsplib-ft53")
+    rows = tuple(r for r in select_smoke_rows(full, replicates=1) if r.dataset_id == "tsplib-ft53" and r.algorithm_id == "Core-GWO-TSP-Pure")
+    assert len(rows) == 2  # one fixed row (lowest level) and one native row
+    plan = dataclasses.replace(full, datasets=datasets, rows=rows)
+    out = tmp_path / "out"
+    report = run_study_smoke(
+        plan, out, problem_loader=ft._loader(), repository_root=ft.REPOSITORY_ROOT, replicates=1, git_provider=CLEAN
+    )
+    assert report.status == "passed", report.text
+    found = _manifests(out)
+    assert len(found) == 2 and verify_campaign(out) == []
+    study_block = plan.study.algorithm_parameters["Core-GWO-TSP-Pure"]
+    for manifest in found.values():
+        assert manifest.dataset.dataset_id == "tsplib-ft53"
+        assert manifest.algorithm.configuration.keys() >= set(study_block) - {"max_iterations", "max_no_improvement"}
+        assert "fair_comparison" not in manifest.algorithm.configuration
+        assert "native_comparison" not in manifest.algorithm.configuration
+        if manifest.budget.policy == "atomic_upper_bound_v1":
+            assert manifest.budget.levels == list(ft.FT53_LEVELS)  # the dataset's own list: 50 and 250 scans of ft53
+            assert manifest.algorithm.configuration == dict(study_block)
+    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    assert index.seed_protocol_version == "sha256-seed-v1" and index.base_seed == plan.study.base_seed

@@ -350,6 +350,7 @@ def test_schema_snapshots_match_models_and_have_exact_ids():
         "run-v1.schema.json": "uniride-run/v1",
         "exact-reference-row-v1.schema.json": "uniride-exact-reference-row/v1",  # WP-E8 Task 3
         "analysis-plan-v1.schema.json": "uniride-analysis-plan/v1",  # D-09
+        "run-index-v1.schema.json": "uniride-run-index/v1",  # D-02
     }
     for name, rendered in render_schemas().items():
         schema = json.loads(rendered)

@@ -50,7 +50,7 @@ from academic_benchmark.fair_pilot import (
     _registry_executor,
     _result_record,
 )
-from academic_benchmark.fairness import normalize_problem, require_fixed_budget_max_no_improvement
+from academic_benchmark.fairness import normalize_problem, require_fixed_budget_stopping_keys
 from academic_benchmark.native_pilot import NativePilotConfig, _native_result_record
 from academic_benchmark.native_protocol import NATIVE_PROTOCOL, NATIVE_TERMINATION_REGIME
 from academic_benchmark.protocol_registry import assert_single_pooling_group
@@ -265,7 +265,7 @@ def _row_params(study: Any, row: PlanRow) -> Dict[str, Any]:
         )
     if fixed:
         try:
-            require_fixed_budget_max_no_improvement(row.algorithm_id, params)  # A17 2026-10-23
+            require_fixed_budget_stopping_keys(row.algorithm_id, params)  # A17 2026-10-23
         except ValueError as exc:
             raise StudySmokeError(str(exc)) from exc
         return params

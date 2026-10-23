@@ -110,6 +110,31 @@ two memetic identities. They have no registry entry of their own: the resolver m
 `Core-GWO-TSP-Memetic-2opt` / `Core-HHO-TSP-Memetic-2opt`. Catalog identities refuse CVRP/CVRPTW
 problems; routing variants are served under the `CVRP-*` / `CVRPTW-*` names.
 
+### What the `CVRP-*` / `CVRPTW-*` aliases actually run
+
+The `CVRP-*` / `CVRPTW-*` names are routing aliases, not the TSP/ATSP algorithm they are named
+after. Each alias runs a matrix engine (`_ROUTING_ALIAS_ENGINES` in
+`academic_benchmark/core/registry_setup.py`):
+
+| Alias base name                                          | Engine that runs                        |
+| -------------------------------------------------------- | --------------------------------------- |
+| `Numba-Swap`, `Numba-Hybrid`                             | `Matrix-TwoOpt-TSP-legacy` (legacy 2-opt matrix engine) |
+| `Numba-2-opt`, `Numba-3-opt-bounded`, `Numba-Or-opt`, `Core-TwoOpt-TSP` | `Matrix-TwoOpt-TSP-legacy` |
+| `Core-GA-TSP`, `Numba-GA`, `GA-Split`                    | `Matrix-GA-TSP-legacy`                  |
+| `Core-PSO-TSP`, `Numba-PSO`, `PSO-Split`                 | `Matrix-PSO-TSP-legacy`                 |
+| `Core-GWO-TSP`, `Numba-GWO`, `GWO-Split`                 | `Matrix-GWO-TSP-legacy`                 |
+| `Core-HHO-TSP`, `Numba-HHO`, `HHO-Split`                 | `Matrix-HHO-TSP-legacy`                 |
+
+In particular, `CVRP-Numba-Swap`, `CVRP-Numba-Hybrid`, `CVRPTW-Numba-Swap` and
+`CVRPTW-Numba-Hybrid` run the legacy 2-opt matrix engine (`Matrix-TwoOpt-TSP-legacy`); they do not
+run a swap search or a hybrid search. The names are kept only because stored results use them;
+they are not renamed. Do not read a result stored under one of these names as evidence about the
+Swap or Hybrid local search.
+
+`Numba-Swap`, `Numba-Hybrid`, the `SOTA-*-TSP` IDs and `FCM-GA-TSP` / `FCM-PSO-TSP` /
+`FCM-GWO-TSP` / `FCM-HHO-TSP` are TSP/ATSP algorithms that refuse CVRP/CVRPTW problems before any
+evaluation. No truthful `CVRP-*` / `CVRPTW-*` alternative exists for them.
+
 `B-GA` and `B-PSO` are retired aliases. Do not route them to archived Bildiri
 classes or revive top-level `core.*` fallback imports. Select explicit canonical
 pure or memetic variants when a study contract requires that distinction.

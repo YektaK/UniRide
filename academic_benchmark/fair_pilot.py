@@ -23,6 +23,7 @@ from academic_benchmark.composite_protocol import COMPOSITE_ALGORITHMS
 from academic_benchmark.fairness import (
     FairComparisonManifest,
     FairRunResult,
+    require_fixed_budget_max_iterations,
     require_fixed_budget_max_no_improvement,
     validate_evaluation_budget,
     validate_scientific_alns_params,
@@ -65,6 +66,7 @@ _V1_ALGORITHM_ALIASES = {
     "Numba-3-opt-bounded": "Core-ThreeOpt-TSP",
 }
 _GWO_HHO = frozenset({"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"})
+_LOCAL_SEARCHES = frozenset({"Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"})
 _CONFIG_KEYS_V1 = frozenset({
     "protocol_version", "problems", "algorithms", "runs", "evaluation_budget",
     "base_seed", "budget_policy", "workers", "replay_replicates",
@@ -244,6 +246,12 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
     for swarm_id in sorted(_GWO_HHO):  # A17 2026-10-23: no registry default may stop a fixed-budget run
         try:
             require_fixed_budget_max_no_improvement(swarm_id, algorithms[swarm_id])
+        except ValueError as exc:
+            raise FairPilotError(str(exc)) from exc
+    # A17 2026-10-23: nor may the GWO/HHO default (250) or the local-search default (1000)
+    for fixed_id in sorted(set(algorithms) & (_GWO_HHO | _LOCAL_SEARCHES)):
+        try:
+            require_fixed_budget_max_iterations(fixed_id, algorithms[fixed_id])
         except ValueError as exc:
             raise FairPilotError(str(exc)) from exc
     if protocol_version == V2_PROTOCOL:

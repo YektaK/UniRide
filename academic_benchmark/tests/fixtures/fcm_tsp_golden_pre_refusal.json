@@ -1,0 +1,146 @@
+{
+ "captured_on": "c7a18760 (before the FCM-*-TSP routing refusal)",
+ "matrix_sha256": "eb28c071e10c10054b17e31cb9e22663989e203ba7e70f58846d6c1a14b472b2",
+ "params": {
+  "elite_count": 2,
+  "fcm_clusters": 2,
+  "fcm_iterations": 6,
+  "fcm_min_cluster_size": 2,
+  "fcm_polish_iterations": 10,
+  "max_iterations": 4,
+  "max_no_improvement": 4,
+  "population_size": 6,
+  "tournament_size": 3
+ },
+ "results": {
+  "atsp:FCM-GA-TSP": {
+   "algorithm": "FCM-GA-TSP",
+   "cost": 308.0,
+   "problem_type": "atsp",
+   "tour": [
+    3,
+    8,
+    6,
+    5,
+    2,
+    1,
+    4,
+    9,
+    7
+   ]
+  },
+  "atsp:FCM-GWO-TSP": {
+   "algorithm": "FCM-GWO-TSP",
+   "cost": 324.0,
+   "problem_type": "atsp",
+   "tour": [
+    3,
+    6,
+    8,
+    2,
+    5,
+    4,
+    1,
+    9,
+    7
+   ]
+  },
+  "atsp:FCM-HHO-TSP": {
+   "algorithm": "FCM-HHO-TSP",
+   "cost": 336.0,
+   "problem_type": "atsp",
+   "tour": [
+    5,
+    2,
+    9,
+    4,
+    1,
+    3,
+    7,
+    8,
+    6
+   ]
+  },
+  "atsp:FCM-PSO-TSP": {
+   "algorithm": "FCM-PSO-TSP",
+   "cost": 295.0,
+   "problem_type": "atsp",
+   "tour": [
+    3,
+    8,
+    6,
+    2,
+    5,
+    1,
+    4,
+    9,
+    7
+   ]
+  },
+  "tsp:FCM-GA-TSP": {
+   "algorithm": "FCM-GA-TSP",
+   "cost": 276.0,
+   "problem_type": "tsp",
+   "tour": [
+    9,
+    4,
+    5,
+    2,
+    6,
+    8,
+    7,
+    3,
+    1
+   ]
+  },
+  "tsp:FCM-GWO-TSP": {
+   "algorithm": "FCM-GWO-TSP",
+   "cost": 288.0,
+   "problem_type": "tsp",
+   "tour": [
+    2,
+    5,
+    9,
+    4,
+    1,
+    3,
+    7,
+    8,
+    6
+   ]
+  },
+  "tsp:FCM-HHO-TSP": {
+   "algorithm": "FCM-HHO-TSP",
+   "cost": 276.0,
+   "problem_type": "tsp",
+   "tour": [
+    5,
+    6,
+    8,
+    7,
+    3,
+    1,
+    9,
+    4,
+    2
+   ]
+  },
+  "tsp:FCM-PSO-TSP": {
+   "algorithm": "FCM-PSO-TSP",
+   "cost": 280.0,
+   "problem_type": "tsp",
+   "tour": [
+    3,
+    6,
+    8,
+    5,
+    2,
+    4,
+    1,
+    9,
+    7
+   ]
+  }
+ },
+ "seed": 42
+}

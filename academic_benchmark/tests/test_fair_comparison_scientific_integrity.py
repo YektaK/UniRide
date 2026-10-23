@@ -272,15 +272,18 @@ def test_periodic_polish_budget_exhaustion_is_exposed(
 
 def test_public_fair_result_exposes_budget_termination():
     params = _params()
-    params["fair_comparison"]["evaluation_budget"] = 5
+    # A17 2026-10-23: a fixed-budget run needs max_iterations >= 1, so this case (budget used up
+    # inside the first iteration and the final polish) now uses 1 iteration and budget 6; with
+    # budget 5 no polish phase would execute and the memetic result would be invalid.
+    params["fair_comparison"]["evaluation_budget"] = 6
     params.update(
-        {"max_iterations": 0, "pack_size": 4, "polish_iters": 0, "final_polish_iters": 10}
+        {"max_iterations": 1, "pack_size": 4, "polish_iters": 0, "final_polish_iters": 10}
     )
     result = AlgorithmRegistry.get_executor("Core-GWO-TSP-Memetic-2opt")(
         _problem(), params, seed=1, run_idx=0
     )
 
-    assert result.objective_evaluations == 5
+    assert result.objective_evaluations == 6
     assert result.budget_terminated is True
 
 

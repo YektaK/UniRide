@@ -1,0 +1,215 @@
+{
+  "$defs": {
+    "ChecksumV1": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ChecksumV1",
+      "type": "object"
+    },
+    "EnvironmentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {
+          "title": "Cpu",
+          "type": "string"
+        },
+        "llvmlite": {
+          "title": "Llvmlite",
+          "type": "string"
+        },
+        "numba": {
+          "title": "Numba",
+          "type": "string"
+        },
+        "numpy": {
+          "title": "Numpy",
+          "type": "string"
+        },
+        "operating_system": {
+          "title": "Operating System",
+          "type": "string"
+        },
+        "python": {
+          "title": "Python",
+          "type": "string"
+        },
+        "statistics_library": {
+          "title": "Statistics Library",
+          "type": "string"
+        }
+      },
+      "required": [
+        "python",
+        "operating_system",
+        "cpu",
+        "numpy",
+        "numba",
+        "llvmlite",
+        "statistics_library"
+      ],
+      "title": "EnvironmentV1",
+      "type": "object"
+    },
+    "GitStateV1": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "commit",
+        "dirty"
+      ],
+      "title": "GitStateV1",
+      "type": "object"
+    },
+    "OutputChecksumV1": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum": {
+          "$ref": "#/$defs/ChecksumV1"
+        },
+        "path": {
+          "format": "uniride-repository-relative-path",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "checksum"
+      ],
+      "title": "OutputChecksumV1",
+      "type": "object"
+    },
+    "RunIndexEntryV1": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison_key_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Comparison Key Digest",
+          "type": "string"
+        },
+        "manifest_checksum": {
+          "$ref": "#/$defs/ChecksumV1"
+        },
+        "manifest_path": {
+          "format": "uniride-repository-relative-path",
+          "title": "Manifest Path",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "title": "Run Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "manifest_path",
+        "manifest_checksum",
+        "comparison_key_digest"
+      ],
+      "title": "RunIndexEntryV1",
+      "type": "object"
+    }
+  },
+  "$id": "uniride-run-index/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Campaign index: lists every run manifest of one campaign with its checksum, plus the campaign-wide fields.\n\nThe manifests of native (algorithm_native_termination) runs carry ``budget.levels`` = [0] as a sentinel: the run\ncontract requires one level entry and a native run has no budget level. No consumer may read that 0 as a budget level;\nthe budget policy ``native_uncapped`` says there is none.",
+  "properties": {
+    "base_seed": {
+      "title": "Base Seed",
+      "type": "integer"
+    },
+    "environment": {
+      "$ref": "#/$defs/EnvironmentV1"
+    },
+    "git": {
+      "$ref": "#/$defs/GitStateV1"
+    },
+    "mode": {
+      "enum": [
+        "smoke",
+        "paper"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "outputs": {
+      "items": {
+        "$ref": "#/$defs/OutputChecksumV1"
+      },
+      "title": "Outputs",
+      "type": "array"
+    },
+    "runs": {
+      "items": {
+        "$ref": "#/$defs/RunIndexEntryV1"
+      },
+      "title": "Runs",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "uniride-run-index/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seed_protocol_version": {
+      "minLength": 1,
+      "title": "Seed Protocol Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "study_id": {
+      "minLength": 1,
+      "title": "Study Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "study_id",
+    "mode",
+    "status",
+    "seed_protocol_version",
+    "base_seed",
+    "git",
+    "environment",
+    "runs",
+    "outputs"
+  ],
+  "title": "RunIndexV1",
+  "type": "object"
+}

@@ -9,6 +9,7 @@ from academic_benchmark.exact_reference.rows import ExactReferenceRowV1
 from .analysis_plan import AnalysisPlanV1
 from .dataset import DatasetManifestV1
 from .run import RunManifestV1
+from .run_index import RunIndexV1
 from .study import StudyManifestV1
 
 
@@ -19,6 +20,7 @@ MODELS = {
     "run-v1.schema.json": RunManifestV1,
     "exact-reference-row-v1.schema.json": ExactReferenceRowV1,
     "analysis-plan-v1.schema.json": AnalysisPlanV1,
+    "run-index-v1.schema.json": RunIndexV1,
 }
 
 

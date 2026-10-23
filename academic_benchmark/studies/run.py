@@ -18,8 +18,12 @@ not on resume (the retry in OQ-9 c was not chosen). One campaign is one clean co
 
 Atomic writes and resume (design ``:362``): while a paper campaign runs, each finished row is written atomically to
 ``checkpoint/rows/<plan index>.json`` (with its own digest) and the campaign fingerprint to ``checkpoint/campaign.json``.
-The result files, run manifests, campaign index and report are derived from the checkpoint at the end, index last, and the
-checkpoint folder is removed after that. An interrupted campaign therefore has no ``run_index.json`` and does not verify as
+The result files, run manifests and campaign index are derived from the checkpoint at the end, index last among the
+checksummed files. The report is written after the index because it quotes the index checksum; the index therefore cannot
+list it (``contracts/run_index.py``: the index never lists the report that quotes its checksum), so the report is not covered
+by a checksum. The checkpoint folder is removed only after the report, ``checkpoint/campaign.json`` first, so a crash between
+index and report leaves a folder that does not verify (``verify_manifests`` flags the checkpoint folder) and that ``--resume``
+re-derives from the progress files, while a removal that stops half way can never be resumed. An interrupted campaign therefore has no ``run_index.json`` and does not verify as
 complete (``verify_manifests`` also flags the checkpoint folder). ``--resume`` verifies every progress file, refuses a
 changed profile, analysis plan, dataset artifact, plan row, commit, dirty state, environment, backend policy or seed
 protocol, runs only the rows that are not done, and produces the same rows as an uninterrupted run (timing aside).
@@ -43,6 +47,7 @@ from academic_benchmark.analysis.environment import (
     statistics_library_identifier,
 )
 from academic_benchmark.analysis.manifests import INDEX_FILE, MANIFEST_DIR, SIDECAR_SUFFIX, collect_environment
+from academic_benchmark.committed_bytes import GitQueryFailed, run_git
 from academic_benchmark.contracts.run import EnvironmentV1
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import RuntimeBackendAvailability, probe_runtime_backends
@@ -278,6 +283,21 @@ def _read_progress(checkpoint: Path, rows: Sequence[PlanRow]) -> Dict[int, tuple
 
 
 # ------------------------------------------------------------------------------------------------------ git/outputs
+def _main_working_tree(root: Path) -> Optional[Path]:
+    """The main working tree of the repository ``root`` belongs to: the parent of ``git rev-parse --git-common-dir``.
+
+    A linked worktree of this project lives inside the main checkout (``.claude/worktrees/<name>``), so an output folder
+    in the main checkout is inside the repository even though it is outside the worktree. ``None`` when git cannot say."""
+    try:
+        common = run_git(["rev-parse", "--git-common-dir"], root).decode("utf-8", "replace").strip()
+    except GitQueryFailed:
+        return None
+    if not common:
+        return None
+    path = Path(common)
+    return ((root / path) if not path.is_absolute() else path).resolve().parent
+
+
 def _require_clean_git(root: Path, git_provider: Callable[[Path], Mapping[str, Any]]) -> Dict[str, Any]:
     git = dict(git_provider(root))
     revision, dirty = git.get("revision"), git.get("dirty")
@@ -393,6 +413,9 @@ def _finalize_paper(
         "environment": environment.model_dump(mode="json"), "analysis_plan": plan_label, "run_index": run_index,
         "rows_written": written, "statement": text,
     })
+    # the marker goes first: a removal that stops half way leaves no campaign.json, so the rest can never be resumed
+    # (a resume would re-run rows, and a recorded failure is never retried, OQ-9 a)
+    (output / CHECKPOINT_DIR / CHECKPOINT_CAMPAIGN_FILE).unlink()
     shutil.rmtree(output / CHECKPOINT_DIR)
     return RunReport(
         status=status, mode="paper", output_dir=str(output), study_id=plan.study.study_id, rows_planned=len(rows),
@@ -428,7 +451,8 @@ def _run_paper(
     # 2. git state and output location
     git = _require_clean_git(root, git_provider)
     output = Path(output_dir).expanduser().resolve()
-    if _is_within(output, root):
+    main_tree = _main_working_tree(root)
+    if _is_within(output, root) or (main_tree is not None and _is_within(output, main_tree)):
         raise StudyRunError(f"paper mode refuses an output directory inside the repository: {output}")
     checkpoint = output / CHECKPOINT_DIR
     if resume:
@@ -530,7 +554,7 @@ def run_study(
     problem_loader: Optional[Callable[[str], Any]] = None,
     resume: bool = False,
     overwrite: bool = False,
-    replicates: int = SMOKE_MAX_REPLICATES,
+    replicates: Optional[int] = None,
     budget_level: Optional[int] = None,
     backend_policy: BackendPolicy = DEFAULT_BACKEND_POLICY,
     registry_getter: Callable[[str], Any] = _registry_executor,
@@ -550,7 +574,7 @@ def run_study(
     root = (Path(repository_root) if repository_root is not None else Path(__file__).resolve().parents[2]).resolve()
     make_environment = environment_provider or collect_environment
     if mode == "paper":
-        if replicates != SMOKE_MAX_REPLICATES or budget_level is not None or overwrite:
+        if replicates is not None or budget_level is not None or overwrite:
             raise StudyRunError("paper mode runs the whole plan: replicates, budget level and overwrite are smoke options")
         return _run_paper(
             study_path, output_dir, root=root, problem_loader=problem_loader, resume=resume, git_provider=git_provider,
@@ -561,7 +585,8 @@ def run_study(
     if resume:
         raise StudyRunError("smoke runs are not resumable: run the slice again in an empty directory")
     return _run_smoke(
-        study_path, output_dir, root=root, problem_loader=problem_loader, replicates=replicates,
+        study_path, output_dir, root=root, problem_loader=problem_loader,
+        replicates=SMOKE_MAX_REPLICATES if replicates is None else replicates,
         budget_level=budget_level, overwrite=overwrite, backend_policy=backend_policy, registry_getter=registry_getter,
         runtime_probe=runtime_probe, registered_algorithms_provider=registered_algorithms_provider,
         gateway_executor=gateway_executor, git_provider=git_provider,
@@ -587,7 +612,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--out", required=True, help="output directory (outside the repository)")
     parser.add_argument("--resume", action="store_true", help="paper mode: continue an interrupted campaign")
     parser.add_argument("--overwrite", action="store_true", help="smoke mode: reuse a non-empty output directory")
-    parser.add_argument("--replicates", type=int, default=SMOKE_MAX_REPLICATES, help="smoke mode: replicates per cell (cap 3)")
+    parser.add_argument("--replicates", type=int, default=None, help="smoke mode: replicates per cell (default and cap 3)")
     parser.add_argument("--budget-level", type=int, default=None, help="smoke mode: fixed-budget level (default: lowest)")
     parser.add_argument("--backend-policy", choices=[p.value for p in BackendPolicy], default=DEFAULT_BACKEND_POLICY.value)
     parser.add_argument("--repository-root", default=None, help=argparse.SUPPRESS)

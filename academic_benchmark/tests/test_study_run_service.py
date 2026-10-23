@@ -470,3 +470,64 @@ def test_cli_refuses_a_real_draft_profile_with_exit_code_2_and_prints_the_reason
 
 def test_smoke_replicate_cap_is_unchanged():
     assert SMOKE_MAX_REPLICATES == 3
+
+
+# ------------------------------------------------------------------------------------------- review polish (D-03)
+def test_paper_mode_refuses_output_inside_the_main_checkout_when_run_from_a_linked_worktree(tmp_path):
+    main = _paper_repo(tmp_path)  # worktrees of this project live inside the main checkout
+    linked = main / ".claude" / "worktrees" / "linked"
+    _git(main, "worktree", "add", "-q", str(linked), "-b", "linked-branch")
+    for target in (main / "results", main / ".claude" / "elsewhere", linked / "results"):
+        with pytest.raises(StudyRunError, match="inside the repository"):
+            _paper(linked, target, git_provider=CLEAN)
+        assert not target.exists()
+
+
+def test_paper_mode_still_accepts_an_output_outside_every_checkout_from_a_linked_worktree(tmp_path):
+    main = _paper_repo(tmp_path)
+    linked = tmp_path / "linked-outside"
+    _git(main, "worktree", "add", "-q", str(linked), "-b", "linked-branch")
+    report = _paper(linked, tmp_path / "out", git_provider=CLEAN)
+    assert report.status == "passed", report.text
+
+
+def test_a_partial_checkpoint_removal_can_never_be_resumed(tmp_path, monkeypatch):
+    root = _paper_repo(tmp_path)
+    out = tmp_path / "out"
+    real_rmtree = shutil.rmtree
+
+    def dying_rmtree(path, *args, **kwargs):
+        if Path(path).name == "checkpoint":
+            raise OSError("simulated crash while removing the progress folder")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(run_module.shutil, "rmtree", dying_rmtree)
+    with pytest.raises(OSError, match="simulated crash"):
+        _paper(root, out, git_provider=CLEAN)
+    monkeypatch.undo()
+    assert not (out / "checkpoint" / "campaign.json").exists()  # the marker goes first
+    log: list = []
+    with pytest.raises(StudyRunError, match="complete|nothing to resume"):
+        _paper(root, out, resume=True, git_provider=CLEAN, gateway_executor=_gateway(log=log))
+    assert log == []  # no recorded row, failed or not, ran again
+
+
+def test_report_files_are_written_before_the_checkpoint_goes_and_the_index_does_not_list_them(paper_campaign):
+    _root, out, _report = paper_campaign
+    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    # the report quotes the index checksum, so the index cannot cover it (run_index.py: "never lists ... the report")
+    assert not any(item.path.startswith("run_report") for item in index.outputs)
+    assert json.loads((out / "run_report.json").read_text("utf-8"))["run_index"]["sha256"] == \
+        __import__("hashlib").sha256((out / "run_index.json").read_bytes()).hexdigest()
+
+
+def test_paper_mode_refuses_any_explicit_replicates_value(tmp_path, capsys):
+    root = _paper_repo(tmp_path)
+    for value in (1, SMOKE_MAX_REPLICATES):  # also the old default value 3
+        with pytest.raises(StudyRunError, match="replicates"):
+            _paper(root, tmp_path / "out", git_provider=CLEAN, replicates=value)
+    assert not (tmp_path / "out").exists()
+    code = main(["--study", "academic_benchmark/studies/bildiri2026/study.json", "--mode", "paper",
+                 "--out", str(tmp_path / "cli-out"), "--replicates", "3"])
+    assert code == 2 and "replicates" in capsys.readouterr().err
+    assert _paper(root, tmp_path / "ok", git_provider=CLEAN).status == "passed"  # not giving it is fine

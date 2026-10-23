@@ -55,6 +55,7 @@ def _asymmetric_problem() -> ProblemInstance:
 def _params(budget: int = 500) -> dict:
     return {
         "fair_comparison": {"evaluation_budget": budget, "base_seed": 77},
+        "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths (the old registry default)
         "max_iterations": 2,
         "pack_size": 6,
         "hawks": 6,

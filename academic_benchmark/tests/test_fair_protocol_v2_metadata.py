@@ -129,7 +129,10 @@ def _closed_cost(tour: list[int], matrix: list[list[float]]) -> float:
 def test_v1_config_remains_loadable(tmp_path: Path):
     config = _v2_config(protocol_version="uniride-fair-tsp-v1")
     config.pop("comparison_regime")
-    config["algorithms"] = {name: (dict(ALNS_PARAMS) if name == "ALNS-TSP" else {}) for name in V1_HISTORICAL_ALGORITHMS}
+    config["algorithms"] = {
+        name: (dict(ALNS_PARAMS) if name == "ALNS-TSP" else {"max_no_improvement": 75} if "GWO" in name or "HHO" in name else {})
+        for name in V1_HISTORICAL_ALGORITHMS
+    }
 
     loaded = load_fair_pilot_config(_write_config(tmp_path, config))
 

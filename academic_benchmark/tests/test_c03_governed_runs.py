@@ -56,7 +56,8 @@ class _Problem7:
 
 
 # Fair ALNS runs require the exact scientific parameter set (no hidden defaults,
-# fairness.py ALNS_REQUIRED_PARAMS); the other algorithms accept empty params.
+# fairness.py ALNS_REQUIRED_PARAMS); GWO/HHO write max_no_improvement explicitly on fixed-budget
+# paths (A17 2026-10-23; 75 is the value the registry default supplied before); 2-opt takes empty params.
 ALNS_PARAMS = {
     "max_iterations": 8,
     "max_no_improvement": 3,
@@ -69,7 +70,9 @@ ALNS_PARAMS = {
 
 
 def _params_for(algorithm_id: str) -> dict:
-    return dict(ALNS_PARAMS) if algorithm_id == "ALNS-TSP" else {}
+    if algorithm_id == "ALNS-TSP":
+        return dict(ALNS_PARAMS)
+    return {"max_no_improvement": 75} if "GWO" in algorithm_id or "HHO" in algorithm_id else {}
 
 
 def _manifest(base_seed: int) -> FairComparisonManifest:

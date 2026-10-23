@@ -56,6 +56,7 @@ def _cycle_cost(tour: list[int], matrix: list[list[float]]) -> float:
 def _params() -> dict:
     return {
         "fair_comparison": {"evaluation_budget": 5000, "base_seed": 77},
+        "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths (the old registry default)
         "max_iterations": 3,
         "pack_size": 6,
         "hawks": 6,

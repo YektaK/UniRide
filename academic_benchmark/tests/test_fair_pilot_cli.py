@@ -55,12 +55,17 @@ ALNS_PARAMS = {
 }
 
 
+def _swarm_or_empty(algorithm: str) -> dict[str, Any]:
+    # A17 2026-10-23: a fixed-budget GWO/HHO block writes max_no_improvement (75 = the old registry default)
+    return {"max_no_improvement": 75} if algorithm in {"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"} else {}
+
+
 def _config(tmp_path: Path, **overrides: Any) -> Path:
     config: dict[str, Any] = {
         "protocol_version": "uniride-fair-tsp-v1",
         "problems": ["tiny-tsp", "tiny-atsp"],
         "algorithms": {
-            algorithm: dict(ALNS_PARAMS) if algorithm == "ALNS-TSP" else {}
+            algorithm: dict(ALNS_PARAMS) if algorithm == "ALNS-TSP" else _swarm_or_empty(algorithm)
             for algorithm in APPROVED_ALGORITHMS
         },
         "runs": 2,
@@ -324,8 +329,8 @@ def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
 
 def _v2_algorithms_with_alns(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {
-        "Core-GWO-TSP-Pure": {},
-        "Core-HHO-TSP-Pure": {},
+        "Core-GWO-TSP-Pure": {"max_no_improvement": 75},
+        "Core-HHO-TSP-Pure": {"max_no_improvement": 75},
         "Core-TwoOpt-TSP": {"first_improvement": False},
         "Core-ThreeOpt-TSP": {"first_improvement": True, "window": 4},
         "ALNS-TSP": params,

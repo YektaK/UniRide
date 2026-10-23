@@ -177,6 +177,7 @@ def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
             "polish_iters": 1,
             "final_polish_iters": 1,
             "fair_comparison": {"evaluation_budget": 500, "base_seed": 1000},
+            "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths (the old registry default)
         },
         seed=42,
         run_idx=0,
@@ -236,6 +237,7 @@ def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
         resolution.canonical_id,
         {
             "max_iterations": 3,
+            "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths
             "pack_size": 4,
             "hawks": 4,
             "polish_iters": 1,

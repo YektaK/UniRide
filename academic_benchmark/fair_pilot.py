@@ -23,6 +23,7 @@ from academic_benchmark.composite_protocol import COMPOSITE_ALGORITHMS
 from academic_benchmark.fairness import (
     FairComparisonManifest,
     FairRunResult,
+    require_fixed_budget_max_no_improvement,
     validate_evaluation_budget,
     validate_scientific_alns_params,
     GA_MEMETIC_ID,
@@ -218,6 +219,11 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
         )
     if any(not isinstance(value, dict) for value in algorithms.values()):
         raise FairPilotError("each algorithm parameter block must be an object")
+    for swarm_id in sorted(_GWO_HHO):  # A17 2026-10-23: no registry default may stop a fixed-budget run
+        try:
+            require_fixed_budget_max_no_improvement(swarm_id, algorithms[swarm_id])
+        except ValueError as exc:
+            raise FairPilotError(str(exc)) from exc
     if "Core-GA-TSP" in algorithms:
         try:
             validate_scientific_ga_params(algorithms["Core-GA-TSP"])

@@ -144,7 +144,7 @@ def test_unmarked_executors_that_run_routing_are_exactly_the_known_ones() -> Non
     }
     assert runs_routing == {
         "Core-Greedy-Routing",  # the routing ID
-        "FCM-GA-TSP", "FCM-PSO-TSP", "FCM-GWO-TSP", "FCM-HHO-TSP",  # Split matrix engines
+        # FCM-*-TSP now refuse routing too (test_fcm_ids_refuse_routing.py).
         "Matrix-TwoOpt-TSP-legacy", "Matrix-GA-TSP-legacy", "Matrix-PSO-TSP-legacy",
         "Matrix-GWO-TSP-legacy", "Matrix-HHO-TSP-legacy",  # truthful legacy engine names
     }

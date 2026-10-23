@@ -34,16 +34,21 @@ from statsmodels.stats.nonparametric import rank_compare_2indep
 from academic_benchmark.analysis import environment as analysis_environment
 from academic_benchmark.analysis import statistics as stats_service
 from academic_benchmark.analysis.statistics import (
-    NumericalPolicy,
     StatisticsRefusal,
     analyse_family,
     describe_sample,
     epsilon_squared,
+    holm_adjust,
+    iman_davenport_f,
+    is_significant,
     kendalls_w,
     matched_pairs_rank_biserial,
+    smallest_possible_adjusted_p,
     vargha_delaney_a12,
 )
+from academic_benchmark.analysis.identity import comparison_cell_key
 from academic_benchmark.contracts import RunManifestV1
+from academic_benchmark.contracts.run_index import RunIndexV1
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.studies.service import load_study_with_plan
@@ -55,10 +60,6 @@ COMMIT = "a" * 40
 PER_INSTANCE = "per-instance-independent"
 ACROSS = "across-instances-tsp-matched"
 CROSS_INSTANCES = ["berlin52", "eil51", "st70", "kroA100", "rd100", "eil76"]
-POLICY = NumericalPolicy(
-    alternative="two-sided", mannwhitney_method="exact", mannwhitney_use_continuity=True,
-    wilcoxon_method="exact", wilcoxon_zero_method="wilcox", wilcoxon_correction=False,
-)
 SEPARATED = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [6, 7, 8, 9, 10], "Core-GWO-TSP-Pure": [11, 12, 13, 14, 15]}
 INTERLEAVED = {"Core-GA-TSP": [1, 4, 7, 10, 13], "Core-PSO-TSP": [2, 5, 8, 11, 14], "Core-GWO-TSP-Pure": [3, 6, 9, 12, 15]}
 
@@ -111,26 +112,52 @@ def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None,
     return row, manifest
 
 
-def failed_item(problem, algorithm, replicate):
+def failed_item(problem, algorithm, replicate, **overrides):
     row = {
-        "record_kind": "failed_run", "validation_status": "failed", "protocol_version": FAIR_V2,
+        "record_kind": "failed_run", "validation_status": "failed", "protocol_version": FAIR_V2, "study_id": "bildiri2026",
         "comparison_regime": "fixed_evaluation_budget", "problem": problem, "algorithm_id": algorithm,
         "replicate": replicate, "evaluation_budget": _levels(problem)[0],
     }
+    row.update(overrides)
     return row, None
+
+
+def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=(), digest_of=None):
+    """A ``RunIndexV1`` that lists the manifest of every completed item (the campaign index the caller has verified)."""
+    runs = []
+    for row, manifest in items:
+        if manifest is None or manifest.run_id in drop:
+            continue
+        digest = comparison_cell_key(row, manifest, allow_dirty=True).digest()
+        runs.append({"run_id": manifest.run_id, "manifest_path": f"manifests/{manifest.run_id}.json",
+                     "manifest_checksum": {"algorithm": "sha256", "value": "b" * 64},
+                     "comparison_key_digest": "0" * 64 if digest_of == "wrong" else digest})
+    environment = {"python": "3.13", "operating_system": "test", "cpu": "test", "numpy": "2.4.6", "numba": "0.66.0",
+                   "llvmlite": "0.48.0", "statistics_library": "none"}
+    return RunIndexV1.model_validate({
+        "schema_version": "uniride-run-index/v1", "study_id": study_id, "mode": mode, "status": "passed",
+        "seed_protocol_version": "sha256-seed-v1", "base_seed": 2026, "git": {"commit": COMMIT, "dirty": dirty},
+        "environment": environment, "runs": runs, "outputs": [],
+    })
 
 
 def per_instance_items(samples, problem="eil51"):
     return [make_item(problem, algorithm, r, gap) for algorithm, values in samples.items() for r, gap in enumerate(values)]
 
 
-def cross_items(shift=0.0, problems=CROSS_INSTANCES, algorithms=("Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure")):
-    """Every instance orders the algorithms the same way; the per-instance median of A, B, C is i, i + 1, i + 2."""
+ALGORITHMS = ("Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure")
+
+
+def cross_items(shift=0.0, problems=CROSS_INSTANCES, algorithms=ALGORITHMS, *, centres=None, skew=None):
+    """Every instance orders the algorithms the same way; the per-instance median of A, B, C is i, i + 1, i + 2 unless
+    ``centres[(problem, algorithm)]`` overrides it. ``skew[(problem, algorithm)]`` replaces the symmetric replicate offsets
+    (-0.1, 0, +0.1) of that cell, so that its mean differs from its median (the median stays the centre)."""
     items = []
     for i, problem in enumerate(problems):
         for a, algorithm in enumerate(algorithms):
-            centre = float(i + a) + shift
-            for r, offset in enumerate((-0.1, 0.0, 0.1)):
+            centre = (centres or {}).get((problem, algorithm), float(i + a)) + shift
+            offsets = (skew or {}).get((problem, algorithm), (-0.1, 0.0, 0.1))
+            for r, offset in enumerate(offsets):
                 items.append(make_item(problem, algorithm, r, centre + offset))
     return items
 
@@ -167,8 +194,8 @@ def active(draft):
     return activate(draft)
 
 
-def run(items, plan, family=PER_INSTANCE, *, mode="paper", policy=POLICY):
-    return analyse_family(items, plan=plan, family_id=family, campaign_mode=mode, policy=policy)
+def run(items, plan, family=PER_INSTANCE, *, mode="paper", **index_options):
+    return analyse_family(items, plan=plan, family_id=family, run_index=index_for(items, mode, **index_options))
 
 
 # ---------------------------------------------------------------- effect sizes against independent values
@@ -344,28 +371,94 @@ def test_alpha_is_read_from_the_plan_not_from_the_code(draft):
         assert literal not in source
 
 
-def test_the_policy_is_required_and_changes_the_p_value(active):
+# ---------------------------------------------------------------- the conventions are analysis-plan fields (owner decisions, A18)
+def _plan_dict(plan):
+    return plan.model_dump(mode="json")
+
+
+def test_both_real_plans_carry_the_owner_conventions(draft_plans):
+    for plan in draft_plans.values():
+        c = plan.conventions
+        assert (c.mann_whitney.method, c.mann_whitney.continuity_correction) == ("auto", True)
+        assert (c.wilcoxon.method, c.wilcoxon.continuity_correction, c.wilcoxon.zero_method) == ("auto", False, "pratt")
+        assert (c.friedman.primary_p_value, list(c.friedman.also_report)) == ("iman_davenport_f", ["chi_square"])
+        assert (c.alternative, c.significance, c.holm_scope, c.correction_across_instances) == (
+            "two_sided", "p_less_than_or_equal_alpha", "within_comparison_cell", "none")
+        assert "Wilcoxon" in plan.power_declaration.statement and plan.power_declaration.pairwise_evidence == "per_instance_mann_whitney"
+
+
+@pytest.mark.parametrize("field", ["conventions", "power_declaration"])
+def test_a_plan_without_the_convention_fields_is_refused(draft, field):
+    data = _plan_dict(draft)
+    del data[field]
+    with pytest.raises(Exception):
+        AnalysisPlanV1.model_validate(data)
+    for key, value in (("alternative", "greater"), ("significance", "p_less_than_alpha"), ("holm_scope", "across_everything")):
+        data = _plan_dict(draft)
+        data["conventions"][key] = value
+        with pytest.raises(Exception):
+            AnalysisPlanV1.model_validate(data)
+    data = _plan_dict(draft)
+    del data["conventions"]["wilcoxon"]["zero_method"]
+    with pytest.raises(Exception):
+        AnalysisPlanV1.model_validate(data)
+
+
+def test_mann_whitney_auto_reports_the_method_actually_used_per_pair(active):
+    """scipy ``method="auto"``: exact when both samples have at most 55 observations and there are no ties, else asymptotic
+    (with the plan's continuity correction). The reported label is checked against an explicit call of that method."""
+    untied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4.5, 6, 7, 8, 9]}
+    tied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4, 6, 7, 8, 9]}
+    for samples, label in ((untied, "exact"), (tied, "asymptotic")):
+        pair = run(per_instance_items(samples), active).inference.pairs[0]
+        direct = sps.mannwhitneyu(samples["Core-GA-TSP"], samples["Core-PSO-TSP"], method=label, use_continuity=True).pvalue
+        assert pair.method_used == label
+        assert pair.p_value == pytest.approx(direct, abs=1e-12)
+    big = {"Core-GA-TSP": list(range(60)), "Core-PSO-TSP": [v + 0.5 for v in range(30, 90)]}
+    assert run(per_instance_items(big), active).inference.pairs[0].method_used == "asymptotic"  # more than 55 per sample
+
+
+def test_the_plan_conventions_not_the_code_decide_the_method(draft):
     samples = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4.5, 6, 7, 8, 9]}
     items = per_instance_items(samples)
-    exact = run(items, active, policy=POLICY).inference.pairs[0]
-    asymptotic = run(items, active, policy=NumericalPolicy(
-        alternative="two-sided", mannwhitney_method="asymptotic", mannwhitney_use_continuity=True,
-        wilcoxon_method="exact", wilcoxon_zero_method="wilcox", wilcoxon_correction=False)).inference.pairs[0]
-    assert exact.p_value == pytest.approx(sps.mannwhitneyu(samples["Core-GA-TSP"], samples["Core-PSO-TSP"], method="exact").pvalue)
-    assert asymptotic.p_value == pytest.approx(
-        sps.mannwhitneyu(samples["Core-GA-TSP"], samples["Core-PSO-TSP"], method="asymptotic", use_continuity=True).pvalue)
-    assert exact.p_value != asymptotic.p_value
-    with pytest.raises(TypeError):
-        analyse_family(items, plan=active, family_id=PER_INSTANCE, campaign_mode="paper")  # no default policy
-    with pytest.raises(TypeError):
-        NumericalPolicy(alternative="two-sided")  # every field is required
+
+    def with_method(method, continuity):
+        def mutate(data):
+            data["conventions"]["mann_whitney"] = {"method": method, "continuity_correction": continuity}
+        return run(items, activate(draft, mutate=mutate)).inference.pairs[0]
+
+    exact, asymptotic, no_correction = with_method("exact", True), with_method("asymptotic", True), with_method("asymptotic", False)
+    assert exact.method_used == "exact" and asymptotic.method_used == no_correction.method_used == "asymptotic"
+    assert asymptotic.p_value == pytest.approx(sps.mannwhitneyu(*samples.values(), method="asymptotic", use_continuity=True).pvalue)
+    assert no_correction.p_value == pytest.approx(sps.mannwhitneyu(*samples.values(), method="asymptotic", use_continuity=False).pvalue)
+    assert len({exact.p_value, asymptotic.p_value, no_correction.p_value}) == 3
 
 
-def test_a_policy_value_the_service_does_not_implement_is_refused(active):
-    bad = NumericalPolicy(alternative="greater", mannwhitney_method="exact", mannwhitney_use_continuity=True,
-                          wilcoxon_method="exact", wilcoxon_zero_method="wilcox", wilcoxon_correction=False)
+def test_a_convention_value_the_service_does_not_implement_is_refused(draft):
+    plan = activate(draft)
+    forged_conventions = plan.conventions.model_copy(update={"mann_whitney": plan.conventions.mann_whitney.model_copy(update={"method": "permutation"})})
+    with pytest.raises(StatisticsRefusal, match="mann_whitney"):
+        run(per_instance_items(SEPARATED), plan.model_copy(update={"conventions": forged_conventions}))
+    forged_conventions = plan.conventions.model_copy(update={"alternative": "greater"})
     with pytest.raises(StatisticsRefusal, match="alternative"):
-        run(per_instance_items(SEPARATED), active, policy=bad)
+        run(per_instance_items(SEPARATED), plan.model_copy(update={"conventions": forged_conventions}))
+
+
+def test_significance_is_p_less_than_or_equal_to_alpha_everywhere():
+    assert is_significant(0.05, 0.05) is True and is_significant(0.0500001, 0.05) is False and is_significant(0.01, 0.05) is True
+    # Holm on [0.025, 0.05]: adjusted 0.05 and 0.05 (hand: 0.025 * 2, then max(0.05, 0.05 * 1)); both are significant at alpha = 0.05
+    assert holm_adjust([0.025, 0.05], 0.05) == [(pytest.approx(0.05), True), (pytest.approx(0.05), True)]
+    assert holm_adjust([0.05, 0.025], 0.05) == [(pytest.approx(0.05), True), (pytest.approx(0.05), True)]  # input order is kept
+    assert [d for _, d in holm_adjust([0.026, 0.05], 0.05)] == [False, False]
+    assert holm_adjust([], 0.05) == []
+
+
+def test_the_omnibus_gate_uses_the_same_comparison(draft):
+    """A plan alpha equal to the omnibus p opens the post-hoc tests (p <= alpha)."""
+    items = per_instance_items(INTERLEAVED)
+    p = run(items, activate(draft)).inference.omnibus.p_value
+    at = run(items, activate(draft, alpha=p))
+    assert at.inference.omnibus.significant is True and at.inference.post_hoc_ran is True
 
 
 def test_identical_values_make_the_omnibus_undefined_not_an_error(active):
@@ -378,26 +471,126 @@ def test_identical_values_make_the_omnibus_undefined_not_an_error(active):
 
 
 # ---------------------------------------------------------------- across instances (matched units)
+def test_iman_davenport_f_follows_demsar_2006():
+    """Demsar (2006), section 3.2.2: F_F = (b - 1) chi2_F / (b (k - 1) - chi2_F), F distributed with k - 1 and (k - 1)(b - 1) degrees
+    of freedom. His example has b = 14 data sets, k = 4 algorithms and chi2_F = 9.28, which gives F_F = 13 * 9.28 / (42 - 9.28) =
+    3.687 (printed as 3.69) with (3, 39) degrees of freedom, whose 5 % critical value is 2.85."""
+    f, df1, df2 = iman_davenport_f(9.28, 14, 4)
+    assert (df1, df2) == (3, 39)
+    assert f == pytest.approx(13 * 9.28 / (42 - 9.28), abs=1e-12) and round(f, 2) == 3.69
+    assert sps.f.ppf(0.95, 3, 39) == pytest.approx(2.85, abs=0.005)
+    assert f > sps.f.ppf(0.95, 3, 39)  # Demsar rejects the null hypothesis at 5 %
+    assert iman_davenport_f(42.0, 14, 4)[0] == math.inf  # chi2_F at its maximum b (k - 1) (perfect agreement): F is infinite
+
+
+def swapped_cross_items(**kw):
+    """Five instances order the algorithms A < B < C; on the sixth (eil76) A and B swap. Rank sums: A 5*1 + 2 = 7, B 5*2 + 1 = 11,
+    C 18."""
+    centres = {("eil76", "Core-GA-TSP"): 6.0, ("eil76", "Core-PSO-TSP"): 5.0}
+    return cross_items(centres=centres, **kw)
+
+
 def test_across_instance_family_reproduces_the_hand_computed_values(active):
-    """Six instances, three algorithms in the same order on every instance (per-instance medians i, i+1, i+2): rank sums 6, 12, 18,
-    chi2_F = 12/(6*3*4) * (36 + 144 + 324) - 3*6*4 = 12 (hand), p = exp(-6), W = 12 / (6 * 2) = 1. Each pair differs in the
-    same direction on all six units: exact two-sided Wilcoxon p = 2 / 2^6 = 1/32, Holm over three pairs: 3/32 = 0.09375,
-    rank-biserial +/-1."""
-    result = run(cross_items(), active, ACROSS)
+    """b = 6, k = 3, rank sums 7, 11, 18 (see ``swapped_cross_items``), mean 12: chi2_F = 12/(6*3*4) * (49 + 121 + 324) - 3*6*4 =
+    31/3 (hand); W = 12 S / (b^2 k (k^2 - 1)) = 12 * 62 / 864 = 0.861111 (S = 25 + 1 + 36); Iman-Davenport F = 5 * (31/3) /
+    (12 - 31/3) = 31 with (2, 10) degrees of freedom; for 2 numerator degrees of freedom the F survival function is closed form,
+    (1 + 2 F / d2)^(-d2 / 2) = 7.2^-5; the chi-square p (2 df) is exp(-chi2_F / 2)."""
+    result = run(swapped_cross_items(), active, ACROSS)
     omnibus = result.inference.omnibus
-    assert omnibus.test == "friedman" and omnibus.statistic == pytest.approx(12.0, abs=1e-12)
-    assert omnibus.p_value == pytest.approx(math.exp(-6.0), rel=1e-12)
-    assert omnibus.effect_size_name == "kendalls_w" and omnibus.effect_size == pytest.approx(1.0, abs=1e-12)
-    assert omnibus.significant is True and result.inference.post_hoc_ran is True
-    assert len(result.inference.pairs) == 3
+    assert omnibus.test == "friedman" and omnibus.status == "computed"
+    assert omnibus.statistic_name == "iman_davenport_f" and omnibus.statistic == pytest.approx(31.0, abs=1e-9)
+    assert omnibus.p_value == pytest.approx(7.2 ** -5, rel=1e-9) and omnibus.p_value_method == "iman_davenport_f"
+    assert omnibus.chi_square_statistic == pytest.approx(31 / 3, abs=1e-9)
+    assert omnibus.chi_square_p_value == pytest.approx(math.exp(-31 / 6), rel=1e-9)
+    assert omnibus.effect_size_name == "kendalls_w" and omnibus.effect_size == pytest.approx(0.861111111, abs=1e-8)
+    assert omnibus.significant is True and result.inference.post_hoc_ran is True and len(result.inference.pairs) == 3
+    units = {a: [result.inference.matched_units[(d, a)] for d in sorted({d for d, _ in result.inference.matched_units})] for a in ALGORITHMS}
+    by_pair = {(p.algorithm_a, p.algorithm_b): p for p in result.inference.pairs}
+    direct = {}
+    for (a, b), pair in by_pair.items():
+        direct[(a, b)] = sps.wilcoxon(units[a], units[b], zero_method="pratt", correction=False, method="auto").pvalue
+        assert pair.p_value == pytest.approx(direct[(a, b)], abs=1e-12)
+        assert pair.method_used == "permutation"  # |differences| tie (all equal 1 or 2 apart from one unit): scipy auto
+        assert pair.n_a == pair.n_b == 6 and pair.test == "wilcoxon_signed_rank"
+    holm = multipletests([direct[k] for k in sorted(direct)], alpha=0.05, method="holm")[1]
+    assert [by_pair[k].p_holm for k in sorted(by_pair)] == pytest.approx(list(holm), abs=1e-12)
+    # A against B: differences -1 on five units and +1 on one: |d| ranks all 3.5, T+ = 3.5, T- = 17.5, r = -14/21
+    assert by_pair[("Core-GA-TSP", "Core-PSO-TSP")].effect_size == pytest.approx(-14 / 21, abs=1e-12)
+
+
+def test_perfect_agreement_gives_an_infinite_f_and_zero_p_and_the_exact_wilcoxon_label(active):
+    """Perfect agreement (W = 1): chi2_F = b (k - 1) = 12 (p exp(-6)), the Iman-Davenport denominator is 0, F is infinite and its
+    p-value is exactly 0 (the limit). With pairwise differences that are all distinct and non-zero scipy's Wilcoxon is exact:
+    every pair differs in the same direction on all six units, p = 2 / 2^6 = 1/32, Holm over three pairs 3/32 = 0.09375."""
+    centres = {(p, a): float(i) + (0, 1 + 0.1 * i, 2 + 0.25 * i * i)[n] for i, p in enumerate(CROSS_INSTANCES) for n, a in enumerate(ALGORITHMS)}
+    result = run(cross_items(centres=centres), active, ACROSS)
+    omnibus = result.inference.omnibus
+    assert omnibus.statistic == math.inf and omnibus.p_value == 0.0 and omnibus.significant is True
+    assert omnibus.chi_square_statistic == pytest.approx(12.0, abs=1e-12) and omnibus.chi_square_p_value == pytest.approx(math.exp(-6.0), rel=1e-12)
+    assert omnibus.effect_size == pytest.approx(1.0, abs=1e-12)
     for pair in result.inference.pairs:
-        assert pair.test == "wilcoxon_signed_rank" and pair.n_a == pair.n_b == 6
-        assert pair.p_value == pytest.approx(1 / 32, abs=1e-12)
-        assert pair.p_holm == pytest.approx(3 / 32, abs=1e-12) and pair.significant is False  # low power, stated not hidden
-        assert pair.effect_size_name == "matched_pairs_rank_biserial" and abs(pair.effect_size) == pytest.approx(1.0)
-    medians = result.inference.matched_units
-    assert medians[("eil51", "Core-PSO-TSP")] == pytest.approx(2.0) and medians[("berlin52", "Core-GA-TSP")] == pytest.approx(0.0)
-    assert len(medians) == 18
+        assert pair.method_used == "exact"
+        assert pair.p_value == pytest.approx(1 / 32, abs=1e-12) and pair.p_holm == pytest.approx(3 / 32, abs=1e-12)
+        assert pair.significant is False and abs(pair.effect_size) == pytest.approx(1.0)  # low power, stated not hidden
+
+
+def test_an_all_zero_wilcoxon_pair_is_reported_with_p_one_and_stays_in_the_holm_family(active):
+    centres = {(p, a): float(i) + (0, 0, 2)[n] for i, p in enumerate(CROSS_INSTANCES) for n, a in enumerate(ALGORITHMS)}
+    result = run(cross_items(centres=centres), active, ACROSS)
+    by_pair = {(p.algorithm_a, p.algorithm_b): p for p in result.inference.pairs}
+    equal = by_pair[("Core-GA-TSP", "Core-PSO-TSP")]
+    assert equal.status == "all_differences_zero" and equal.p_value == 1.0 and equal.p_holm == 1.0
+    assert equal.effect_size is None and equal.significant is False
+    others = [p for k, p in by_pair.items() if k != ("Core-GA-TSP", "Core-PSO-TSP")]
+    assert all(p.status == "computed" for p in others)
+    # Holm over all three pairs (the all-zero pair keeps its place): sorted p = [1/32, 1/32, 1]: 3/32, max(3/32, 2/32), 1
+    assert [p.p_holm for p in others] == pytest.approx([3 / 32, 3 / 32], abs=1e-12)
+
+
+def test_the_matched_unit_is_the_median_not_the_mean_of_the_replicates(active):
+    """One skewed cell: Core-GA-TSP on eil51 has replicate gaps 1, 1, 10 (median 1, mean 4). The unit must be 1; with the mean 4 it
+    would exceed Core-PSO-TSP's 2 and change the Friedman and Wilcoxon inputs."""
+    skew = {("eil51", "Core-GA-TSP"): (0.0, 0.0, 9.0)}
+    plain = run(cross_items(), active, ACROSS).inference
+    skewed = run(cross_items(skew=skew), active, ACROSS).inference
+    assert skewed.matched_units[("eil51", "Core-GA-TSP")] == pytest.approx(1.0, abs=1e-12)  # centre 1, replicates 1, 1, 10
+    assert skewed.matched_units == pytest.approx(plain.matched_units)
+    assert skewed.omnibus.chi_square_statistic == pytest.approx(plain.omnibus.chi_square_statistic)
+    assert [v for p in skewed.pairs for v in (p.p_value, p.effect_size)] == pytest.approx([v for p in plain.pairs for v in (p.p_value, p.effect_size)])
+    cell = [c for c in run(cross_items(skew=skew), active, ACROSS).cells if (c.dataset_identity, c.algorithm_id) == ("eil51", "Core-GA-TSP")][0]
+    assert cell.summary["mean"] == pytest.approx(4.0) and cell.summary["median"] == pytest.approx(1.0)  # the descriptive columns differ
+
+
+def test_across_instances_refuses_a_declared_instance_with_no_rows(active):
+    """5 of 6 declared instances: Friedman and Wilcoxon would still compute (p = 0.006738); the plan declares six, so it is refused."""
+    with pytest.raises(StatisticsRefusal, match="eil76"):
+        run(cross_items(problems=CROSS_INSTANCES[:5]), active, ACROSS)
+    with pytest.raises(StatisticsRefusal, match="st70"):
+        run(cross_items(problems=CROSS_INSTANCES[:2]), active, ACROSS)
+    # a descriptive (smoke) view of a partial design is still offered, with the absent instance listed
+    smoke = run(cross_items(problems=CROSS_INSTANCES[:5]), active, ACROSS, mode="smoke")
+    assert smoke.inference is None and any(e["dataset_identity"] == "eil76" and e["algorithm_id"] is None for e in smoke.exclusions)
+
+
+def test_the_power_limit_is_declared_in_the_plan_and_stated_when_it_applies(active):
+    assert smallest_possible_adjusted_p(6, 3) == pytest.approx(3 / 32, abs=1e-15)
+    assert smallest_possible_adjusted_p(4, 3) == pytest.approx(3 / 8, abs=1e-15)
+    assert smallest_possible_adjusted_p(4, 1) == pytest.approx(0.125, abs=1e-15)
+    assert smallest_possible_adjusted_p(10, 3) == pytest.approx(3 / 512, abs=1e-15)
+    text = run(cross_items(), active, ACROSS).text
+    assert active.power_declaration.statement in text
+    assert "0.09375" in text and "cannot reach" in text
+    assert "cannot reach" not in run(per_instance_items(SEPARATED), active).text
+    assert_no_ranking_words(text)
+
+
+def test_the_effect_size_directions_are_stated_neutrally(active):
+    a12 = "A12 is P(gap of algorithm a > gap of algorithm b) + 0.5 P(equal)"
+    biserial = "the matched-pairs rank-biserial r is positive when algorithm a has larger gaps than algorithm b"
+    for family, items, present, absent in ((PER_INSTANCE, per_instance_items(SEPARATED), a12, biserial), (ACROSS, cross_items(), biserial, a12)):
+        text = run(items, active, family).text
+        assert "Effect-size direction" in text and present in text and absent not in text
+        assert_no_ranking_words(text)
 
 
 def test_across_instance_pair_directions_follow_the_units(active):
@@ -452,12 +645,35 @@ def test_both_real_plans_are_draft_and_inference_is_refused_with_descriptive_out
         assert "p-value" not in result.text and "descriptive" in result.text
 
 
-def test_smoke_campaign_gets_descriptive_output_and_no_inference(active):
-    result = run(per_instance_items(SEPARATED), active, mode="smoke")
-    assert result.inference is None and any("smoke" in reason for reason in result.inference_refused)
-    assert len(result.cells) == 3
-    with pytest.raises(StatisticsRefusal, match="campaign_mode"):
-        run(per_instance_items(SEPARATED), active, mode="whatever")
+
+
+def test_the_campaign_mode_comes_from_the_verified_run_index(active):
+    items = per_instance_items(SEPARATED)
+    smoke = run(items, active, mode="smoke")  # the index of a smoke campaign
+    assert smoke.campaign_mode == "smoke" and smoke.inference is None and any("smoke" in r for r in smoke.inference_refused)
+    assert len(smoke.cells) == 3
+    assert run(items, active, mode="paper").campaign_mode == "paper"
+    # a caller can no longer name the mode: a bare string is not an index, and the old keyword does not exist
+    with pytest.raises(StatisticsRefusal, match="RunIndexV1"):
+        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index="paper")
+    with pytest.raises(TypeError):
+        analyse_family(items, plan=active, family_id=PER_INSTANCE, campaign_mode="paper")
+
+
+def test_manifests_that_the_index_does_not_list_are_refused(active):
+    items = per_instance_items(SEPARATED)
+    unlisted = items[0][1].run_id
+    with pytest.raises(StatisticsRefusal, match="not listed in the run index"):
+        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, drop=(unlisted,)))
+    with pytest.raises(StatisticsRefusal, match="comparison key digest"):
+        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, digest_of="wrong"))
+    with pytest.raises(StatisticsRefusal, match="study"):
+        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, study_id="yaem2026"))
+    with pytest.raises(StatisticsRefusal, match="dirty"):
+        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, dirty=True))
+    other_commit = [(row, manifest.model_copy(update={"git": manifest.git.model_copy(update={"commit": "c" * 40})})) for row, manifest in items]
+    with pytest.raises(StatisticsRefusal, match="commit"):
+        analyse_family(other_commit, plan=active, family_id=PER_INSTANCE, run_index=index_for(items))
 
 
 def test_a_sample_below_the_plan_minimum_gives_insufficient_sample_and_no_p_value(draft):
@@ -549,6 +765,22 @@ def test_a_failed_run_excludes_its_cell_from_inference_and_is_reported(active):
     assert {c.algorithm_id for c in result.cells} == {"Core-GA-TSP", "Core-GWO-TSP-Pure"}
     assert {(p.algorithm_a, p.algorithm_b) for p in result.inference.pairs} == {("Core-GA-TSP", "Core-GWO-TSP-Pure")}
     assert "excluded" in result.text and "Core-PSO-TSP" in result.text
+
+
+def test_a_failed_row_must_belong_to_the_family(active):
+    good = per_instance_items(SEPARATED)
+    cases = {
+        "algorithm": failed_item("eil51", "Core-ALIEN-TSP", 0),
+        "study_id": failed_item("eil51", "Core-PSO-TSP", 0, study_id="yaem2026"),
+        "protocol_version": failed_item("eil51", "Core-PSO-TSP", 0, protocol_version="uniride-fair-tsp-v1"),
+    }
+    for field, item in cases.items():
+        with pytest.raises(StatisticsRefusal, match=field):
+            run(good + [item], active)
+    row, _ = failed_item("eil51", "Core-PSO-TSP", 0)
+    del row["study_id"]
+    with pytest.raises(StatisticsRefusal, match="study_id"):
+        run(good + [(row, None)], active)
 
 
 def test_rows_without_a_usable_gap_are_refused(active):

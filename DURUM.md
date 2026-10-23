@@ -8,7 +8,7 @@ Son güncelleme: 2026-10-23 (WIP `e24a5cd1` sonrası). Kararlar `docs/DECISION_L
 |---|---|---|
 | WP-E11 Gurobi lisans hatasında tekrar deneme (E14, en fazla 2) | `fix/wp-e11-gurobi-licence-retry` | Opus DUZELT tur 1 (probe yalnızca lisans türünü yeniden denesin; probe tekrarları `run_history.probe_retries` ile kayda geçsin). Geliştiricide; rapor bekleniyor. |
 | Sabit bütçede `max_no_improvement` zorunlu + YAEM tohumu 2027 | — | BİRLEŞTİ `e24a5cd1` (Opus ONAY). |
-| Gate D (Paket D) planı | `docs/gate-d-plan` | Opus denetimi 4 turda ONAY (`f3496883`). Sahibin 17 sorusu ve plan onayı bekleniyor. |
+| Gate D (Paket D) | — | Plan BİRLEŞTİ `944c2b4a`; 17 soru = öneriler (A18). İlk dalga: D-01, D-08a, D-09 + FCM reddi / max_iterations zorunlu. |
 
 ## Bu turda biten
 
@@ -19,9 +19,8 @@ Son güncelleme: 2026-10-23 (WIP `e24a5cd1` sonrası). Kararlar `docs/DECISION_L
 
 ## Sahibin kararını bekleyenler
 
-- Gate D planının 17 sorusu (plan dosyası §5) ve planın onayı.
-- `FCM-*-TSP` rota problemlerini reddetsin mi? `CVRP-/CVRPTW-Numba-Swap/-Hybrid` takma adları (eski 2-opt motoru) kalsın mı, yeniden adlandırılsın mı, kaldırılsın mı?
-- Sabit bütçede GWO/HHO `max_iterations` (kayıt varsayılanı 250) ve yerel arama `max_iterations` (1000) de açıkça yazılmak zorunda olsun mu? Smart "varsayılan" modu GWO/HHO için artık reddediliyor; istenen bu mu?
+- D-04b1 zaman ölçümünden sonra: OQ-1 (30 koşu), OQ-3 (YAEM), OQ-4 (native sınırlar), OQ-16 (Bildiri ayarları) kesinleşecek.
+
 
 ## Ertelenen küçük işler
 

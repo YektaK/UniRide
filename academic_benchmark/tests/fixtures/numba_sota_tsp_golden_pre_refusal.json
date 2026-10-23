@@ -1,0 +1,240 @@
+{
+ "captured_on": "8d3cbab0 (before the Numba/SOTA routing refusal)",
+ "matrix_sha256": "eb28c071e10c10054b17e31cb9e22663989e203ba7e70f58846d6c1a14b472b2",
+ "params": {
+  "Numba-Swap/Hybrid": {
+   "max_iterations": 5
+  },
+  "SOTA-*": {
+   "max_iterations": 3,
+   "population_size": 6
+  }
+ },
+ "results": {
+  "atsp:Numba-Hybrid": {
+   "algorithm": "Numba-Hybrid",
+   "cost": 295.0,
+   "problem_type": "atsp",
+   "tour": [
+    1,
+    4,
+    9,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5
+   ]
+  },
+  "atsp:Numba-Swap": {
+   "algorithm": "Numba-Swap",
+   "cost": 299.0,
+   "problem_type": "atsp",
+   "tour": [
+    4,
+    9,
+    1,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5
+   ]
+  },
+  "atsp:SOTA-CGO-TSP": {
+   "algorithm": "SOTA-CGO-TSP",
+   "cost": 295.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    4,
+    9,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5
+   ]
+  },
+  "atsp:SOTA-E2BSO-TSP": {
+   "algorithm": "SOTA-E2BSO-TSP",
+   "cost": 295.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    4,
+    9,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5
+   ]
+  },
+  "atsp:SOTA-P-AOEA-TSP": {
+   "algorithm": "SOTA-P-AOEA-TSP",
+   "cost": 295.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    4,
+    9,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5
+   ]
+  },
+  "atsp:SOTA-R2DMA-TSP": {
+   "algorithm": "SOTA-R2DMA-TSP",
+   "cost": 295.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    4,
+    9,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5
+   ]
+  },
+  "atsp:SOTA-RUN-TSP": {
+   "algorithm": "SOTA-RUN-TSP",
+   "cost": 295.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    4,
+    9,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5
+   ]
+  },
+  "tsp:Numba-Hybrid": {
+   "algorithm": "Numba-Hybrid",
+   "cost": 254.0,
+   "problem_type": "tsp",
+   "tour": [
+    4,
+    9,
+    1,
+    7,
+    3,
+    8,
+    6,
+    5,
+    2
+   ]
+  },
+  "tsp:Numba-Swap": {
+   "algorithm": "Numba-Swap",
+   "cost": 322.0,
+   "problem_type": "tsp",
+   "tour": [
+    4,
+    9,
+    1,
+    6,
+    8,
+    3,
+    7,
+    5,
+    2
+   ]
+  },
+  "tsp:SOTA-CGO-TSP": {
+   "algorithm": "SOTA-CGO-TSP",
+   "cost": 254.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    9,
+    4,
+    5,
+    2,
+    6,
+    8,
+    3,
+    7
+   ]
+  },
+  "tsp:SOTA-E2BSO-TSP": {
+   "algorithm": "SOTA-E2BSO-TSP",
+   "cost": 254.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    9,
+    4,
+    2,
+    5,
+    6,
+    8,
+    3,
+    7
+   ]
+  },
+  "tsp:SOTA-P-AOEA-TSP": {
+   "algorithm": "SOTA-P-AOEA-TSP",
+   "cost": 254.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    9,
+    4,
+    5,
+    2,
+    6,
+    8,
+    3,
+    7
+   ]
+  },
+  "tsp:SOTA-R2DMA-TSP": {
+   "algorithm": "SOTA-R2DMA-TSP",
+   "cost": 254.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    9,
+    4,
+    2,
+    5,
+    6,
+    8,
+    3,
+    7
+   ]
+  },
+  "tsp:SOTA-RUN-TSP": {
+   "algorithm": "SOTA-RUN-TSP",
+   "cost": 254.0,
+   "problem_type": "tsp",
+   "tour": [
+    1,
+    7,
+    3,
+    8,
+    6,
+    2,
+    5,
+    4,
+    9
+   ]
+  }
+ },
+ "seed": 42
+}

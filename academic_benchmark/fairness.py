@@ -179,6 +179,45 @@ def validate_scientific_pso_params(params: Mapping[str, Any]) -> dict[str, Any]:
     return dict(params)
 
 
+# Algorithm IDs whose flat parameter block carries ``max_no_improvement``. 2-opt, 3-opt and Or-opt
+# have no such parameter. A composite ID keeps it in its ``global`` namespace (and in the ``polish``
+# namespace when the polish is ALNS); see :func:`require_fixed_budget_max_no_improvement`.
+FLAT_MAX_NO_IMPROVEMENT_IDS = frozenset({
+    "Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt",
+    "Core-GA-TSP", GA_MEMETIC_ID, "Core-PSO-TSP", "ALNS-TSP",
+})
+
+
+def _require_explicit_stagnation_key(label: str, block: Any) -> None:
+    value = block.get("max_no_improvement", _MISSING) if isinstance(block, Mapping) else _MISSING
+    if value is _MISSING:
+        raise ValueError(
+            f"{label}: a fixed-budget run needs max_no_improvement written explicitly; a missing key "
+            "would fall back to a solver default that can end the run before the evaluation budget is used"
+        )
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{label}: max_no_improvement must be an integer >= 1, got {value!r}")
+
+
+_MISSING = object()
+
+
+def require_fixed_budget_max_no_improvement(algorithm_id: str, params: Mapping[str, Any]) -> None:
+    """Refuse a fixed-budget parameter block that does not write ``max_no_improvement`` (A17, 2026-10-23).
+
+    Called by every fixed-budget path before any evaluation (the Numba GWO/HHO executors, the fair-pilot
+    loader, the study smoke runner). Algorithms without the parameter (2-opt, 3-opt, Or-opt) pass
+    untouched. Native runs do not call this function."""
+    if algorithm_id in FLAT_MAX_NO_IMPROVEMENT_IDS:
+        _require_explicit_stagnation_key(algorithm_id, params)
+    elif algorithm_id in COMPOSITE_ALGORITHMS:
+        global_params = params.get("global") if isinstance(params, Mapping) else None
+        _require_explicit_stagnation_key(f"{algorithm_id} global stage", global_params)
+        if POLISH_OPERATORS[COMPOSITE_KIND_OF[algorithm_id]] == "ALNS":
+            _require_explicit_stagnation_key(f"{algorithm_id} polish stage", params.get("polish"))
+
+
 HYBRID_3OPT_POLISH_REQUIRED = frozenset({"max_iterations", "first_improvement", "window"})
 
 

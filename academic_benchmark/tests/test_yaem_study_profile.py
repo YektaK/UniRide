@@ -256,3 +256,15 @@ def test_smoke_run_of_the_profile_on_berlin52_at_the_lowest_budget_passes(plan, 
             assert row["composition"]["global_fraction"] == 0.80
     assert not (out / "failed_runs.jsonl").exists()
     assert _git_status() == before  # the smoke output left nothing in the repository
+
+
+# ------------------------------------------------------------------------------------- seed identity
+BILDIRI_STUDY = "academic_benchmark/studies/bildiri2026/study.json"
+
+
+def test_yaem_and_bildiri_profiles_do_not_share_a_base_seed(payload):
+    """Owner decision 2026-10-23 (A17): independent replicates on the shared instances need distinct seeds."""
+    bildiri = json.loads((REPOSITORY_ROOT / BILDIRI_STUDY).read_text(encoding="utf-8"))
+    assert payload["base_seed"] != bildiri["base_seed"]
+    assert payload["base_seed"] == 2027  # draft placeholder chosen by the lead, owner-approved
+    assert payload["status"] == "draft"

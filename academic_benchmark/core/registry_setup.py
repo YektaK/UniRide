@@ -788,6 +788,12 @@ def _make_numba_metah_executor(
             if _is_routing_problem(problem):
                 raise ValueError("academic TSP comparison mode does not accept routing problems")
             seed = protocol_manifest.paired_seed(problem.name, run_idx)
+        if manifest is not None:
+            # A17 (2026-10-23): a fixed-budget run writes max_no_improvement explicitly; the
+            # registry default below must never end a fixed-budget run early. Native runs keep it.
+            from academic_benchmark.fairness import require_fixed_budget_max_no_improvement
+
+            require_fixed_budget_max_no_improvement(algorithm_name, params)
 
         # Routing problems never get here: every catalog executor is registered behind
         # _register_catalog_executor, which refuses them (the CVRP-*/CVRPTW-* aliases keep

@@ -23,6 +23,7 @@ from academic_benchmark.composite_protocol import COMPOSITE_ALGORITHMS
 from academic_benchmark.fairness import (
     FairComparisonManifest,
     FairRunResult,
+    require_fixed_budget_max_no_improvement,
     validate_evaluation_budget,
     validate_scientific_alns_params,
     GA_MEMETIC_ID,
@@ -240,6 +241,11 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
             validate_scientific_composite_params(composite_id, algorithms[composite_id], fixed_budget=True)
         except ValueError as exc:
             raise FairPilotError(f"{composite_id}: {exc}") from exc
+    for swarm_id in sorted(_GWO_HHO):  # A17 2026-10-23: no registry default may stop a fixed-budget run
+        try:
+            require_fixed_budget_max_no_improvement(swarm_id, algorithms[swarm_id])
+        except ValueError as exc:
+            raise FairPilotError(str(exc)) from exc
     if protocol_version == V2_PROTOCOL:
         _validate_v2_algorithm_policy(algorithms)
     runs = _strict_int(data["runs"], "runs", 1)

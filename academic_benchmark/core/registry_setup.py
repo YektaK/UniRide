@@ -1664,6 +1664,11 @@ def _route_costs(routes, matrix, depot_index):
     return costs
 
 
+# Routing alias base name -> the matrix engine that actually runs under CVRP-<base> and
+# CVRPTW-<base>. The alias name is NOT the algorithm: e.g. CVRP-Numba-Swap and
+# CVRP-Numba-Hybrid (and the CVRPTW- forms) run the legacy 2-opt matrix engine
+# (Matrix-TwoOpt-TSP-legacy), not a swap or hybrid search. Names are kept because stored
+# results use them (owner decision 2026-10-23); see HOW_TO_USE.md.
 _ROUTING_ALIAS_ENGINES = {
     "Core-Greedy-Routing": "Core-Greedy-Routing",
     "Core-TwoOpt-TSP": "Matrix-TwoOpt-TSP-legacy",

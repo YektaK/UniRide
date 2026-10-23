@@ -507,6 +507,135 @@ def test_run_v1_schema_is_not_changed_by_d02():
     assert "seed_protocol_version" not in schema["properties"]
 
 
+# ------------------------------------------------------------------ DUZELT r1: levels, completeness, folder allow-list
+def _merge_two_levels(tmp_path: Path) -> Path:
+    """One campaign with both budget levels of the dataset for one replicate (paired seeds repeat across levels)."""
+    from academic_benchmark.analysis.manifests import write_run_campaign
+
+    plan, _r, low = _run(tmp_path, "low")
+    root = comp._repository(tmp_path / "repo-high")
+    high = tmp_path / "out-high"
+    run_study_smoke(
+        comp._plan(root), high, problem_loader=comp._loader(), repository_root=root, replicates=1,
+        budget_level=comp.LEVELS[1], git_provider=CLEAN,
+    )
+    rows = _read_rows(low / "fixed_runs.jsonl") + _read_rows(high / "fixed_runs.jsonl")
+    assert {r["evaluation_budget"] for r in rows} == set(comp.LEVELS)
+    assert len({(r["algorithm_id"], r["seed"]) for r in rows}) == len(comp.COMPOSITES)  # same seed at both levels
+    merged = tmp_path / "merged"
+    merged.mkdir()
+    (merged / "fixed_runs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    template = {m.algorithm.algorithm_id: m for m in _manifests(low).values() if m.protocol_version != "uniride-native-tsp-v1"}
+    checksum = OutputChecksumV1(
+        path="fixed_runs.jsonl", checksum={"algorithm": "sha256", "value": manifests.file_sha256(merged / "fixed_runs.jsonl")}
+    )
+    pairs = []
+    for row in rows:
+        base = template[row["algorithm_id"]]
+        pairs.append((row, build_run_manifest(
+            row, study_id=base.study_id, dataset=base.dataset, base_seed=base.seeds.base_seed, levels=list(comp.LEVELS),
+            configuration=dict(base.algorithm.configuration), git=base.git, environment=base.environment, outputs=[checksum],
+        )))
+    base = next(iter(template.values()))
+    write_run_campaign(
+        merged, mode="smoke", study_id=base.study_id, seed_protocol_version="sha256-seed-v1", base_seed=base.seeds.base_seed,
+        git=base.git, environment=base.environment, status="passed", runs=pairs, output_files=["fixed_runs.jsonl"],
+    )
+    return merged
+
+
+def test_a_campaign_with_two_budget_levels_verifies(tmp_path):
+    merged = _merge_two_levels(tmp_path)
+    assert len(_manifests(merged)) == 2 * len(comp.COMPOSITES)
+    assert verify_campaign(merged) == []
+
+
+def _reseal_index(directory: Path, *, drop_runs=(), **updates) -> None:
+    index = RunIndexV1.model_validate_json((directory / "run_index.json").read_bytes())
+    runs = [e for e in index.runs if e.run_id not in set(drop_runs)]
+    for run_id in drop_runs:
+        (directory / "manifests" / f"{run_id}.json").unlink()
+        (directory / "manifests" / f"{run_id}.json.sha256").unlink()
+    write_json_with_sidecar(directory / "run_index.json", index.model_copy(update={"runs": runs, **updates}))
+
+
+def test_a_row_without_a_manifest_fails_even_when_the_index_is_resealed(campaign, tmp_path):
+    _plan, _report, out = campaign
+    copied = _copy(out, tmp_path)
+    index = RunIndexV1.model_validate_json((copied / "run_index.json").read_bytes())
+    _reseal_index(copied, drop_runs=[index.runs[0].run_id])
+    errors = verify_campaign(copied)
+    assert errors and any("no run manifest" in e for e in errors)
+
+
+def test_an_index_with_no_runs_does_not_verify_while_result_files_hold_rows(campaign, tmp_path):
+    _plan, _report, out = campaign
+    copied = _copy(out, tmp_path)
+    index = RunIndexV1.model_validate_json((copied / "run_index.json").read_bytes())
+    _reseal_index(copied, drop_runs=[e.run_id for e in index.runs])
+    errors = verify_campaign(copied)
+    assert errors and any("no run manifest" in e for e in errors)
+
+
+def test_two_manifests_for_one_row_fail(campaign, tmp_path):
+    """Another manifest bound to the same row (a different run id cannot be minted, so the row is duplicated instead)."""
+    _plan, _report, out = campaign
+    copied = _copy(out, tmp_path)
+    rows = _read_rows(copied / "fixed_runs.jsonl")
+    (copied / "fixed_runs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows + [rows[0]]), encoding="utf-8")
+    _recompute_all_checksums(copied)
+    errors = verify_campaign(copied)
+    assert errors and any("row" in e for e in errors)
+
+
+@pytest.mark.parametrize("name", ["extra_runs.jsonl", "notes.txt"])
+def test_unexpected_top_level_files_are_reported(campaign, tmp_path, name):
+    _plan, _report, out = campaign
+    copied = _copy(out, tmp_path)
+    (copied / name).write_text("{}\n", encoding="utf-8")
+    errors = verify_campaign(copied)
+    assert errors and any(name in e and "unexpected" in e for e in errors)
+
+
+def test_the_report_files_and_the_manifest_folder_are_expected(campaign):
+    _plan, _report, out = campaign
+    assert {p.name for p in out.iterdir()} >= {"smoke_report.txt", "smoke_report.json", "manifests"}
+    assert verify_campaign(out) == []
+
+
+def test_the_writer_and_the_verifier_require_the_implemented_seed_protocol(campaign, tmp_path):
+    from academic_benchmark.analysis.manifests import write_run_campaign
+
+    _plan, _report, out = campaign
+    manifest = next(iter(_manifests(out).values()))
+    target = tmp_path / "bad-seed-protocol"
+    target.mkdir()
+    with pytest.raises(ManifestError, match="seed_protocol_version"):
+        write_run_campaign(
+            target, mode="smoke", study_id=manifest.study_id, seed_protocol_version="other-seed-v9",
+            base_seed=manifest.seeds.base_seed, git=manifest.git, environment=manifest.environment, status="passed",
+            runs=[], output_files=[],
+        )
+    copied = _copy(out, tmp_path)
+    _reseal_index(copied, seed_protocol_version="other-seed-v9")
+    assert any("seed_protocol_version" in e for e in verify_campaign(copied))
+
+
+def test_native_manifests_carry_the_sentinel_level_and_the_contract_says_so(campaign, tmp_path):
+    schema = json.loads(render_schemas()["run-index-v1.schema.json"])
+    assert "sentinel" in schema["description"] and "[0]" in schema["description"]
+    _plan, _report, out = campaign
+    copied = _copy(out, tmp_path)
+    target = next(
+        p for p in (copied / "manifests").glob("*.json") if json.loads(p.read_bytes())["budget"]["policy"] == "native_uncapped"
+    )
+    raw = json.loads(target.read_bytes())
+    raw["budget"]["levels"] = [900]
+    write_json_with_sidecar(target, RunManifestV1.model_validate(raw))
+    _recompute_all_checksums(copied)
+    assert any("sentinel" in e or "[0]" in e for e in verify_campaign(copied))
+
+
 # ------------------------------------------------------------------ the real Bildiri profile (D-01 requirements for D-02)
 def test_real_bildiri_ft53_manifests_carry_the_datasets_own_levels_and_tsplib_dataset_id(tmp_path):
     import dataclasses
@@ -521,9 +650,13 @@ def test_real_bildiri_ft53_manifests_carry_the_datasets_own_levels_and_tsplib_da
     assert len(rows) == 2  # one fixed row (lowest level) and one native row
     plan = dataclasses.replace(full, datasets=datasets, rows=rows)
     out = tmp_path / "out"
+    from academic_benchmark.committed_bytes import run_git
+
+    before = run_git(["status", "--porcelain"], ft.REPOSITORY_ROOT)
     report = run_study_smoke(
         plan, out, problem_loader=ft._loader(), repository_root=ft.REPOSITORY_ROOT, replicates=1, git_provider=CLEAN
     )
+    assert run_git(["status", "--porcelain"], ft.REPOSITORY_ROOT) == before  # the manifests land outside the repository
     assert report.status == "passed", report.text
     found = _manifests(out)
     assert len(found) == 2 and verify_campaign(out) == []

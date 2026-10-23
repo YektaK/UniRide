@@ -44,7 +44,7 @@ from .ampl_backend import (
     SolverSettings,
     StageResult,
     _scrub,
-    backend_absent,
+    backend_absent_kind,
     classify_outcome,
     has_incumbent,
     reconcile_objective,
@@ -273,15 +273,13 @@ def _is_session_error(exc: BaseException) -> bool:
     return isinstance(exc, (OSError, EOFError)) or any(c.__name__ == "AMPLException" for c in type(exc).__mro__)
 
 
-def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Optional[GurobiSettings] = None) -> StageSolve:
-    """One stage as one Gurobi call through the open AMPL session.
+LICENCE_RETRIES = 2  # E14: re-runs of a stage whose solve failed with a licence-type message
+DEFAULT_LICENCE_RETRY_PAUSE_SECONDS = 5.0
+LICENCE_RETRY_PAUSE_SECONDS = DEFAULT_LICENCE_RETRY_PAUSE_SECONDS  # tests patch this one; the pause is read at call time
 
-    Raises ``GurobiBackendUnavailable`` (which ``run_day_stages`` reports as ``backend_unavailable``, never raising it
-    to the caller) when the AMPL session fails during the solve (amplpy ``AMPLException``, a broken pipe) or when the
-    solver result is a failure (500 or more) whose message or log names a missing solver or licence. Any other failure
-    is a defect and propagates; a failure without that evidence is ``rejected``.
-    """
-    settings = settings or GurobiSettings()
+
+def _attempt(session: AmplSession, model: JointModel, settings: GurobiSettings):
+    """One complete, self-contained solve: ``(ampl, solve_result_num, message, log, seconds)`` (the log is never stored)."""
     ampl = session.ampl
     load_day_model(ampl, model)
     ampl.option["solver"] = SOLVER
@@ -303,8 +301,45 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     message = str(ampl.get_value("solve_message"))
     log = "\n".join(session._log)  # read for work units only, never stored
     session._log.clear()
-    if num >= 500 and backend_absent(SOLVER, f"{message}\n{log}"):
-        raise GurobiBackendUnavailable(f"{SOLVER}: solver or license missing")
+    return ampl, num, message, log, seconds
+
+
+def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Optional[GurobiSettings] = None, *,
+                       licence_retries: Optional[int] = None, retry_pause: Optional[float] = None,
+                       sleep: Optional[Callable[[float], None]] = None) -> StageSolve:
+    """One stage as one Gurobi call through the open AMPL session.
+
+    Raises ``GurobiBackendUnavailable`` (which ``run_day_stages`` reports as ``backend_unavailable``, never raising it
+    to the caller) when the AMPL session fails during the solve (amplpy ``AMPLException``, a broken pipe) or when the
+    solver result is a failure (500 or more) whose message or log names a missing solver or licence. Any other failure
+    is a defect and propagates; a failure without that evidence is ``rejected``.
+
+    E14 (owner, 2026-10-22): a licence-type failure (that second case) is first re-run, up to ``licence_retries`` more
+    times (default ``LICENCE_RETRIES`` = 2), after ``retry_pause`` seconds (default ``LICENCE_RETRY_PAUSE_SECONDS``;
+    ``sleep`` is injectable for tests). Every attempt is a full ``_attempt``: ``load_day_model`` resets the AMPL session and
+    rebuilds the SAME ``model``, then the same options (seed, work limit, time limit), the bound sentinel and a cleared log
+    are set again, so a retry cannot depend on what the failed solve left behind (a failed solve returned no values, and
+    only the final attempt is read). The number of re-runs is ``StageResult.solve_retries (CSV column licence_retries)``. When the last attempt
+    also fails, ``GurobiBackendUnavailable`` carries scrubbed facts only (result number, ``licence`` or ``binary``, the
+    retry count), never the message or the log. ``wall_seconds`` and ``work_units`` of the result describe the last (successful)
+    attempt only, and every attempt gets the full time and work limit, so a retried stage can have used more than one limit
+    in total; ``solve_retries`` says whether that happened. Only the licence kind is retried: a missing program (kind "binary") and any other failure are never retried.
+    """
+    settings = settings or GurobiSettings()
+    max_retries = LICENCE_RETRIES if licence_retries is None else licence_retries
+    pause = LICENCE_RETRY_PAUSE_SECONDS if retry_pause is None else retry_pause
+    pause_for = time.sleep if sleep is None else sleep
+    retries = 0
+    while True:
+        ampl, num, message, log, seconds = _attempt(session, model, settings)
+        kind = backend_absent_kind(SOLVER, f"{message}\n{log}") if num >= 500 else None
+        if kind is None:
+            break
+        if kind != "licence" or retries >= max_retries:  # a missing program is permanent: raised at once (lead decision)
+            raise GurobiBackendUnavailable(f"{SOLVER}: solver or license missing (solve_result_num {num}, {kind}, "
+                                           f"{retries} licence retries)")
+        retries += 1
+        pause_for(pause)
     objective = ampl.get_objective(OBJECTIVE).value()
     bound_value = float(ampl.get_value(f"{OBJECTIVE}.bestbound"))
     bound = None if bound_value <= _BOUND_SENTINEL / 10 else bound_value
@@ -326,7 +361,7 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     first = _scrub(message.splitlines()[0]) if message else ""
     out = dataclasses.replace(out, solve_result=str(ampl.solve_result), solve_result_num=num, solver_message=f"{out.solver_message}; {first}" if out.solver_message else first,
                               wall_seconds=round(seconds, 4), work_units=work, time_limit=settings.time_limit,
-                              work_limit=settings.work_limit)
+                              work_limit=settings.work_limit, solve_retries=retries)
     return stage_solve_from_values(model, out, raw)
 
 

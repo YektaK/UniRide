@@ -282,7 +282,7 @@ def _run_fair_local_search(problem, params, run_idx, algorithm_name, strategy_pa
     route = list(range(problem.dimension))
     random.Random(seed).shuffle(route)
     budget = ObjectiveEvaluationBudget(manifest.evaluation_budget)
-    max_iterations = int(params["max_iterations"])
+    max_iterations = int(params.get("max_iterations", 1000))
     first_improvement = bool(params.get("first_improvement", False))
     acceptance_policy = "first_improvement" if first_improvement else "best_improvement"
     neighborhood_window = None

@@ -290,6 +290,10 @@ def resolve_analysis_plan(
     study id, and its families may only name datasets of the study with matching problem types.
     Paper mode raises ``StudyServiceError`` unless the plan resolves and is ``active``; smoke mode
     returns the reason in the label (descriptive output only, no inference).
+
+    D-03 note: the paper-mode preflight of the study run service must go through
+    ``load_study(mode="paper")`` or this function; a paper run that skips it would run without a
+    resolved, active analysis plan.
     """
     _check_mode(mode)
     study_file = _resolve_inside(Path(repository_root), study_path, "study path")

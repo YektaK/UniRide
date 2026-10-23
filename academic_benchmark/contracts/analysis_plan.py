@@ -59,7 +59,8 @@ class PostHocV1(StrictContract):
     test: Literal["mann_whitney_u", "wilcoxon_signed_rank"]
     rule: Literal["only_after_significant_omnibus", "always_over_declared_family"]
     correction: Literal["holm"]
-    effect_size: Literal["vargha_delaney_a12"]
+    # A12 (Vargha-Delaney) for independent samples; matched-pairs rank-biserial for paired tests
+    effect_size: Literal["vargha_delaney_a12", "matched_pairs_rank_biserial"]
 
 
 class ComparisonFamilyV1(StrictContract):
@@ -80,8 +81,10 @@ class ComparisonFamilyV1(StrictContract):
             raise ValueError("dataset_ids must be unique")
         if self.scope == "per_instance":
             expected = (INDEPENDENT_OMNIBUS, INDEPENDENT_POST_HOC)
+            post_hoc_effect = "vargha_delaney_a12"
         else:
             expected = (MATCHED_OMNIBUS, MATCHED_POST_HOC)
+            post_hoc_effect = "matched_pairs_rank_biserial"
             if self.problem_types != ["TSP"]:
                 # OQ-8 a): the cross-instance test pools TSP instances only; ATSP is per instance
                 raise ValueError("an across_instances family must have problem_types ['TSP'] only")
@@ -90,12 +93,21 @@ class ComparisonFamilyV1(StrictContract):
                 f"a {self.scope} family uses the omnibus {expected[0]} and the post-hoc "
                 f"{expected[1]} (independent samples per instance, matched units across instances)"
             )
+        if self.post_hoc.effect_size != post_hoc_effect:
+            # A12 is an independent-samples measure and does not describe paired differences
+            raise ValueError(
+                f"the post-hoc {self.post_hoc.test} of a {self.scope} family reports the effect "
+                f"size {post_hoc_effect}, not {self.post_hoc.effect_size}"
+            )
         return self
 
 
 class DescriptiveV1(StrictContract):
     columns: list[Literal["n", "median", "iqr", "min", "max", "mean", "sd"]] = Field(min_length=1)
     sd_convention: Literal["sample_n_minus_1", "population_n"]
+    # IQR = Q3 - Q1 with Q1/Q3 by this method (A18: linear interpolation, Hyndman-Fan type 7, the
+    # NumPy/R default); stated here so the report code carries no default of its own
+    quantile_method: Literal["hyndman_fan_type_7"]
     variables: list[
         Literal["cost", "gap", "evaluations_consumed", "evaluation_budget_share"]
     ] = Field(min_length=1)

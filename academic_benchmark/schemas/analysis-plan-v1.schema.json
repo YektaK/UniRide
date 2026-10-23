@@ -93,6 +93,11 @@
           "title": "Counts",
           "type": "array"
         },
+        "quantile_method": {
+          "const": "hyndman_fan_type_7",
+          "title": "Quantile Method",
+          "type": "string"
+        },
         "sd_convention": {
           "enum": [
             "sample_n_minus_1",
@@ -119,6 +124,7 @@
       "required": [
         "columns",
         "sd_convention",
+        "quantile_method",
         "variables",
         "counts"
       ],
@@ -248,7 +254,10 @@
           "type": "string"
         },
         "effect_size": {
-          "const": "vargha_delaney_a12",
+          "enum": [
+            "vargha_delaney_a12",
+            "matched_pairs_rank_biserial"
+          ],
           "title": "Effect Size",
           "type": "string"
         },

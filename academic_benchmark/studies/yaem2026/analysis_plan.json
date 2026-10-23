@@ -8,7 +8,8 @@
     "DECISION_LOG A18 OQ-6 a: response = relative gap to the exact reference (%), per-instance median as the Friedman unit",
     "DECISION_LOG A18 OQ-8 a: TSP-only family for the cross-instance test",
     "DECISION_LOG A18 OQ-9 a: paper mode records a failed run, continues, excludes the cell from inference and reports it",
-    "DECISION_LOG A18 OQ-15 a: descriptive columns n, median, IQR, min, max, mean and sample SD (n-1)"
+    "DECISION_LOG A18 OQ-15 a: descriptive columns n, median, IQR, min, max, mean and sample SD (n-1)",
+    "DECISION_LOG A18 owner answers to the D-09 review questions: IQR with Q1/Q3 by linear interpolation (Hyndman-Fan type 7); effect size A12 for the per-instance Mann-Whitney U post-hoc and matched-pairs rank-biserial correlation for the across-instance Wilcoxon post-hoc; OQ-15 columns/variables/counts reading confirmed"
   ],
   "unresolved": [
     {
@@ -56,7 +57,7 @@
         "test": "wilcoxon_signed_rank",
         "rule": "only_after_significant_omnibus",
         "correction": "holm",
-        "effect_size": "vargha_delaney_a12"
+        "effect_size": "matched_pairs_rank_biserial"
       }
     }
   ],
@@ -64,6 +65,7 @@
   "descriptive": {
     "columns": ["n", "median", "iqr", "min", "max", "mean", "sd"],
     "sd_convention": "sample_n_minus_1",
+    "quantile_method": "hyndman_fan_type_7",
     "variables": ["cost", "gap", "evaluations_consumed", "evaluation_budget_share"],
     "counts": ["termination_reason_counts", "failed_run_count"]
   },

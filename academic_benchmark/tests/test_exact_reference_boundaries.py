@@ -24,11 +24,12 @@ from academic_benchmark.exact_reference.reader import ExactReferenceRefused, loa
 REPO = Path(__file__).resolve().parents[2]
 PKG = REPO / "academic_benchmark"
 ARCHIVE = "arch" + "ive"
-NEW_ACADEMIC_MODULES = ("academic_benchmark.exact_reference", "academic_benchmark.validation", "academic_benchmark.protocol_registry")
+NEW_ACADEMIC_MODULES = ("academic_benchmark.exact_reference", "academic_benchmark.validation", "academic_benchmark.protocol_registry",
+                       "academic_benchmark.analysis")
 NEW_MODULE_FILES = (
     [PKG / "protocol_registry.py", PKG / "validation" / "__init__.py", PKG / "validation" / "hamiltonian_cycle.py",
        PKG / "validation" / "day_plan.py"]
-    + sorted((PKG / "exact_reference").glob("*.py")))
+    + sorted((PKG / "exact_reference").glob("*.py")) + [PKG / "analysis" / "gaps.py"])
 LEGACY_LITERAL = "academic_benchmark" + "/" + "bildiri2026"
 EXACT_ARTIFACT_MARKERS = ("exact_reference", "tsplib-exact-reference", "week-2026-10-05-exact")
 # No src file may name an academic result folder (no exceptions: the WP-E10 fleet re-run guards and the tests that read the
@@ -235,6 +236,57 @@ def test_the_bildiri_study_profile_stays_unlinked_from_the_exact_reference():
     for path in files:
         assert _study_import_violations(path) == [], path.name
         assert _study_text_violations(path, ids) == [], path.name
+
+
+# Gate D, D-06 (X3): the study profiles are linked to the exact reference only through the analysis plan's
+# ``exact_reference`` block (reader, join identity, pooling = reference only). The study profile files, the study modules and the
+# study row files stay free of exact-reference names and rows; gap columns are computed by the analysis layer, not by a study.
+EXPECTED_PLAN_LINK = {"reader": "exact_reference_v1", "join_identity": "normalised_tsplib_problem_name", "pooling": "reference_only"}
+PLAN_KEYS_THAT_MAY_NAME_THE_GAP = ("decisions", "response", "exact_reference", "unresolved")  # prose and the response variable
+STUDY_FOLDERS = ("bildiri2026", "yaem2026")
+
+
+@pytest.mark.parametrize("folder", STUDY_FOLDERS)
+def test_the_study_profile_files_name_no_exact_reference(folder):
+    text = (PKG / "studies" / folder / "study.json").read_text(encoding="utf-8")
+    assert "exact_reference" not in text and "exact-reference" not in text
+
+
+@pytest.mark.parametrize("folder", STUDY_FOLDERS)
+def test_the_analysis_plan_is_the_only_study_artifact_linked_to_the_exact_reference(folder):
+    import json
+
+    base = PKG / "studies" / folder
+    plan = json.loads((base / "analysis_plan.json").read_text(encoding="utf-8"))
+    assert plan["exact_reference"] == EXPECTED_PLAN_LINK
+    for key, value in plan.items():
+        if key not in PLAN_KEYS_THAT_MAY_NAME_THE_GAP:
+            assert "exact_reference" not in json.dumps(value) and "exact-reference" not in json.dumps(value), key
+    others = [p for p in base.rglob("*") if p.is_file() and p.name not in ("analysis_plan.json", "study.json") and "__pycache__" not in p.parts]
+    for path in others:
+        assert "exact_reference" not in path.read_text(encoding="utf-8", errors="replace"), path.name
+
+
+def test_the_study_modules_do_not_import_the_gap_columns():
+    files = sorted((PKG / "studies").rglob("*.py"))
+    assert files, "the scan found no study module"
+    for path in files:
+        names = _imported_names(path)
+        assert [n for n in names if n == "academic_benchmark.analysis.gaps" or n.startswith("academic_benchmark.analysis.gaps.")] == [], path.name
+
+
+def test_the_study_row_files_refuse_exact_reference_rows(tmp_path):
+    from academic_benchmark.studies.smoke import FIXED_GROUP, NATIVE_GROUP, write_rows_file
+
+    exact = {"protocol": "exact_reference_v1", "problem": "eil51", "instance_id": "eil51", "solver_role": "primary"}
+    fixed = {"protocol_version": "uniride-fair-tsp-v2", "comparison_regime": "fixed_evaluation_budget", "problem": "eil51",
+             "dataset_id": "tsplib-eil51", "evaluation_budget": 63750}
+    for expected in (FIXED_GROUP, NATIVE_GROUP):
+        for rows in ([exact], [fixed, exact]):
+            target = tmp_path / f"{expected}-{len(rows)}.jsonl"
+            with pytest.raises(ValueError):
+                write_rows_file(target, rows, expected_group=expected)
+            assert not target.exists()
 
 
 # ---------------------------------------------------------------- the archive manifests still verify

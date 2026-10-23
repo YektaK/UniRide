@@ -149,10 +149,34 @@ def test_native_two_and_three_opt_already_require_the_key(algorithm_id):
         _run(algorithm_id, _local_params(key=False, protocol="native"))
 
 
-def test_native_or_opt_without_the_key_is_unchanged():
-    """Native runs are out of scope: Or-opt keeps its default of 1000 in native mode."""
-    result = _run("Core-OrOpt-TSP", _local_params(key=False, protocol="native"))
+def test_native_or_opt_without_the_key_is_refused_before_any_evaluation(monkeypatch):
+    """A17 owner decision (2026-10-23, follow-up): native Or-opt also writes max_iterations.
+
+    This test used to pin the old rule (native Or-opt silently defaulted to 1000); it now
+    pins the new one, in line with native 2-opt/3-opt."""
+    def forbidden(*args, **kwargs):
+        raise AssertionError("no search work may start without an explicit max_iterations")
+
+    monkeypatch.setattr(registry_setup, "_problem_matrix", forbidden)
+    with pytest.raises(ValueError) as caught:
+        _run("Core-OrOpt-TSP", _local_params(key=False, protocol="native"))
+    message = str(caught.value)
+    assert "Core-OrOpt-TSP" in message and "max_iterations" in message
+
+
+@pytest.mark.parametrize("bad", [0, -2, 2.5, True, "1000", None])
+def test_native_or_opt_key_must_be_a_positive_integer(bad):
+    params = _local_params(key=False, protocol="native")
+    params["max_iterations"] = bad
+    with pytest.raises(ValueError, match="max_iterations"):
+        _run("Core-OrOpt-TSP", params)
+
+
+def test_native_or_opt_with_the_key_runs_and_records_it():
+    params = _local_params(key=True, protocol="native")
+    result = _run("Core-OrOpt-TSP", params)
     assert result.comparison_regime == "algorithm_native_termination"
+    assert "max_iterations=3" in result.termination_policy
 
 
 # ----------------------------------------------------------------------------------- helpers

@@ -1749,7 +1749,7 @@ def _run_canonical_or_opt(
     accounting = ObjectiveEvaluationBudget(
         None if native else manifest.evaluation_budget
     )
-    max_iterations = int(params.get("max_iterations", 1000))
+    max_iterations = int(params["max_iterations"])  # no default: both callers require the key (A17)
     first_improvement = bool(params.get("first_improvement", False))
     neighborhood_window = int(
         params.get("window", params.get("max_segment_length", 3))
@@ -1931,7 +1931,7 @@ def _run_fair_local_search(
         LocalSearchType.TWO_OPT, LocalSearchType.THREE_OPT, LocalSearchType.OR_OPT
     }:
         # A17 (2026-10-23): the default of 1000 below must never end a fixed-budget run early.
-        # Checked before any search work (the matrix is not even built); native runs keep it.
+        # Checked before any search work (the matrix is not even built); native Or-opt checks it too.
         from academic_benchmark.fairness import require_explicit_max_iterations
 
         require_explicit_max_iterations(algorithm_name, params)
@@ -1948,6 +1948,11 @@ def _run_native_local_search(
     problem, params, run_idx, algorithm_name, strategy_payload, manifest
 ):
     if strategy_payload == LocalSearchType.OR_OPT:
+        # A17 (2026-10-23 follow-up): native Or-opt, like native 2-opt/3-opt, has no hidden
+        # default of 1000; the key must be a positive int, checked before the matrix is built.
+        from academic_benchmark.fairness import require_explicit_max_iterations
+
+        require_explicit_max_iterations(algorithm_name, params, native=True)
         return _run_canonical_or_opt(
             problem, params, run_idx, algorithm_name, manifest, native=True
         )

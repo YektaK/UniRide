@@ -229,10 +229,18 @@ FLAT_MAX_ITERATIONS_IDS = frozenset({
 })
 
 
-def require_explicit_max_iterations(label: str, block: Any) -> None:
-    """Refuse a parameter block that does not write ``max_iterations`` as an integer >= 1."""
+def require_explicit_max_iterations(label: str, block: Any, *, native: bool = False) -> None:
+    """Refuse a parameter block that does not write ``max_iterations`` as an integer >= 1.
+
+    ``native=True`` is the native-termination wording (native Or-opt, A17 2026-10-23 follow-up)."""
     value = block.get("max_iterations", _MISSING) if isinstance(block, Mapping) else _MISSING
     if value is _MISSING:
+        if native:
+            raise ValueError(
+                f"{label}: a native run needs max_iterations written explicitly; a missing key "
+                "would fall back to a registry default (local search 1000) that silently becomes "
+                "the stopping rule"
+            )
         raise ValueError(
             f"{label}: a fixed-budget run needs max_iterations written explicitly; a missing key "
             "would fall back to a registry default (GWO/HHO 250, local search 1000) that can end the "

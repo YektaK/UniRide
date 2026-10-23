@@ -794,11 +794,12 @@ def _make_numba_metah_executor(
                 raise ValueError("academic TSP comparison mode does not accept routing problems")
             seed = protocol_manifest.paired_seed(problem.name, run_idx)
         if manifest is not None:
-            # A17 (2026-10-23): a fixed-budget run writes max_no_improvement explicitly; the
-            # registry default below must never end a fixed-budget run early. Native runs keep it.
-            from academic_benchmark.fairness import require_fixed_budget_max_no_improvement
+            # A17 (2026-10-23): a fixed-budget run writes max_no_improvement and max_iterations
+            # explicitly; the registry defaults (75, 250) must never end a fixed-budget run early.
+            # Native runs keep them.
+            from academic_benchmark.fairness import require_fixed_budget_stopping_keys
 
-            require_fixed_budget_max_no_improvement(algorithm_name, params)
+            require_fixed_budget_stopping_keys(algorithm_name, params)
 
         # Routing problems never get here: every catalog executor is registered behind
         # _register_catalog_executor, which refuses them (the CVRP-*/CVRPTW-* aliases keep
@@ -1926,6 +1927,14 @@ _existing_native_local_search = _run_native_local_search
 def _run_fair_local_search(
     problem, params, run_idx, algorithm_name, strategy_payload, manifest
 ):
+    if strategy_payload in {
+        LocalSearchType.TWO_OPT, LocalSearchType.THREE_OPT, LocalSearchType.OR_OPT
+    }:
+        # A17 (2026-10-23): the default of 1000 below must never end a fixed-budget run early.
+        # Checked before any search work (the matrix is not even built); native runs keep it.
+        from academic_benchmark.fairness import require_explicit_max_iterations
+
+        require_explicit_max_iterations(algorithm_name, params)
     if strategy_payload == LocalSearchType.OR_OPT:
         return _run_canonical_or_opt(
             problem, params, run_idx, algorithm_name, manifest, native=False

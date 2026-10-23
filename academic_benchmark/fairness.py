@@ -218,6 +218,49 @@ def require_fixed_budget_max_no_improvement(algorithm_id: str, params: Mapping[s
             _require_explicit_stagnation_key(f"{algorithm_id} polish stage", params.get("polish"))
 
 
+# Algorithm IDs whose registry executor fills a missing ``max_iterations`` from a default that can end a
+# fixed-budget run early: GWO/HHO (default 250) and the local searches 2-opt, 3-opt, Or-opt (default
+# 1000). GA, PSO and ALNS validate the key in their own strict schemas; a composite ID keeps it in its
+# ``global`` namespace (its schema already requires it; this is the same check, one layer earlier).
+FLAT_MAX_ITERATIONS_IDS = frozenset({
+    "Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt",
+    "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Core-OrOpt-TSP",
+})
+
+
+def require_explicit_max_iterations(label: str, block: Any) -> None:
+    """Refuse a parameter block that does not write ``max_iterations`` as an integer >= 1."""
+    value = block.get("max_iterations", _MISSING) if isinstance(block, Mapping) else _MISSING
+    if value is _MISSING:
+        raise ValueError(
+            f"{label}: a fixed-budget run needs max_iterations written explicitly; a missing key "
+            "would fall back to a registry default (GWO/HHO 250, local search 1000) that can end the "
+            "run before the evaluation budget is used"
+        )
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{label}: max_iterations must be an integer >= 1, got {value!r}")
+
+
+def require_fixed_budget_max_iterations(algorithm_id: str, params: Mapping[str, Any]) -> None:
+    """Refuse a fixed-budget block that does not write ``max_iterations`` (A17, 2026-10-23).
+
+    Covers the flat GWO/HHO IDs, the composite global stage and the local searches 2-opt, 3-opt and
+    Or-opt; other IDs pass untouched (GA, PSO and ALNS validate the key in their own schemas).
+    Called before any evaluation by every fixed-budget path; native runs do not call it."""
+    if algorithm_id in FLAT_MAX_ITERATIONS_IDS:
+        require_explicit_max_iterations(algorithm_id, params)
+    elif algorithm_id in COMPOSITE_ALGORITHMS:
+        global_params = params.get("global") if isinstance(params, Mapping) else None
+        require_explicit_max_iterations(f"{algorithm_id} global stage", global_params)
+
+
+def require_fixed_budget_stopping_keys(algorithm_id: str, params: Mapping[str, Any]) -> None:
+    """Both explicit-key rules of a fixed-budget block: ``max_no_improvement`` and ``max_iterations``."""
+    require_fixed_budget_max_no_improvement(algorithm_id, params)
+    require_fixed_budget_max_iterations(algorithm_id, params)
+
+
 HYBRID_3OPT_POLISH_REQUIRED = frozenset({"max_iterations", "first_improvement", "window"})
 
 

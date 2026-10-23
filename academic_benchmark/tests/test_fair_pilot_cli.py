@@ -56,8 +56,13 @@ ALNS_PARAMS = {
 
 
 def _swarm_or_empty(algorithm: str) -> dict[str, Any]:
-    # A17 2026-10-23: a fixed-budget GWO/HHO block writes max_no_improvement (75 = the old registry default)
-    return {"max_no_improvement": 75} if algorithm in {"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"} else {}
+    # A17 2026-10-23: a fixed-budget block writes the stopping keys the registry defaults used to supply:
+    # GWO/HHO max_no_improvement 75 and max_iterations 250, 2-opt/3-opt max_iterations 1000
+    if algorithm in {"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"}:
+        return {"max_no_improvement": 75, "max_iterations": 250}
+    if algorithm in {"Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"}:
+        return {"max_iterations": 1000}
+    return {}
 
 
 def _config(tmp_path: Path, **overrides: Any) -> Path:
@@ -329,10 +334,10 @@ def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
 
 def _v2_algorithms_with_alns(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {
-        "Core-GWO-TSP-Pure": {"max_no_improvement": 75},
-        "Core-HHO-TSP-Pure": {"max_no_improvement": 75},
-        "Core-TwoOpt-TSP": {"first_improvement": False},
-        "Core-ThreeOpt-TSP": {"first_improvement": True, "window": 4},
+        "Core-GWO-TSP-Pure": {"max_no_improvement": 75, "max_iterations": 250},
+        "Core-HHO-TSP-Pure": {"max_no_improvement": 75, "max_iterations": 250},
+        "Core-TwoOpt-TSP": {"first_improvement": False, "max_iterations": 1000},
+        "Core-ThreeOpt-TSP": {"first_improvement": True, "window": 4, "max_iterations": 1000},
         "ALNS-TSP": params,
     }
 

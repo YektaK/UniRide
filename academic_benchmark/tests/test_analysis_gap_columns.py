@@ -230,7 +230,7 @@ def test_an_exact_row_dict_as_data_is_refused(plan):
 def test_exact_rows_mixed_into_heuristic_rows_are_refused_before_any_gap(plan):
     table = table_of(exact_row("eil51", value=426))
     mixed = [heuristic_row("eil51", 430), {"protocol": "exact_reference_v1", "problem": "eil51", "objective_cost": 426.0}]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="different pooling groups"):
         add_gap_columns(mixed, table, plan=plan)
 
 

@@ -42,10 +42,14 @@ _ROUTING_ALTERNATIVE_BASES = {
 # Owner decision 4 (2026-10-23): TSP/ATSP IDs that are not capability-catalog IDs but used to run
 # the greedy router on routing problems under their own labels. They refuse routing like the
 # Core-* IDs. No truthful routing variant exists: there is no CVRP-SOTA-* alias, and the
-# CVRP-/CVRPTW-Numba-Swap and -Hybrid aliases run the legacy 2-opt matrix engine.
+# CVRP-/CVRPTW-Numba-Swap and -Hybrid aliases run the legacy 2-opt matrix engine (their engine
+# is Matrix-TwoOpt-TSP-legacy, not a Swap/Hybrid search). The FCM-*-TSP IDs (owner decision
+# 2026-10-23) ran the Split-based FCM engine on routing problems under their TSP names; no
+# CVRP-/CVRPTW-FCM-* alias exists.
 _ROUTING_REFUSING_NONCATALOG_IDS = frozenset({
     "Numba-Swap", "Numba-Hybrid",
     "SOTA-E2BSO-TSP", "SOTA-R2DMA-TSP", "SOTA-P-AOEA-TSP", "SOTA-CGO-TSP", "SOTA-RUN-TSP",
+    "FCM-GA-TSP", "FCM-PSO-TSP", "FCM-GWO-TSP", "FCM-HHO-TSP",
 })
 
 
@@ -221,6 +225,7 @@ def _make_core_tsp_executor(algorithm_name, solver):
 
 def _make_matrix_tsp_executor(algorithm_name: str):
     def executor(problem, params, seed, run_idx):
+        _refuse_catalog_routing(algorithm_name, problem)  # FCM-*-TSP refuse routing
         import time
         from academic_benchmark.engine_core import RunResult
 
@@ -1505,7 +1510,7 @@ for _algo_name, (_cls, _defaults, _variant, _polish_enabled) in _NUMBA_METAH_OVE
     )
 
 for algo_name in FCM_TSP_SOLVERS:
-    AlgorithmRegistry.register(algo_name)(_make_matrix_tsp_executor(algo_name))
+    _register_catalog_executor(algo_name, _make_matrix_tsp_executor(algo_name))
 
 
 def _make_routing_alias_executor(alias_name: str, engine_name: str):

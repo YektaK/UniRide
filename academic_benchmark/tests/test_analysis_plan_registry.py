@@ -114,12 +114,13 @@ def test_committed_plans_encode_the_owner_answers(study):
         "test": "wilcoxon_signed_rank",
         "rule": "only_after_significant_omnibus",
         "correction": "holm",
-        "effect_size": "vargha_delaney_a12",
+        "effect_size": "matched_pairs_rank_biserial",
     }
     assert across["problem_types"] == ["TSP"]  # OQ-8 a)
 
     assert plan["descriptive"]["columns"] == ["n", "median", "iqr", "min", "max", "mean", "sd"]
     assert plan["descriptive"]["sd_convention"] == "sample_n_minus_1"
+    assert plan["descriptive"]["quantile_method"] == "hyndman_fan_type_7"  # IQR: Q1, Q3 by linear interpolation
 
     assert plan["failure_policy"] == {
         "on_failed_run": "record_and_continue",
@@ -352,3 +353,32 @@ def test_analysis_plan_schema_snapshot_is_registered_and_current():
     schema = json.loads(render_schemas()["analysis-plan-v1.schema.json"])
     assert schema["properties"]["schema_version"]["const"] == "uniride-analysis-plan/v1"
     assert schema["additionalProperties"] is False
+
+
+# ---- review answers (A18, D-09 review): quantile method and effect-size pairing --------------------
+
+
+def test_plan_without_a_quantile_method_fails_validation():
+    """The IQR method is stated by the plan, never defaulted by code."""
+    payload = _plan_payload("bildiri2026")
+    del payload["descriptive"]["quantile_method"]
+    with pytest.raises(ValidationError, match="quantile_method"):
+        AnalysisPlanV1.model_validate(payload)
+    payload = _plan_payload("bildiri2026")
+    payload["descriptive"]["quantile_method"] = "nearest_rank"
+    with pytest.raises(ValidationError):
+        AnalysisPlanV1.model_validate(payload)
+
+
+def test_paired_wilcoxon_post_hoc_rejects_a12():
+    payload = _plan_payload("bildiri2026")
+    _family(payload, "across_instances")["post_hoc"]["effect_size"] = "vargha_delaney_a12"
+    with pytest.raises(ValidationError, match="rank_biserial"):
+        AnalysisPlanV1.model_validate(payload)
+
+
+def test_independent_mann_whitney_post_hoc_rejects_a_paired_measure():
+    payload = _plan_payload("bildiri2026")
+    _family(payload, "per_instance")["post_hoc"]["effect_size"] = "matched_pairs_rank_biserial"
+    with pytest.raises(ValidationError, match="vargha_delaney_a12"):
+        AnalysisPlanV1.model_validate(payload)

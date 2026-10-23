@@ -136,6 +136,52 @@ class ExactReferenceLinkV1(StrictContract):
     pooling: Literal["reference_only"]
 
 
+class MannWhitneyConventionV1(StrictContract):
+    """SciPy ``mannwhitneyu`` conventions; ``auto`` is exact for at most 55 observations per sample without ties, else asymptotic."""
+
+    method: Literal["auto", "exact", "asymptotic"]
+    continuity_correction: bool
+
+
+class WilcoxonConventionV1(StrictContract):
+    """SciPy ``wilcoxon`` conventions; ``zero_method`` states how zero differences are ranked."""
+
+    method: Literal["auto", "exact", "asymptotic"]
+    continuity_correction: bool
+    zero_method: Literal["wilcox", "pratt", "zsplit"]
+
+
+class FriedmanConventionV1(StrictContract):
+    """The Friedman p-value that decides the omnibus gate (Iman-Davenport F, Demsar 2006) and the one reported beside it."""
+
+    primary_p_value: Literal["iman_davenport_f"]
+    also_report: list[Literal["chi_square"]] = Field(min_length=1)
+
+
+class ConventionsV1(StrictContract):
+    """Numerical conventions of the tests (owner decisions, DECISION_LOG A18 2026-10-23 "owner decisions on the D-05 statistics
+    conventions"). The statistics service reads them from here and refuses a value it does not implement."""
+
+    alternative: Literal["two_sided"]
+    significance: Literal["p_less_than_or_equal_alpha"]
+    holm_scope: Literal["within_comparison_cell"]
+    correction_across_instances: Literal["none"]
+    mann_whitney: MannWhitneyConventionV1
+    wilcoxon: WilcoxonConventionV1
+    friedman: FriedmanConventionV1
+    all_zero_wilcoxon_pair: Literal["all_differences_zero_p_one_in_holm_family"]
+    identical_value_omnibus: Literal["undefined_not_significant"]
+
+
+class PowerDeclarationV1(StrictContract):
+    """Declared in advance: where the pairwise and the cross-instance evidence comes from. ``statement`` is printed verbatim in the
+    cross-instance report text together with the computed smallest possible adjusted p-value."""
+
+    pairwise_evidence: Literal["per_instance_mann_whitney"]
+    cross_instance_evidence: Literal["friedman_with_kendalls_w"]
+    statement: str = Field(min_length=1)
+
+
 class AnalysisPlanV1(StrictContract):
     model_config = StrictContract.model_config | {
         "json_schema_extra": {"$id": "uniride-analysis-plan/v1"}
@@ -156,6 +202,8 @@ class AnalysisPlanV1(StrictContract):
     minimum_n_per_cell: PositiveInt | None
     failure_policy: FailurePolicyV1
     exact_reference: ExactReferenceLinkV1
+    conventions: ConventionsV1
+    power_declaration: PowerDeclarationV1
 
     @model_validator(mode="after")
     def validate_status_and_unresolved(self) -> "AnalysisPlanV1":

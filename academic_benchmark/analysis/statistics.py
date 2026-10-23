@@ -31,12 +31,13 @@ from __future__ import annotations
 
 import itertools
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
 from academic_benchmark.analysis.environment import require_analysis_environment, statistics_library_identifier
-from academic_benchmark.analysis.identity import ComparisonIdentityError, assert_single_comparison_family
+from academic_benchmark.analysis.identity import ComparisonIdentityError, assert_single_comparison_family, comparison_cell_key
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1, ComparisonFamilyV1, DescriptiveV1
+from academic_benchmark.contracts.run_index import RunIndexV1
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.protocol_registry import assert_rankable
 
@@ -51,35 +52,9 @@ STATUS_COMPUTED = "computed"
 STATUS_UNDEFINED = "undefined_all_values_identical"
 
 
+
 class StatisticsRefusal(ValueError):
     """The service refused to analyse the input; the message names the reason."""
-
-
-# ------------------------------------------------------------------------------------------------ policy
-@dataclass(frozen=True)
-class NumericalPolicy:
-    """Numerical conventions of the tests that the analysis plan does not fix. Every field is required (no defaults):
-    the caller states them and every result echoes them. Open owner question in the D-05 hand-over report."""
-
-    alternative: str
-    mannwhitney_method: str
-    mannwhitney_use_continuity: bool
-    wilcoxon_method: str
-    wilcoxon_zero_method: str
-    wilcoxon_correction: bool
-
-    def validate(self) -> None:
-        if self.alternative != "two-sided":
-            raise StatisticsRefusal(f"alternative {self.alternative!r} is not implemented; only 'two-sided' (the omnibus tests are non-directional)")
-        if self.mannwhitney_method not in ("auto", "exact", "asymptotic"):
-            raise StatisticsRefusal(f"mannwhitney_method {self.mannwhitney_method!r} is not implemented (auto, exact, asymptotic)")
-        if self.wilcoxon_method not in ("auto", "exact", "asymptotic"):
-            raise StatisticsRefusal(f"wilcoxon_method {self.wilcoxon_method!r} is not implemented (auto, exact, asymptotic)")
-        if self.wilcoxon_zero_method not in ZERO_METHODS:
-            raise StatisticsRefusal(f"wilcoxon_zero_method {self.wilcoxon_zero_method!r} is not implemented {ZERO_METHODS}")
-        for name in ("mannwhitney_use_continuity", "wilcoxon_correction"):
-            if not isinstance(getattr(self, name), bool):
-                raise StatisticsRefusal(f"{name} must be a bool")
 
 
 # ------------------------------------------------------------------------------------------------ results
@@ -96,12 +71,16 @@ class Omnibus:
     test: str
     status: str
     statistic: Optional[float]
+    statistic_name: str
     p_value: Optional[float]
+    p_value_method: str
     effect_size_name: str
     effect_size: Optional[float]
     significant: bool
     n_groups: int
     n_observations: int  # per-instance: replicates in total; across instances: matched units per algorithm
+    chi_square_statistic: Optional[float] = None  # Friedman only: reported beside the primary Iman-Davenport F
+    chi_square_p_value: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -118,6 +97,7 @@ class PairResult:
     effect_size: Optional[float]
     n_a: int
     n_b: int
+    method_used: str
 
 
 @dataclass(frozen=True)
@@ -139,7 +119,7 @@ class FamilyAnalysis:
     analysis_plan_id: str
     plan_status: str
     statistics_library: str
-    numerical_policy: Mapping[str, Any]
+    conventions: Mapping[str, Any]
     cells: tuple
     exclusions: tuple
     inference_refused: tuple
@@ -340,51 +320,110 @@ def _median(values: Sequence[float]) -> float:
     return _quantile_type7(sorted(values), 0.5)
 
 
-# ------------------------------------------------------------------------------------------------ tests
-def _holm(p_values: Sequence[float], alpha: float) -> list:
+
+
+# ------------------------------------------------------------------------------------------------ numerical helpers
+def is_significant(p_value: float, alpha: float) -> bool:
+    """The one significance comparison of the service (owner decision, A18): ``p <= alpha``. The omnibus gate and the Holm-adjusted
+    pairwise p-values both use it."""
+    return p_value <= alpha
+
+
+def holm_adjust(p_values: Sequence[float], alpha: float) -> list:
+    """Holm-adjusted p-values in input order, each with its decision (``is_significant``). statsmodels ``multipletests``."""
+    values = [float(p) for p in p_values]
+    if not values:
+        return []
     from statsmodels.stats.multitest import multipletests
 
-    return [float(p) for p in multipletests(list(p_values), alpha=alpha, method="holm")[1]]
+    adjusted = [float(p) for p in multipletests(values, alpha=alpha, method="holm")[1]]
+    return [(p, is_significant(p, alpha)) for p in adjusted]
 
 
-def _pairs_independent(samples: Mapping[str, list], alpha: float, policy: NumericalPolicy) -> tuple:
+def iman_davenport_f(chi_square: float, n_blocks: int, n_treatments: int) -> tuple:
+    """Iman-Davenport F of a Friedman test (Demsar 2006, section 3.2.2): F = (b - 1) chi2_F / (b (k - 1) - chi2_F) with k - 1 and
+    (k - 1)(b - 1) degrees of freedom; ``(F, df1, df2)``. At the maximum chi2_F = b (k - 1) (perfect agreement) F is infinite."""
+    for value, name in ((n_blocks, "blocks"), (n_treatments, "treatments")):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 2:
+            raise StatisticsRefusal(f"the Iman-Davenport F needs an integer number of {name} >= 2, got {value!r}")
+    if isinstance(chi_square, bool) or not isinstance(chi_square, (int, float)) or not math.isfinite(float(chi_square)) or chi_square < 0:
+        raise StatisticsRefusal(f"the Iman-Davenport F needs a finite chi-square >= 0, got {chi_square!r}")
+    df1, df2 = n_treatments - 1, (n_treatments - 1) * (n_blocks - 1)
+    denominator = n_blocks * (n_treatments - 1) - float(chi_square)
+    if denominator <= 0:
+        return math.inf, df1, df2
+    return (n_blocks - 1) * float(chi_square) / denominator, df1, df2
+
+
+def smallest_possible_adjusted_p(n_units: int, n_pairs: int) -> float:
+    """Smallest Holm-adjusted p-value that ``n_pairs`` exact two-sided Wilcoxon signed-rank tests over ``n_units`` matched units can
+    reach: one pair with all units differing in one direction has p = 2 / 2^n, and Holm multiplies the smallest p by the family size."""
+    if n_units < 1 or n_pairs < 1:
+        raise StatisticsRefusal("the power limit needs at least one unit and one pair")
+    return min(1.0, n_pairs * 2.0 ** (1 - n_units))
+
+
+def mannwhitney_method_used(x: Sequence[float], y: Sequence[float], method: str) -> str:
+    """The method SciPy applies: ``auto`` is exact for at most 55 observations per sample and no ties in the combined data, else
+    asymptotic (SciPy ``mannwhitneyu`` documentation); an explicit method is used as given."""
+    if method != "auto":
+        return method
+    tied = len(set(x) | set(y)) < len(x) + len(y)
+    return "exact" if max(len(x), len(y)) <= 55 and not tied else "asymptotic"
+
+
+def wilcoxon_method_used(x: Sequence[float], y: Sequence[float], method: str) -> str:
+    """The method SciPy applies (``_wilcoxon_nd``): ``auto`` is exact without zero differences and without tied absolute differences;
+    otherwise a deterministic permutation test for at most 13 units and the asymptotic test above that."""
+    if method != "auto":
+        return method
+    diffs = [a - b for a, b in zip(x, y)]
+    magnitudes = [abs(d) for d in diffs if d != 0]
+    if len(magnitudes) == len(diffs) and len(set(magnitudes)) == len(magnitudes):
+        return "exact"
+    return "permutation" if len(diffs) <= 13 else "asymptotic"
+
+
+# ------------------------------------------------------------------------------------------------ tests
+def _pairs_independent(samples: Mapping[str, list], alpha: float, conventions) -> tuple:
     from scipy import stats as sps
 
+    conv = conventions.mann_whitney
     raw = []
     for a, b in itertools.combinations(sorted(samples), 2):
         result = sps.mannwhitneyu(
-            samples[a], samples[b], alternative=policy.alternative, method=policy.mannwhitney_method,
-            use_continuity=policy.mannwhitney_use_continuity,
+            samples[a], samples[b], alternative="two-sided", method=conv.method, use_continuity=conv.continuity_correction
         )
         raw.append((a, b, float(result.statistic), float(result.pvalue)))
-    adjusted = _holm([item[3] for item in raw], alpha) if raw else []
+    adjusted = holm_adjust([item[3] for item in raw], alpha)
     return tuple(
-        PairResult(a, b, "mann_whitney_u", STATUS_COMPUTED, u, p, ph, ph < alpha, "vargha_delaney_a12",
-                   vargha_delaney_a12(samples[a], samples[b]), len(samples[a]), len(samples[b]))
-        for (a, b, u, p), ph in zip(raw, adjusted)
+        PairResult(a, b, "mann_whitney_u", STATUS_COMPUTED, u, p, ph, sig, "vargha_delaney_a12",
+                   vargha_delaney_a12(samples[a], samples[b]), len(samples[a]), len(samples[b]),
+                   mannwhitney_method_used(samples[a], samples[b], conv.method))
+        for (a, b, u, p), (ph, sig) in zip(raw, adjusted)
     )
 
 
-def _pairs_matched(units: Mapping[str, list], alpha: float, policy: NumericalPolicy) -> tuple:
+def _pairs_matched(units: Mapping[str, list], alpha: float, conventions) -> tuple:
     from scipy import stats as sps
 
+    conv = conventions.wilcoxon
     raw = []
     for a, b in itertools.combinations(sorted(units), 2):
         x, y = units[a], units[b]
-        r = matched_pairs_rank_biserial(x, y, policy.wilcoxon_zero_method)
-        if r is None:  # every difference is zero: SciPy cannot compute it; the observed data sit exactly at the null centre
-            raw.append((a, b, "all_differences_zero", 0.0, 1.0, None))
+        r = matched_pairs_rank_biserial(x, y, conv.zero_method)
+        if r is None:  # every difference is zero: SciPy cannot compute it; reported with p = 1 and kept in the Holm family (A18)
+            raw.append((a, b, "all_differences_zero", 0.0, 1.0, None, "none (all differences are zero)"))
             continue
         result = sps.wilcoxon(
-            x, y, zero_method=policy.wilcoxon_zero_method, correction=policy.wilcoxon_correction,
-            alternative=policy.alternative, method=policy.wilcoxon_method,
+            x, y, zero_method=conv.zero_method, correction=conv.continuity_correction, alternative="two-sided", method=conv.method
         )
-        raw.append((a, b, STATUS_COMPUTED, float(result.statistic), float(result.pvalue), r))
-    adjusted = _holm([item[4] for item in raw], alpha) if raw else []
+        raw.append((a, b, STATUS_COMPUTED, float(result.statistic), float(result.pvalue), r, wilcoxon_method_used(x, y, conv.method)))
+    adjusted = holm_adjust([item[4] for item in raw], alpha)
     return tuple(
-        PairResult(a, b, "wilcoxon_signed_rank", status, stat, p, ph, ph < alpha, "matched_pairs_rank_biserial", r,
-                   len(units[a]), len(units[b]))
-        for (a, b, status, stat, p, r), ph in zip(raw, adjusted)
+        PairResult(a, b, "wilcoxon_signed_rank", status, stat, p, ph, sig, "matched_pairs_rank_biserial", r,
+                   len(units[a]), len(units[b]), used)
+        for (a, b, status, stat, p, r, used), (ph, sig) in zip(raw, adjusted)
     )
 
 
@@ -394,11 +433,12 @@ def _omnibus_independent(samples: Mapping[str, list], alpha: float) -> Omnibus:
     groups = [samples[name] for name in sorted(samples)]
     n_total = sum(len(g) for g in groups)
     if len({v for g in groups for v in g}) == 1:
-        return Omnibus("kruskal_wallis", STATUS_UNDEFINED, None, None, "epsilon_squared", None, False, len(groups), n_total)
+        return Omnibus("kruskal_wallis", STATUS_UNDEFINED, None, "kruskal_wallis_h", None, "chi_square", "epsilon_squared", None,
+                       False, len(groups), n_total)
     result = sps.kruskal(*groups)
     p = float(result.pvalue)
-    return Omnibus("kruskal_wallis", STATUS_COMPUTED, float(result.statistic), p, "epsilon_squared",
-                   epsilon_squared(float(result.statistic), n_total), p < alpha, len(groups), n_total)
+    return Omnibus("kruskal_wallis", STATUS_COMPUTED, float(result.statistic), "kruskal_wallis_h", p, "chi_square",
+                   "epsilon_squared", epsilon_squared(float(result.statistic), n_total), is_significant(p, alpha), len(groups), n_total)
 
 
 def _omnibus_matched(columns: Mapping[str, list], alpha: float) -> Omnibus:
@@ -406,12 +446,16 @@ def _omnibus_matched(columns: Mapping[str, list], alpha: float) -> Omnibus:
 
     names = sorted(columns)
     blocks = [list(row) for row in zip(*[columns[name] for name in names])]
+    b, k = len(blocks), len(names)
     w = kendalls_w(blocks)
     if w is None:
-        return Omnibus("friedman", STATUS_UNDEFINED, None, None, "kendalls_w", None, False, len(names), len(blocks))
-    result = sps.friedmanchisquare(*[columns[name] for name in names])
-    p = float(result.pvalue)
-    return Omnibus("friedman", STATUS_COMPUTED, float(result.statistic), p, "kendalls_w", w, p < alpha, len(names), len(blocks))
+        return Omnibus("friedman", STATUS_UNDEFINED, None, "iman_davenport_f", None, "iman_davenport_f", "kendalls_w", None, False, k, b)
+    chi = sps.friedmanchisquare(*[columns[name] for name in names])
+    # the tie-corrected chi2_F equals W * b * (k - 1); the F statistic is computed from W so that perfect agreement is exactly infinite
+    f, df1, df2 = iman_davenport_f(w * b * (k - 1), b, k)
+    p = 0.0 if f == math.inf else float(sps.f.sf(f, df1, df2))
+    return Omnibus("friedman", STATUS_COMPUTED, f, "iman_davenport_f", p, "iman_davenport_f", "kendalls_w", w,
+                   is_significant(p, alpha), k, b, float(chi.statistic), float(chi.pvalue))
 
 
 # ------------------------------------------------------------------------------------------------ the service
@@ -419,12 +463,13 @@ def _fmt(value: Optional[float]) -> str:
     return "undefined" if value is None else f"{value:.6g}"
 
 
-def _render(analysis_kwargs: dict, plan: AnalysisPlanV1, family: ComparisonFamilyV1) -> str:
-    cells, exclusions = analysis_kwargs["cells"], analysis_kwargs["exclusions"]
-    refused, inference = analysis_kwargs["inference_refused"], analysis_kwargs["inference"]
+def _render(values: dict, plan: AnalysisPlanV1, family: ComparisonFamilyV1) -> str:
+    cells, exclusions = values["cells"], values["exclusions"]
+    refused, inference = values["inference_refused"], values["inference"]
+    conv = plan.conventions
     lines = [
-        f"Family {family.family_id} ({family.scope}); campaign mode {analysis_kwargs['campaign_mode']}; "
-        f"analysis plan {plan.analysis_plan_id} (status {plan.status}); statistics library {analysis_kwargs['statistics_library']}.",
+        f"Family {family.family_id} ({family.scope}); campaign mode {values['campaign_mode']}; "
+        f"analysis plan {plan.analysis_plan_id} (status {plan.status}); statistics library {values['statistics_library']}.",
         f"Cells (descriptive statistics of the {plan.response.variable}, {plan.response.unit}; "
         f"SD convention {plan.descriptive.sd_convention}, quantiles {plan.descriptive.quantile_method}):",
     ]
@@ -439,36 +484,81 @@ def _render(analysis_kwargs: dict, plan: AnalysisPlanV1, family: ComparisonFamil
     else:
         o = inference.omnibus
         lines.append(
-            f"Omnibus {o.test}: status {o.status}, statistic {_fmt(o.statistic)}, p {_fmt(o.p_value)}, "
+            f"Omnibus {o.test}: status {o.status}, {o.statistic_name} {_fmt(o.statistic)}, p {_fmt(o.p_value)} ({o.p_value_method}), "
             f"{o.effect_size_name} {_fmt(o.effect_size)}, alpha {inference.alpha}, groups {o.n_groups}, n {o.n_observations}."
         )
+        if o.chi_square_statistic is not None:
+            lines.append(f"  chi-square beside it: statistic {_fmt(o.chi_square_statistic)}, p {_fmt(o.chi_square_p_value)}.")
         lines.append(f"Post-hoc ({inference.correction}): {inference.post_hoc_reason}")
         for pair in inference.pairs:
             lines.append(
-                f"  {pair.algorithm_a} vs {pair.algorithm_b} ({pair.test}): status {pair.status}, statistic {_fmt(pair.statistic)}, "
-                f"p {_fmt(pair.p_value)}, p after {inference.correction} {_fmt(pair.p_holm)}, "
+                f"  {pair.algorithm_a} vs {pair.algorithm_b} ({pair.test}, method used {pair.method_used}): status {pair.status}, "
+                f"statistic {_fmt(pair.statistic)}, p {_fmt(pair.p_value)}, p after {inference.correction} {_fmt(pair.p_holm)}, "
                 f"{pair.effect_size_name} {_fmt(pair.effect_size)}, n {pair.n_a}/{pair.n_b}"
             )
-    policy = ", ".join(f"{k}={v}" for k, v in analysis_kwargs["numerical_policy"].items())
-    lines.append(f"Numerical policy: {policy}.")
+    if family.scope == "per_instance":
+        lines.append(
+            "Effect-size direction: A12 is P(gap of algorithm a > gap of algorithm b) + 0.5 P(equal) for the pair (a, b) as listed."
+        )
+    else:
+        lines.append(
+            "Effect-size direction: the matched-pairs rank-biserial r is positive when algorithm a has larger gaps than algorithm b "
+            "for the pair (a, b) as listed."
+        )
+        datasets, algorithms = {c.dataset_identity for c in cells}, {c.algorithm_id for c in cells}
+        if len(datasets) >= 2 and len(algorithms) >= 2:
+            pairs = len(algorithms) * (len(algorithms) - 1) // 2
+            smallest = smallest_possible_adjusted_p(len(datasets), pairs)
+            if not is_significant(smallest, plan.alpha):
+                lines.append(plan.power_declaration.statement)
+                lines.append(
+                    f"With {len(datasets)} matched units the smallest possible exact two-sided Wilcoxon p is {_fmt(2.0 ** (1 - len(datasets)))}; "
+                    f"after Holm over {pairs} pairs the smallest possible adjusted p is {_fmt(smallest)}, above alpha {plan.alpha}: "
+                    "the pairwise cross-instance tests cannot reach significance here."
+                )
+    lines.append(
+        f"Conventions (from the analysis plan): Mann-Whitney method {conv.mann_whitney.method}, continuity correction "
+        f"{conv.mann_whitney.continuity_correction}; Wilcoxon method {conv.wilcoxon.method}, continuity correction "
+        f"{conv.wilcoxon.continuity_correction}, zero differences {conv.wilcoxon.zero_method}; significance p <= alpha; "
+        f"Holm {conv.holm_scope.replace('_', ' ')}, no correction across instances."
+    )
     lines.append("Statistical results describe these runs only; the report states no ordering of the algorithms.")
     return "\n".join(lines)
 
 
-def analyse_family(
-    items: Iterable[tuple], *, plan: AnalysisPlanV1, family_id: str, campaign_mode: str, policy: NumericalPolicy
-) -> FamilyAnalysis:
+def _check_conventions(plan: AnalysisPlanV1) -> None:
+    c = plan.conventions
+    if c.alternative != "two_sided":
+        raise StatisticsRefusal(f"alternative {c.alternative!r} is not implemented (two_sided)")
+    if c.significance != "p_less_than_or_equal_alpha":
+        raise StatisticsRefusal(f"significance rule {c.significance!r} is not implemented (p_less_than_or_equal_alpha)")
+    if (c.holm_scope, c.correction_across_instances) != ("within_comparison_cell", "none"):
+        raise StatisticsRefusal("only Holm within each comparison cell without a correction across instances is implemented")
+    if c.mann_whitney.method not in ("auto", "exact", "asymptotic"):
+        raise StatisticsRefusal(f"mann_whitney method {c.mann_whitney.method!r} is not implemented (auto, exact, asymptotic)")
+    if c.wilcoxon.method not in ("auto", "exact", "asymptotic") or c.wilcoxon.zero_method not in ZERO_METHODS:
+        raise StatisticsRefusal(f"wilcoxon method {c.wilcoxon.method!r} / zero_method {c.wilcoxon.zero_method!r} is not implemented")
+    if c.friedman.primary_p_value != "iman_davenport_f" or list(c.friedman.also_report) != ["chi_square"]:
+        raise StatisticsRefusal("only the Iman-Davenport F as primary Friedman p-value with the chi-square beside it is implemented")
+    if (c.all_zero_wilcoxon_pair, c.identical_value_omnibus) != (
+        "all_differences_zero_p_one_in_holm_family", "undefined_not_significant"
+    ):
+        raise StatisticsRefusal("the plan's degenerate-case conventions are not the implemented ones")
+
+
+def analyse_family(items: Iterable[tuple], *, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV1) -> FamilyAnalysis:
     """Analyse one declared comparison family. ``items`` are ``(row, manifest)`` pairs: rows with the D-06 gap column and their
-    ``RunManifestV1``; failed runs are ``(row, None)``. ``campaign_mode`` is the mode of the verified campaign index
-    (``"smoke"`` or ``"paper"``). Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must not be
-    analysed; otherwise returns descriptive cells plus either the inference or the named reasons why it was not performed."""
+    ``RunManifestV1``; failed runs are ``(row, None)``. ``run_index`` is the ``RunIndexV1`` of the campaign that the caller has verified
+    (``manifests.verify_campaign``): its ``mode`` is the campaign mode ("smoke" or "paper"), and every manifest must be listed in it
+    with the comparison key digest of its row. Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must
+    not be analysed; otherwise returns descriptive cells plus either the inference or the named reasons why it was not performed."""
     require_analysis_environment()
     family = _plan_family(plan, family_id)
-    if campaign_mode not in CAMPAIGN_MODES:
-        raise StatisticsRefusal(f"campaign_mode must be one of {CAMPAIGN_MODES}, got {campaign_mode!r}")
-    if not isinstance(policy, NumericalPolicy):
-        raise StatisticsRefusal("policy must be a NumericalPolicy")
-    policy.validate()
+    _check_conventions(plan)
+    if not isinstance(run_index, RunIndexV1):
+        raise StatisticsRefusal(f"run_index must be the verified RunIndexV1 of the campaign, not {type(run_index).__name__}")
+    campaign_mode = run_index.mode
+    conventions = plan.conventions
     pairs_in = list(items)
     if not pairs_in or any(not isinstance(pair, tuple) or len(pair) != 2 for pair in pairs_in):
         raise StatisticsRefusal("items must be a non-empty list of (row, manifest) pairs")
@@ -494,6 +584,22 @@ def analyse_family(
     if identity_family is None or identity_family.contains_dirty:
         raise StatisticsRefusal("the rows come from a dirty working tree (contains_dirty): no code identity, no statistics")
 
+    # the verified campaign index binds the manifests: mode, study, commit and the comparison key of every run
+    if run_index.git.dirty:
+        raise StatisticsRefusal("the run index records a dirty working tree: no code identity, no statistics")
+    study_id = identity_family.shared["study_id"]
+    if run_index.study_id != study_id:
+        raise StatisticsRefusal(f"the run index belongs to study {run_index.study_id!r}, the rows to study {study_id!r}")
+    listed = {entry.run_id: entry for entry in run_index.runs}
+    for row, manifest in good:
+        entry = listed.get(manifest.run_id)
+        if entry is None:
+            raise StatisticsRefusal(f"manifest {manifest.run_id!r} is not listed in the run index: rows must come from the verified campaign")
+        if manifest.git.commit != run_index.git.commit:
+            raise StatisticsRefusal(f"manifest {manifest.run_id!r} was written at commit {manifest.git.commit}, the run index at {run_index.git.commit}")
+        if comparison_cell_key(row, manifest).digest() != entry.comparison_key_digest:
+            raise StatisticsRefusal(f"the comparison key digest of {manifest.run_id!r} differs from the run index entry")
+
     unit = plan.response.unit
     samples: dict = {}
     for row, manifest in good:
@@ -513,11 +619,21 @@ def analyse_family(
     budgets: dict = {}
     for row, _ in good:
         budgets.setdefault(normalize_problem(row["problem"]), set()).add(row.get("evaluation_budget"))
+    family_algorithms = set(identity_family.varied["algorithm_id"])
+    protocol_version = identity_family.shared["protocol_version"]
     failed_counts: dict = {}
     for row in failed:
         problem, algorithm = row.get("problem"), row.get("algorithm_id")
         if not isinstance(problem, str) or not isinstance(algorithm, str):
             raise StatisticsRefusal("a failed run needs its algorithm_id and problem name to be reported")
+        if algorithm not in family_algorithms:
+            raise StatisticsRefusal(f"a failed run names algorithm_id {algorithm!r}, which is not among the family's algorithms {sorted(family_algorithms)}")
+        if row.get("study_id") != study_id:
+            raise StatisticsRefusal(f"a failed run of {algorithm!r} has study_id {row.get('study_id')!r}, the family's is {study_id!r}")
+        if row.get("protocol_version") != protocol_version:
+            raise StatisticsRefusal(
+                f"a failed run of {algorithm!r} has protocol_version {row.get('protocol_version')!r}, the family's is {protocol_version!r}"
+            )
         identity = normalize_problem(problem)
         known = budgets.get(identity)
         if known and row.get("evaluation_budget") not in known:
@@ -530,13 +646,13 @@ def analyse_family(
     ]
     for key in failed_counts:
         samples.pop(key, None)
+    absent: list = []
     if family.scope == "across_instances":
         present = {dataset for dataset, _ in samples} | {dataset for dataset, _ in failed_counts}
-        for dataset_id in family.dataset_ids:
-            name = dataset_id.removeprefix("tsplib-")
-            if name not in present:
-                exclusions.append({"algorithm_id": None, "dataset_identity": name, "failed_runs": 0,
-                                   "reason": "instance of the declared family has no rows in the analysed input"})
+        absent = [d.removeprefix("tsplib-") for d in family.dataset_ids if d.removeprefix("tsplib-") not in present]
+        for name in absent:
+            exclusions.append({"algorithm_id": None, "dataset_identity": name, "failed_runs": 0,
+                               "reason": "instance of the declared family has no rows in the analysed input"})
 
     cells = tuple(
         CellSummary(dataset, algorithm, len(values), describe_sample([values[r] for r in sorted(values)], plan.descriptive))
@@ -574,9 +690,14 @@ def analyse_family(
                 )
             data = {a: [samples[(datasets[0], a)][r] for r in lengths[a]] for a in algorithms}
             omnibus = _omnibus_independent(data, plan.alpha)
-            run_pairs = lambda: _pairs_independent(data, plan.alpha, policy)  # noqa: E731
+            run_pairs = lambda: _pairs_independent(data, plan.alpha, conventions)  # noqa: E731
             matched = None
         else:
+            if absent:
+                raise StatisticsRefusal(
+                    f"declared instance(s) {absent} of family {family.family_id!r} have no completed and no failed rows; the matched "
+                    "design must cover every declared instance (no instance is dropped or added after results are seen)"
+                )
             missing = [(d, a) for d in datasets for a in algorithms if (d, a) not in samples]
             if missing:
                 excluded = {(e["dataset_identity"], e["algorithm_id"]) for e in exclusions}
@@ -592,7 +713,7 @@ def analyse_family(
             matched = {(d, a): _median(list(samples[(d, a)].values())) for d in datasets for a in algorithms}
             data = {a: [matched[(d, a)] for d in datasets] for a in algorithms}
             omnibus = _omnibus_matched(data, plan.alpha)
-            run_pairs = lambda: _pairs_matched(data, plan.alpha, policy)  # noqa: E731
+            run_pairs = lambda: _pairs_matched(data, plan.alpha, conventions)  # noqa: E731
         rule = family.post_hoc.rule
         if rule == "only_after_significant_omnibus" and not omnibus.significant:
             ran, why, pairs = False, "not run: the omnibus test is not significant (rule only_after_significant_omnibus)", ()
@@ -603,13 +724,15 @@ def analyse_family(
     values = {
         "family_id": family.family_id, "scope": family.scope, "campaign_mode": campaign_mode,
         "analysis_plan_id": plan.analysis_plan_id, "plan_status": plan.status,
-        "statistics_library": statistics_library_identifier(), "numerical_policy": asdict(policy),
+        "statistics_library": statistics_library_identifier(), "conventions": conventions.model_dump(mode="json"),
         "cells": cells, "exclusions": tuple(exclusions), "inference_refused": tuple(reasons), "inference": inference,
     }
     return FamilyAnalysis(**values, text=_render(values, plan, family))
 
 
 __all__ = [
-    "CellSummary", "FamilyAnalysis", "InferenceResult", "NumericalPolicy", "Omnibus", "PairResult", "StatisticsRefusal",
-    "analyse_family", "describe_sample", "epsilon_squared", "kendalls_w", "matched_pairs_rank_biserial", "vargha_delaney_a12",
+    "CellSummary", "FamilyAnalysis", "InferenceResult", "Omnibus", "PairResult", "StatisticsRefusal", "analyse_family",
+    "describe_sample", "epsilon_squared", "holm_adjust", "iman_davenport_f", "is_significant", "kendalls_w",
+    "mannwhitney_method_used", "matched_pairs_rank_biserial", "smallest_possible_adjusted_p", "vargha_delaney_a12",
+    "wilcoxon_method_used",
 ]

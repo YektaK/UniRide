@@ -126,7 +126,7 @@ def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=
     """A ``RunIndexV1`` that lists the manifest of every completed item (the campaign index the caller has verified)."""
     runs = []
     for row, manifest in items:
-        if manifest is None or manifest.run_id in drop:
+        if manifest is None or manifest.run_id in drop or any(r["run_id"] == manifest.run_id for r in runs):
             continue
         digest = comparison_cell_key(row, manifest, allow_dirty=True).digest()
         runs.append({"run_id": manifest.run_id, "manifest_path": f"manifests/{manifest.run_id}.json",
@@ -532,6 +532,26 @@ def test_perfect_agreement_gives_an_infinite_f_and_zero_p_and_the_exact_wilcoxon
         assert pair.method_used == "exact"
         assert pair.p_value == pytest.approx(1 / 32, abs=1e-12) and pair.p_holm == pytest.approx(3 / 32, abs=1e-12)
         assert pair.significant is False and abs(pair.effect_size) == pytest.approx(1.0)  # low power, stated not hidden
+
+
+def test_wilcoxon_auto_method_labels_follow_scipy():
+    """scipy ``wilcoxon(method="auto")``: exact without zero differences and tied |d|; a deterministic permutation test for at most 13
+    units with ties or zeros; asymptotic above that. Each label is checked against the explicit method's p-value."""
+    from academic_benchmark.analysis.statistics import wilcoxon_method_used
+    x14 = [float(v) for v in range(14)]
+    y14 = [v + 1.0 for v in x14]  # 14 units, all |d| equal: ties, more than 13 units
+    assert wilcoxon_method_used(x14, y14, "auto") == "asymptotic"
+    assert sps.wilcoxon(x14, y14, zero_method="pratt", method="auto").pvalue == pytest.approx(
+        sps.wilcoxon(x14, y14, zero_method="pratt", method="asymptotic").pvalue, abs=1e-15)
+    x6, y6 = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [1.5, 2.0, 3.2, 4.9, 5.1, 6.0]  # zeros present
+    assert wilcoxon_method_used(x6, y6, "auto") == "permutation"
+    assert sps.wilcoxon(x6, y6, zero_method="pratt", method="auto").pvalue == pytest.approx(
+        sps.wilcoxon(x6, y6, zero_method="pratt", method=sps.PermutationMethod()).pvalue, abs=1e-15)
+    x5, y5 = [1.0, 2.0, 3.0, 4.0, 5.0], [1.5, 3.0, 3.2, 8.0, 5.9]
+    assert wilcoxon_method_used(x5, y5, "auto") == "exact"
+    assert sps.wilcoxon(x5, y5, zero_method="pratt", method="auto").pvalue == pytest.approx(
+        sps.wilcoxon(x5, y5, zero_method="pratt", method="exact").pvalue, abs=1e-15)
+    assert wilcoxon_method_used(x5, y5, "asymptotic") == "asymptotic"
 
 
 def test_an_all_zero_wilcoxon_pair_is_reported_with_p_one_and_stays_in_the_holm_family(active):

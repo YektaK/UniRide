@@ -418,3 +418,69 @@ def test_a_failed_run_row_is_refused_with_its_own_message(marker):
             "problem": "eil51", "algorithm_id": "Core-PSO-TSP"}
     with pytest.raises(ComparisonIdentityError, match="failed run"):
         comparison_cell_key(bare, make_manifest())
+
+
+# ------------------------------------------------------------------ DUZELT round 2
+PY_NONE = {"objective": "python", "polish": "none"}
+NUMBA_NONE = {"objective": "numba", "polish": "none"}
+NUMBA_PY = {"objective": "numba", "polish": "python"}
+
+
+def _algo(algorithm_id, profile, configuration):
+    return pair({"algorithm_id": algorithm_id},
+                {"algorithm_id": algorithm_id, "backend_profile": profile, "configuration": configuration})
+
+
+def test_an_algorithm_family_over_algorithms_with_different_backends_is_accepted():
+    """Local search runs on Python, GA/PSO on a Numba objective, memetic IDs add a Python polish (registry_setup.py);
+    a cross-algorithm family over the real Bildiri set must not be refused on the backend profile."""
+    items = [
+        _algo("Core-TwoOpt-TSP", PY_NONE, {"max_iterations": 1000}),
+        _algo("Core-GA-TSP", NUMBA_NONE, {"population_size": 20}),
+        _algo("Core-GA-TSP-Memetic-2opt", NUMBA_PY, {"population_size": 20, "initial_polish_iters": 1}),
+    ]
+    family = assert_single_comparison_family(items, vary=("algorithm",))
+    assert family.size == 3
+    assert {"algorithm_id", "configuration_hash", "backend_profile"} <= set(family.varied)
+    assert "backend_profile" not in family.shared and family.shared["backend_policy"] == "prefer_numba"
+    # the Friedman design (algorithm and instance) works the same way
+    st70 = [_algo_on("st70", *item) for item in (
+        ("Core-TwoOpt-TSP", PY_NONE, {"max_iterations": 1000}),
+        ("Core-GA-TSP", NUMBA_NONE, {"population_size": 20}),
+    )]
+    eil = [_algo_on("eil51", *item) for item in (
+        ("Core-TwoOpt-TSP", PY_NONE, {"max_iterations": 1000}),
+        ("Core-GA-TSP", NUMBA_NONE, {"population_size": 20}),
+    )]
+    assert assert_single_comparison_family(st70 + eil, vary=("algorithm", "dataset")).size == 4
+
+
+def _algo_on(problem, algorithm_id, profile, configuration):
+    return pair({"algorithm_id": algorithm_id, "problem": problem, "budget": 1},
+                {"algorithm_id": algorithm_id, "backend_profile": profile, "configuration": configuration,
+                 "dataset_id": f"tsplib-{problem}", "levels": (1, 2)})
+
+
+def test_one_algorithm_with_two_backend_profiles_is_still_refused_in_an_algorithm_family():
+    ga_numba = _algo("Core-GA-TSP", NUMBA_NONE, {"population_size": 20})
+    ga_python = _algo("Core-GA-TSP", PY_NONE, {"population_size": 20})
+    two_opt = _algo("Core-TwoOpt-TSP", PY_NONE, {"max_iterations": 1000})
+    with pytest.raises(ComparisonIdentityError, match="backend profile"):
+        assert_single_comparison_family([ga_numba, ga_python, two_opt], vary=("algorithm",))
+    with pytest.raises(ComparisonIdentityError, match="backend_profile"):
+        assert_single_comparison_family([ga_numba, ga_python])  # and never one cell
+
+
+def test_a_backend_policy_difference_still_splits_an_algorithm_family():
+    a = _algo("Core-GA-TSP", NUMBA_NONE, {"population_size": 20})
+    b = pair({"algorithm_id": "Core-TwoOpt-TSP"},
+             {"algorithm_id": "Core-TwoOpt-TSP", "backend_policy": "python_only", "backend_profile": PY_NONE})
+    with pytest.raises(ComparisonIdentityError, match="backend_policy"):
+        assert_single_comparison_family([a, b], vary=("algorithm",))
+
+
+def test_a_row_dataset_id_in_tsplib_form_must_also_match_the_problem_name():
+    with pytest.raises(ComparisonIdentityError, match="problem"):
+        comparison_cell_key(make_row(problem="st70", dataset_id="tsplib-eil51"), make_manifest())
+    ok = comparison_cell_key(make_row(problem="eil51", dataset_id="tsplib-eil51"), make_manifest())
+    assert ok.dataset_identity == "eil51"

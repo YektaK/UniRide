@@ -181,7 +181,7 @@ def test_an_exact_row_is_not_a_mapping_and_cannot_enter_the_dict_based_aggregato
 
 
 # ---------------------------------------------------------------- import boundaries (AST)
-FIXED_NATIVE_MODULES = ("fairness.py", "fair_pilot.py", "native_protocol.py", "native_pilot.py", "matrix_run_summary.py",
+FIXED_NATIVE_MODULES = ("fairness.py", "fair_pilot.py", "native_protocol.py", "native_pilot.py",
                         "results_reader.py", "data_export.py", "core/preflight.py", "core/execution_gateway.py",
                         "core/registry_setup.py")
 
@@ -204,6 +204,15 @@ def test_fixed_budget_and_native_modules_import_neither_exact_reference_nor_the_
     assert path.is_file(), path
     for name in _imports(path):
         assert "exact_reference" not in name and "protocol_registry" not in name and "validation" not in name.split("."), (module, name)
+
+
+def test_matrix_run_summary_imports_the_registry_but_not_the_exact_reference_package():
+    """Gate D item D-08a (DECISION_LOG E12 acceptance, X4): the reporting-side summary is the one reader that calls the
+    registry's pooling guard. It still imports nothing from ``exact_reference`` or a ``validation`` module directly."""
+    names = _imports(PKG / "matrix_run_summary.py")
+    assert "academic_benchmark.protocol_registry" in names
+    for name in names:
+        assert "exact_reference" not in name and "validation" not in name.split("."), name
 
 
 def test_exact_reference_imports_none_of_the_fixed_budget_native_or_registry_modules():

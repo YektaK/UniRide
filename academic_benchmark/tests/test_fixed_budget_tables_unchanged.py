@@ -204,7 +204,12 @@ def _clock():
 def _render_fair(tmp_path: Path) -> dict:
     config = {
         "protocol_version": "uniride-fair-tsp-v1", "problems": ["tiny-tsp", "tiny-atsp"],
-        "algorithms": {a: dict(_ALNS_PARAMS) if a == "ALNS-TSP" else {} for a in APPROVED_ALGORITHMS},
+        "algorithms": {
+            a: dict(_ALNS_PARAMS) if a == "ALNS-TSP"
+            else {"max_no_improvement": 75, "max_iterations": 250} if "GWO" in a or "HHO" in a
+            else {"max_iterations": 1000}  # the registry defaults the old config relied on (A17 2026-10-23)
+            for a in APPROVED_ALGORITHMS
+        },
         "runs": 3, "evaluation_budget": 20, "base_seed": 123, "budget_policy": "atomic_upper_bound_v1", "workers": 1,
         "replay_replicates": [0], "allow_repository_output": False, "overwrite": False,
     }

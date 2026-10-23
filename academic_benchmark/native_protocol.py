@@ -38,7 +38,11 @@ NATIVE_MEMETIC_2OPT_ALGORITHMS = frozenset({
     "Core-HHO-TSP-Memetic-2opt",
     "Core-GA-TSP-Memetic-2opt",
 })
-OPTIONAL_NATIVE_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP"}) | NATIVE_MEMETIC_2OPT_ALGORITHMS
+OPTIONAL_NATIVE_ALGORITHMS = (
+    frozenset({"Core-GA-TSP", "Core-PSO-TSP"})
+    | NATIVE_MEMETIC_2OPT_ALGORITHMS
+    | frozenset(COMPOSITE_ALGORITHMS)  # C-13: the composite IDs (global/polish namespaces, no global_fraction)
+)
 
 
 @dataclass(frozen=True)

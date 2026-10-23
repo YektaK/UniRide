@@ -55,6 +55,7 @@ def _asymmetric_problem() -> ProblemInstance:
 def _params(budget: int = 500) -> dict:
     return {
         "fair_comparison": {"evaluation_budget": budget, "base_seed": 77},
+        "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths (the old registry default)
         "max_iterations": 2,
         "pack_size": 6,
         "hawks": 6,
@@ -129,7 +130,7 @@ def test_gwo_hho_variant_and_polish_metadata_are_truthful(algorithm, variant, po
     assert result.polish_policy["final"] is polished
 
 
-@pytest.mark.parametrize("algorithm", ("Numba-2-opt", "Numba-3-opt-bounded"))
+@pytest.mark.parametrize("algorithm", ("Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"))
 def test_legacy_executor_never_emits_legacy_identity(algorithm):
     result = AlgorithmRegistry.get_executor(algorithm)(
         _symmetric_problem(),
@@ -144,13 +145,11 @@ def test_legacy_executor_never_emits_legacy_identity(algorithm):
 @pytest.mark.parametrize(
     "algorithm",
     (
-        "Numba-2-opt",
-        "Numba-3-opt-bounded",
         "Core-TwoOpt-TSP",
         "Core-ThreeOpt-TSP",
     ),
 )
-def test_fair_validator_accepts_historical_and_canonical_local_search_ids(algorithm):
+def test_fair_validator_accepts_canonical_local_search_ids(algorithm):
     result = _run(algorithm)
 
     assert result.algorithm_id == result.algorithm == algorithm

@@ -56,7 +56,9 @@ class _Problem7:
 
 
 # Fair ALNS runs require the exact scientific parameter set (no hidden defaults,
-# fairness.py ALNS_REQUIRED_PARAMS); the other algorithms accept empty params.
+# fairness.py ALNS_REQUIRED_PARAMS); GWO/HHO write max_no_improvement and max_iterations explicitly on
+# fixed-budget paths (A17 2026-10-23; 75 and 250 are the values the registry defaults supplied before);
+# 2-opt writes max_iterations (1000 was its registry default).
 ALNS_PARAMS = {
     "max_iterations": 8,
     "max_no_improvement": 3,
@@ -69,7 +71,11 @@ ALNS_PARAMS = {
 
 
 def _params_for(algorithm_id: str) -> dict:
-    return dict(ALNS_PARAMS) if algorithm_id == "ALNS-TSP" else {}
+    if algorithm_id == "ALNS-TSP":
+        return dict(ALNS_PARAMS)
+    if "GWO" in algorithm_id or "HHO" in algorithm_id:
+        return {"max_no_improvement": 75, "max_iterations": 250}
+    return {"max_iterations": 1000}
 
 
 def _manifest(base_seed: int) -> FairComparisonManifest:
@@ -90,7 +96,7 @@ def _request(algorithm_id: str) -> GovernedExecutionRequest:
 
 # ---------------------------------------------------------------- Smart ----
 
-def _run_smart(monkeypatch, problem, algorithms, n_runs, param_source="db", log=None):
+def _run_smart(monkeypatch, problem, algorithms, n_runs, param_source="db", log=None, params_for=None):
     import academic_benchmark.tsplib_manager as tsplib_manager
 
     saved: list[dict] = []
@@ -110,7 +116,7 @@ def _run_smart(monkeypatch, problem, algorithms, n_runs, param_source="db", log=
     monkeypatch.setattr(smart_benchmark, "_shutdown_requested", False)
     monkeypatch.setattr(
         smart_benchmark, "_db_get_best",
-        lambda _problem, algorithm_id, _db: {"params": _params_for(algorithm_id)},
+        lambda _problem, algorithm_id, _db: {"params": (params_for or _params_for)(algorithm_id)},
     )
     monkeypatch.setattr(
         tsplib_manager, "save_benchmark_run",
@@ -310,19 +316,35 @@ def test_make_deterministic_seed_is_removed() -> None:
 # ----------------------------------------- B1: no silent partial batches ----
 
 def test_governed_smart_batch_aborts_on_any_task_failure_and_saves_nothing(monkeypatch) -> None:
-    """ALNS with the ``default`` source has no scientific params and raises a plain
-    ValueError.  A governed batch must not drop that task, save the other rows and
-    mark the run completed (unification design: failures are never dropped silently)."""
+    """ALNS without scientific params raises a plain ValueError.  A governed batch must not
+    drop that task, save the other rows and mark the run completed (unification design:
+    failures are never dropped silently).  2-opt carries its explicit max_iterations (A17
+    2026-10-23), so ALNS is the one failing task; Smart's empty-parameter ``default`` mode
+    refuses 2-opt as well (see the test below)."""
     log: dict = {}
     with pytest.raises(ValueError, match="ALNS parameter schema mismatch"):
         _run_smart(
             monkeypatch, _Problem7(), ["Core-TwoOpt-TSP", "ALNS-TSP"], 2,
-            param_source="default", log=log,
+            param_source="db", log=log,
+            params_for=lambda algorithm_id: {} if algorithm_id == "ALNS-TSP" else _params_for(algorithm_id),
         )
     assert log["run_statuses"] == []
     assert log["metadata_saves"] == []
     assert smart_benchmark._current_results == []
     assert log["saved"] == []
+
+
+@pytest.mark.parametrize("algorithm_id,key", [
+    ("Core-TwoOpt-TSP", "max_iterations"),
+    ("Core-GWO-TSP-Pure", "max_no_improvement"),
+])
+def test_governed_smart_default_mode_refuses_algorithms_that_need_explicit_stopping_keys(
+    monkeypatch, algorithm_id, key
+) -> None:
+    """Owner decision 4 (2026-10-23): Smart's ``default`` mode sends empty parameters and is
+    given no implicit stopping values; a fixed-budget run that needs one is refused."""
+    with pytest.raises(ValueError, match=rf"{algorithm_id}.*{key}"):
+        _run_smart(monkeypatch, _Problem7(), [algorithm_id], 1, param_source="default")
 
 
 def test_non_governed_smart_batch_still_skips_a_failed_task(monkeypatch) -> None:
@@ -367,11 +389,13 @@ def test_governed_legacy_config_batch_aborts_on_any_task_failure_and_saves_nothi
     tasks = []
     for algorithm_id in ("Core-TwoOpt-TSP", "ALNS-TSP"):
         request = _request(algorithm_id)
-        # ALNS-TSP gets no scientific params, so its executor raises a plain ValueError.
+        # ALNS-TSP gets no scientific params, so its executor raises a plain ValueError;
+        # 2-opt writes its max_iterations explicitly (A17 2026-10-23) and succeeds.
         tasks.append(
             BenchmarkTask(
                 problem.name, algorithm_id, 1,
-                smart_benchmark._smart_task_seed(request, problem.name, 1), {}, request,
+                smart_benchmark._smart_task_seed(request, problem.name, 1),
+                {"max_iterations": 1000} if algorithm_id == "Core-TwoOpt-TSP" else {}, request,
             )
         )
     config = BenchmarkConfig("c03-legacy", "now", tasks)
@@ -405,7 +429,10 @@ def _cli_persisted_rows(monkeypatch, tmp_path, task):
 
 def test_governed_cli_rows_persist_seed_provenance(monkeypatch, tmp_path) -> None:
     problem = cli_engine._make_problem_dict(_Problem7())
-    task = (problem, "Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {}, 4, 2, _request("Core-TwoOpt-TSP"))
+    task = (
+        problem, "Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {"max_iterations": 1000}, 4, 2,
+        _request("Core-TwoOpt-TSP"),
+    )
     (payload,) = _cli_persisted_rows(monkeypatch, tmp_path, task)
     manifest = _manifest(CLI_BASE_SEED)
     metadata = payload["metadata"]

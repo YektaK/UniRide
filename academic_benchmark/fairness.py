@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from academic_benchmark.composite_protocol import (
     COMPOSITE_ALGORITHMS,
+    COMPOSITE_KIND_OF,
     POLISH_OPERATORS,
     is_composite_variant,
     validate_composite_policy,
@@ -178,6 +179,88 @@ def validate_scientific_pso_params(params: Mapping[str, Any]) -> dict[str, Any]:
     return dict(params)
 
 
+# Algorithm IDs whose flat parameter block carries ``max_no_improvement``. 2-opt, 3-opt and Or-opt
+# have no such parameter. A composite ID keeps it in its ``global`` namespace (and in the ``polish``
+# namespace when the polish is ALNS); see :func:`require_fixed_budget_max_no_improvement`.
+FLAT_MAX_NO_IMPROVEMENT_IDS = frozenset({
+    "Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt",
+    "Core-GA-TSP", GA_MEMETIC_ID, "Core-PSO-TSP", "ALNS-TSP",
+})
+
+
+def _require_explicit_stagnation_key(label: str, block: Any) -> None:
+    value = block.get("max_no_improvement", _MISSING) if isinstance(block, Mapping) else _MISSING
+    if value is _MISSING:
+        raise ValueError(
+            f"{label}: a fixed-budget run needs max_no_improvement written explicitly; a missing key "
+            "would fall back to a solver default that can end the run before the evaluation budget is used"
+        )
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{label}: max_no_improvement must be an integer >= 1, got {value!r}")
+
+
+_MISSING = object()
+
+
+def require_fixed_budget_max_no_improvement(algorithm_id: str, params: Mapping[str, Any]) -> None:
+    """Refuse a fixed-budget parameter block that does not write ``max_no_improvement`` (A17, 2026-10-23).
+
+    Called by every fixed-budget path before any evaluation (the Numba GWO/HHO executors, the fair-pilot
+    loader, the study smoke runner). Algorithms without the parameter (2-opt, 3-opt, Or-opt) pass
+    untouched. Native runs do not call this function."""
+    if algorithm_id in FLAT_MAX_NO_IMPROVEMENT_IDS:
+        _require_explicit_stagnation_key(algorithm_id, params)
+    elif algorithm_id in COMPOSITE_ALGORITHMS:
+        global_params = params.get("global") if isinstance(params, Mapping) else None
+        _require_explicit_stagnation_key(f"{algorithm_id} global stage", global_params)
+        if POLISH_OPERATORS[COMPOSITE_KIND_OF[algorithm_id]] == "ALNS":
+            _require_explicit_stagnation_key(f"{algorithm_id} polish stage", params.get("polish"))
+
+
+# Algorithm IDs whose registry executor fills a missing ``max_iterations`` from a default that can end a
+# fixed-budget run early: GWO/HHO (default 250) and the local searches 2-opt, 3-opt, Or-opt (default
+# 1000). GA, PSO and ALNS validate the key in their own strict schemas; a composite ID keeps it in its
+# ``global`` namespace (its schema already requires it; this is the same check, one layer earlier).
+FLAT_MAX_ITERATIONS_IDS = frozenset({
+    "Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt",
+    "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Core-OrOpt-TSP",
+})
+
+
+def require_explicit_max_iterations(label: str, block: Any) -> None:
+    """Refuse a parameter block that does not write ``max_iterations`` as an integer >= 1."""
+    value = block.get("max_iterations", _MISSING) if isinstance(block, Mapping) else _MISSING
+    if value is _MISSING:
+        raise ValueError(
+            f"{label}: a fixed-budget run needs max_iterations written explicitly; a missing key "
+            "would fall back to a registry default (GWO/HHO 250, local search 1000) that can end the "
+            "run before the evaluation budget is used"
+        )
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{label}: max_iterations must be an integer >= 1, got {value!r}")
+
+
+def require_fixed_budget_max_iterations(algorithm_id: str, params: Mapping[str, Any]) -> None:
+    """Refuse a fixed-budget block that does not write ``max_iterations`` (A17, 2026-10-23).
+
+    Covers the flat GWO/HHO IDs, the composite global stage and the local searches 2-opt, 3-opt and
+    Or-opt; other IDs pass untouched (GA, PSO and ALNS validate the key in their own schemas).
+    Called before any evaluation by every fixed-budget path; native runs do not call it."""
+    if algorithm_id in FLAT_MAX_ITERATIONS_IDS:
+        require_explicit_max_iterations(algorithm_id, params)
+    elif algorithm_id in COMPOSITE_ALGORITHMS:
+        global_params = params.get("global") if isinstance(params, Mapping) else None
+        require_explicit_max_iterations(f"{algorithm_id} global stage", global_params)
+
+
+def require_fixed_budget_stopping_keys(algorithm_id: str, params: Mapping[str, Any]) -> None:
+    """Both explicit-key rules of a fixed-budget block: ``max_no_improvement`` and ``max_iterations``."""
+    require_fixed_budget_max_no_improvement(algorithm_id, params)
+    require_fixed_budget_max_iterations(algorithm_id, params)
+
+
 HYBRID_3OPT_POLISH_REQUIRED = frozenset({"max_iterations", "first_improvement", "window"})
 
 
@@ -205,6 +288,20 @@ def validate_scientific_hybrid_3opt_params(
     explicit ``global_fraction`` in (0, 1); a native run has none.
     """
     return _validate_hybrid(family, params, fixed_budget=fixed_budget, polish_kind="3-opt")
+
+
+def validate_scientific_composite_params(
+    algorithm_id: str, params: Mapping[str, Any], *, fixed_budget: bool
+) -> dict[str, Any]:
+    """Strict parameter schema of a composite algorithm ID (pilot configurations and study profiles).
+
+    Dispatches on the composition kind of ``algorithm_id`` (3-opt or ALNS polish); a fixed-budget
+    block needs an explicit ``global_fraction`` and a native block refuses it."""
+    if algorithm_id not in COMPOSITE_ALGORITHMS:
+        raise ValueError(f"{algorithm_id!r} is not a composite algorithm ID")
+    family = COMPOSITE_ALGORITHMS[algorithm_id][0]
+    kind = POLISH_OPERATORS[COMPOSITE_KIND_OF[algorithm_id]]  # "3-opt" or "ALNS"
+    return _validate_hybrid(family, params, fixed_budget=fixed_budget, polish_kind=kind)
 
 
 def _validate_hybrid(

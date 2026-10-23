@@ -55,12 +55,22 @@ ALNS_PARAMS = {
 }
 
 
+def _swarm_or_empty(algorithm: str) -> dict[str, Any]:
+    # A17 2026-10-23: a fixed-budget block writes the stopping keys the registry defaults used to supply:
+    # GWO/HHO max_no_improvement 75 and max_iterations 250, 2-opt/3-opt max_iterations 1000
+    if algorithm in {"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"}:
+        return {"max_no_improvement": 75, "max_iterations": 250}
+    if algorithm in {"Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"}:
+        return {"max_iterations": 1000}
+    return {}
+
+
 def _config(tmp_path: Path, **overrides: Any) -> Path:
     config: dict[str, Any] = {
         "protocol_version": "uniride-fair-tsp-v1",
         "problems": ["tiny-tsp", "tiny-atsp"],
         "algorithms": {
-            algorithm: dict(ALNS_PARAMS) if algorithm == "ALNS-TSP" else {}
+            algorithm: dict(ALNS_PARAMS) if algorithm == "ALNS-TSP" else _swarm_or_empty(algorithm)
             for algorithm in APPROVED_ALGORITHMS
         },
         "runs": 2,
@@ -324,10 +334,10 @@ def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
 
 def _v2_algorithms_with_alns(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {
-        "Core-GWO-TSP-Pure": {},
-        "Core-HHO-TSP-Pure": {},
-        "Core-TwoOpt-TSP": {"first_improvement": False},
-        "Core-ThreeOpt-TSP": {"first_improvement": True, "window": 4},
+        "Core-GWO-TSP-Pure": {"max_no_improvement": 75, "max_iterations": 250},
+        "Core-HHO-TSP-Pure": {"max_no_improvement": 75, "max_iterations": 250},
+        "Core-TwoOpt-TSP": {"first_improvement": False, "max_iterations": 1000},
+        "Core-ThreeOpt-TSP": {"first_improvement": True, "window": 4, "max_iterations": 1000},
         "ALNS-TSP": params,
     }
 
@@ -357,3 +367,33 @@ def test_fair_v2_alns_invalid_parameters_delegate_to_shared_validator(
             algorithms=_v2_algorithms_with_alns(invalid),
         ))
     assert str(loader_error.value) == str(shared_error.value)
+
+
+# ---- D-08a: pilot summaries use the SAMPLE standard deviation (n-1), named in the field (OQ-15, DECISION_LOG A18) ----
+def _agg_rows(costs, **extra):
+    return [{"record_kind": "primary", "problem": "p", "algorithm_id": "a", "objective_cost": c, "gap_pct": 1.0,
+             "elapsed_ms": 1.0, "objective_evaluations": 5, "budget_terminated": False, **extra} for c in costs]
+
+
+def test_fixed_budget_aggregate_reports_sample_sd_under_a_named_field():
+    from academic_benchmark.fair_pilot import _aggregate
+    (row,) = _aggregate(_agg_rows([10.0, 12.0, 17.0]), True)
+    assert row["sample_sd_cost"] == pytest.approx(13 ** 0.5)  # n-1 = 2; the population value would be 2.944
+    assert "stddev_cost" not in row
+
+
+def test_fixed_budget_aggregate_sample_sd_is_undefined_for_one_run():
+    from academic_benchmark.fair_pilot import _aggregate
+    (row,) = _aggregate(_agg_rows([10.0]), True)
+    assert row["sample_sd_cost"] is None
+
+
+def test_native_aggregate_reports_sample_sd_under_a_named_field():
+    from academic_benchmark.native_pilot import aggregate_native_records
+    rows = _agg_rows([10.0, 12.0, 17.0], protocol_version="uniride-native-tsp-v1",
+                     comparison_regime="algorithm_native_termination", evaluation_budget=None)
+    (row,) = aggregate_native_records(rows, True)
+    assert row["sample_sd_cost"] == pytest.approx(13 ** 0.5)
+    assert "stddev_cost" not in row
+    (single,) = aggregate_native_records(rows[:1], True)
+    assert single["sample_sd_cost"] is None

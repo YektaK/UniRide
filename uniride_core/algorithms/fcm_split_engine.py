@@ -18,6 +18,9 @@ from uniride_core.algorithms.tsp_meta_matrix_engine import TSPSolver
 from uniride_core.models import PermutationResult, RoutingProblem
 
 
+_ROUTING_PROBLEM_TYPES = frozenset({"cvrp", "cvrptw", "uniride", "uniride_cvrp", "uniride_cvrptw"})
+
+
 class FCMSplitMatrixEngine(UnifiedEngine):
     """Divide large matrix-native TSPs into FCM clusters, solve, stitch, polish."""
 
@@ -25,12 +28,22 @@ class FCMSplitMatrixEngine(UnifiedEngine):
         self.name = name
         self._solver = solver
 
+    def _refuse_routing(self, problem_type: str) -> None:
+        """FCM-*-TSP are TSP/ATSP algorithms; no CVRP/CVRPTW alias exists for them."""
+        if str(problem_type or "tsp").lower() in _ROUTING_PROBLEM_TYPES:
+            raise ValueError(
+                f"{self.name} is a TSP/ATSP algorithm and refuses "
+                f"{str(problem_type).upper()} routing problems before any evaluation; "
+                "no truthful CVRP-/CVRPTW- alternative exists for this ID."
+            )
+
     def solve_problem(
         self,
         problem: RoutingProblem,
         config: Optional[Dict[str, Any]] = None,
         seed: Optional[int] = None,
     ):
+        self._refuse_routing(problem.problem_type)
         cfg = dict(config or {})
         if problem.coordinates and "coordinates" not in cfg:
             cfg["coordinates"] = list(problem.coordinates)
@@ -49,8 +62,9 @@ class FCMSplitMatrixEngine(UnifiedEngine):
         rng = random.Random(seed)
 
         problem_type = str(cfg.get("problem_type", "tsp")).lower()
+        self._refuse_routing(problem_type)
         depot = int(cfg.get("depot_index", 0) or 0)
-        routing_problem = problem_type in {"cvrp", "cvrptw", "uniride", "uniride_cvrp", "uniride_cvrptw"}
+        routing_problem = problem_type in _ROUTING_PROBLEM_TYPES
         node_indices = [idx for idx in range(n) if not routing_problem or idx != depot]
 
         if len(node_indices) <= 2:

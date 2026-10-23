@@ -129,7 +129,14 @@ def _closed_cost(tour: list[int], matrix: list[list[float]]) -> float:
 def test_v1_config_remains_loadable(tmp_path: Path):
     config = _v2_config(protocol_version="uniride-fair-tsp-v1")
     config.pop("comparison_regime")
-    config["algorithms"] = {name: (dict(ALNS_PARAMS) if name == "ALNS-TSP" else {}) for name in V1_HISTORICAL_ALGORITHMS}
+    config["algorithms"] = {
+        name: (
+            dict(ALNS_PARAMS) if name == "ALNS-TSP"
+            else {"max_no_improvement": 75, "max_iterations": 250} if "GWO" in name or "HHO" in name
+            else {"max_iterations": 1000}  # the registry defaults the old configs relied on (A17 2026-10-23)
+        )
+        for name in V1_HISTORICAL_ALGORITHMS
+    }
 
     loaded = load_fair_pilot_config(_write_config(tmp_path, config))
 
@@ -216,7 +223,7 @@ def test_first_improvement_metadata_is_explicit_and_directed_cost_is_preserved()
 
 def test_local_search_termination_reasons_distinguish_budget_iteration_and_local_optimum():
     exhausted = _run("Core-TwoOpt-TSP", budget=1, max_iterations=20)
-    capped = _run("Core-TwoOpt-TSP", budget=100, max_iterations=0)
+    capped = _run("Core-TwoOpt-TSP", budget=100, max_iterations=1)
     local_optimum = _run("Core-TwoOpt-TSP", budget=100, max_iterations=20)
 
     assert exhausted.termination_reason == "evaluation_budget_exhausted"

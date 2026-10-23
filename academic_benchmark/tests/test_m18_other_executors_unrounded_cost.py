@@ -133,7 +133,7 @@ def test_matrix_tsp_executor_integer_instance_values_unchanged(monkeypatch) -> N
 
 # -- Group C: legacy executor time-matrix branch (registry_setup.py:431) -----
 
-@pytest.mark.parametrize("algorithm", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_legacy_executor_time_matrix_reports_unrounded_cost(algorithm: str) -> None:
     matrix = _fractional_matrix()
     result = AlgorithmRegistry.get_executor(algorithm)(
@@ -143,7 +143,7 @@ def test_legacy_executor_time_matrix_reports_unrounded_cost(algorithm: str) -> N
     assert abs(independent - round(independent, 2)) > 1e-6
 
 
-@pytest.mark.parametrize("algorithm", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_legacy_executor_integer_instances_values_unchanged(algorithm: str) -> None:
     matrix = _integer_matrix()
     executor = AlgorithmRegistry.get_executor(algorithm)

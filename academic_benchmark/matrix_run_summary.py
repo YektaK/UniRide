@@ -8,11 +8,40 @@ import math
 from typing import Any, Dict, Iterable, Optional, Tuple
 
 from academic_benchmark.obsolete_results import filter_obsolete_rows
+from academic_benchmark.protocol_registry import assert_single_pooling_group
 from academic_benchmark.tsplib_manager import DB_PATH, query_benchmark_results
 
 
+_PROTOCOL_FIELDS = ("protocol", "comparison_regime", "protocol_version")
+
+
+def _guard_pooling(rows: list) -> None:
+    """Refuse rows that must not be pooled (DECISION_LOG E12 acceptance; Gate D item D-08a).
+
+    Rows that carry protocol evidence are classified by ``protocol_registry`` and must all share one pooling group;
+    contradictory fields raise there. Matrix-native rows (CVRP/CVRPTW from the web matrix path) carry no protocol
+    fields at all and stay summarizable as one unlabelled set, but a list that mixes labelled and unlabelled rows is
+    refused because the pooling group of the unlabelled rows cannot be verified.
+    """
+    labelled = [row for row in rows if any(isinstance(row, dict) and row.get(f) for f in _PROTOCOL_FIELDS)]
+    if not labelled:
+        return
+    if len(labelled) != len(rows):
+        raise ValueError(
+            f"{len(rows) - len(labelled)} of {len(rows)} rows carry no protocol, comparison_regime or protocol_version "
+            "while others do; the pooling group of unlabelled rows cannot be verified, refusing to summarize them together"
+        )
+    assert_single_pooling_group(rows)
+
+
 def summarize_benchmark_rows(rows: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
-    """Return feasibility and hierarchical BKS counters for benchmark rows."""
+    """Return feasibility and hierarchical BKS counters for benchmark rows.
+
+    Raises ``ValueError`` when the rows belong to different protocol pooling groups (fixed budget, native termination,
+    exact reference, ...), contradict themselves, or mix labelled with unlabelled rows.
+    """
+    rows = list(rows)
+    _guard_pooling(rows)
     summary: Dict[str, Any] = {
         "total_rows": 0,
         "failed_rows": 0,

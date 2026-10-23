@@ -53,7 +53,20 @@ TINY_TSP = ProblemInstance(
 
 
 @pytest.mark.parametrize("problem", [TINY_CVRP, TINY_CVRPTW], ids=["cvrp", "cvrptw"])
-def test_core_ga_routing_call_builds_the_ga_engine_not_the_greedy_default(monkeypatch, problem) -> None:
+def test_core_ga_routing_call_is_refused_before_any_engine_is_built(monkeypatch, problem) -> None:
+    # Gate C follow-up (owner 2026-10-21): Core-GA-TSP is TSP/ATSP only. It used to build the
+    # Matrix-GA-TSP-legacy engine here and label the routing row "Core-GA-TSP".
+    built: list[str] = []
+    monkeypatch.setattr(
+        registry_setup, "create_matrix_engine", lambda name: built.append(name)
+    )
+    with pytest.raises(registry_setup.CoreRoutingRefusedError, match="Core-GA-TSP is a TSP/ATSP"):
+        AlgorithmRegistry.get_executor("Core-GA-TSP")(problem, {}, 42, 0)
+    assert built == []
+
+
+@pytest.mark.parametrize("problem", [TINY_CVRP, TINY_CVRPTW], ids=["cvrp", "cvrptw"])
+def test_cvrp_alias_builds_the_ga_engine_under_its_own_name(monkeypatch, problem) -> None:
     real_create = registry_setup.create_matrix_engine
     built: list[tuple[str, str]] = []
 
@@ -63,10 +76,11 @@ def test_core_ga_routing_call_builds_the_ga_engine_not_the_greedy_default(monkey
         return engine
 
     monkeypatch.setattr(registry_setup, "create_matrix_engine", recording_create)
-    result = AlgorithmRegistry.get_executor("Core-GA-TSP")(problem, {}, 42, 0)
+    alias = ("CVRP-" if problem.problem_type == "cvrp" else "CVRPTW-") + "Core-GA-TSP"
+    result = AlgorithmRegistry.get_executor(alias)(problem, {}, 42, 0)
 
     assert built == [("Matrix-GA-TSP-legacy", "TSPMetaMatrixEngine")]
-    assert result.algorithm == "Core-GA-TSP"
+    assert result.algorithm == alias
     assert result.routes
 
 

@@ -17,7 +17,8 @@ references and selections, never competitors (design docs/designs/EXACT_SOLVER_A
 
 This registry lives in the academic layer on purpose (owner decision OQ4, 2026-10-18): ``uniride_core``'s
 ``ExecutionProtocol`` stays ``fixed_budget``/``native_termination`` and no preflight path accepts ``exact_reference_v1``.
-The fixed-budget and native modules do not import this module (an AST test checks it); the existing
+The fixed-budget and native modules do not import this module (an AST test checks it; the reporting-side
+``matrix_run_summary`` is the one reader that calls ``assert_single_pooling_group``, Gate D item D-08a); the existing
 ``protocol.assert_not_pooled`` is unchanged and stays the exact-side guard.
 
 Rows are classified by the fields they carry today: ``protocol`` (exact and union rows), ``comparison_regime`` and

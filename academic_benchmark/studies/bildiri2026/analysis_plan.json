@@ -1,0 +1,89 @@
+{
+  "schema_version": "uniride-analysis-plan/v1",
+  "analysis_plan_id": "bildiri2026-reproduction-v1",
+  "study_id": "bildiri2026",
+  "status": "draft",
+  "decisions": [
+    "DECISION_LOG A18 (2026-10-23) OQ-5 a: per instance Kruskal-Wallis, then pairwise Mann-Whitney U with Holm only after a significant omnibus test; across instances Friedman, then Wilcoxon signed-rank with Holm under the same rule; alpha 0.05; effect sizes A12, epsilon-squared, Kendall's W",
+    "DECISION_LOG A18 OQ-6 a: response = relative gap to the exact reference (%), per-instance median as the Friedman unit",
+    "DECISION_LOG A18 OQ-8 a: TSP-only family for the cross-instance test; ft53 (ATSP) per instance only",
+    "DECISION_LOG A18 OQ-9 a: paper mode records a failed run, continues, excludes the cell from inference and reports it",
+    "DECISION_LOG A18 OQ-15 a: descriptive columns n, median, IQR, min, max, mean and sample SD (n-1)",
+    "DECISION_LOG A18 owner answers to the D-09 review questions: IQR with Q1/Q3 by linear interpolation (Hyndman-Fan type 7); effect size A12 for the per-instance Mann-Whitney U post-hoc and matched-pairs rank-biserial correlation for the across-instance Wilcoxon post-hoc; OQ-15 columns/variables/counts reading confirmed"
+  ],
+  "unresolved": [
+    {
+      "field": "minimum_n_per_cell",
+      "pending": "the minimum sample size per cell is not part of the A18 answers; it depends on the run count (OQ-1, D-04b1 timing table)"
+    },
+    {
+      "field": "run_count",
+      "pending": "OQ-1 a) 30 runs per cell is confirmed only after the D-04b1 timing table; the profile run_count is the smoke value"
+    },
+    {
+      "field": "native_termination_limits",
+      "pending": "OQ-4 a) explicit per-algorithm native limits and per-stage composite limits are set from the D-04b1 per-iteration table; the profile holds the smoke placeholder"
+    },
+    {
+      "field": "algorithm_parameters_confirmation",
+      "pending": "OQ-16 a) algorithm parameters are confirmed after D-04b1 shows whether the memetic 60000-iteration limit binds at 250x"
+    }
+  ],
+  "response": {"variable": "relative_gap_to_exact_reference", "unit": "percent"},
+  "matched_unit": {"per": "instance", "summary": "median", "over": "replicates"},
+  "families": [
+    {
+      "family_id": "per-instance-independent",
+      "scope": "per_instance",
+      "problem_types": ["TSP", "ATSP"],
+      "dataset_ids": [
+        "tsplib-berlin52", "tsplib-eil51", "tsplib-st70", "tsplib-kroa100",
+        "tsplib-rd100", "tsplib-eil76", "tsplib-ft53"
+      ],
+      "algorithm_set": "all_algorithms_of_the_comparison_cell",
+      "omnibus": {"test": "kruskal_wallis", "effect_size": "epsilon_squared"},
+      "post_hoc": {
+        "test": "mann_whitney_u",
+        "rule": "only_after_significant_omnibus",
+        "correction": "holm",
+        "effect_size": "vargha_delaney_a12"
+      }
+    },
+    {
+      "family_id": "across-instances-tsp-matched",
+      "scope": "across_instances",
+      "problem_types": ["TSP"],
+      "dataset_ids": [
+        "tsplib-berlin52", "tsplib-eil51", "tsplib-st70", "tsplib-kroa100",
+        "tsplib-rd100", "tsplib-eil76"
+      ],
+      "algorithm_set": "all_algorithms_of_the_comparison_cell",
+      "omnibus": {"test": "friedman", "effect_size": "kendalls_w"},
+      "post_hoc": {
+        "test": "wilcoxon_signed_rank",
+        "rule": "only_after_significant_omnibus",
+        "correction": "holm",
+        "effect_size": "matched_pairs_rank_biserial"
+      }
+    }
+  ],
+  "alpha": 0.05,
+  "descriptive": {
+    "columns": ["n", "median", "iqr", "min", "max", "mean", "sd"],
+    "sd_convention": "sample_n_minus_1",
+    "quantile_method": "hyndman_fan_type_7",
+    "variables": ["cost", "gap", "evaluations_consumed", "evaluation_budget_share"],
+    "counts": ["termination_reason_counts", "failed_run_count"]
+  },
+  "minimum_n_per_cell": null,
+  "failure_policy": {
+    "on_failed_run": "record_and_continue",
+    "inference": "exclude_cell",
+    "reporting": "report_exclusions"
+  },
+  "exact_reference": {
+    "reader": "exact_reference_v1",
+    "join_identity": "normalised_tsplib_problem_name",
+    "pooling": "reference_only"
+  }
+}

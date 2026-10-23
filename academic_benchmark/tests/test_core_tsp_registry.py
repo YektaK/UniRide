@@ -30,8 +30,10 @@ def test_academic_registry_exposes_core_tsp_engines():
         "Core-OrOpt-TSP",
         "Core-GA-TSP",
         "Core-PSO-TSP",
-        "Core-GWO-TSP",
-        "Core-HHO-TSP",
+        "Core-GWO-TSP-Pure",
+        "Core-GWO-TSP-Memetic-2opt",
+        "Core-HHO-TSP-Pure",
+        "Core-HHO-TSP-Memetic-2opt",
         "FCM-GA-TSP",
         "FCM-PSO-TSP",
         "FCM-GWO-TSP",
@@ -72,7 +74,7 @@ def test_academic_registry_exposes_core_tsp_engines():
             },
         ),
         (
-            "Core-GWO-TSP",
+            "Core-GWO-TSP-Pure",
             {
                 "num_wolves": 8,
                 "max_iterations": 5,
@@ -81,7 +83,7 @@ def test_academic_registry_exposes_core_tsp_engines():
             },
         ),
         (
-            "Core-HHO-TSP",
+            "Core-HHO-TSP-Pure",
             {
                 "num_hawks": 8,
                 "max_iterations": 5,
@@ -152,7 +154,7 @@ def _coord_only_problem():
 
 @pytest.mark.parametrize(
     "algorithm",
-    ["Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"],
+    ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure", "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt"],
 )
 def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
     """Regression: GWO/HHO via registry must work when dist_matrix is not pre-set.
@@ -162,9 +164,8 @@ def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
     calls _problem_matrix → prepare_matrices() which was missing from _Problem.
     This test exercises the same path through the real ProblemInstance.
     """
-    algorithms = set(AlgorithmRegistry.list_algorithms())
-    if algorithm not in algorithms:
-        pytest.skip(f"{algorithm} not registered (missing bildiri2026 deps?)")
+    # The Numba import fails closed (C-14): a missing identity is a failure, not a skip.
+    assert algorithm in set(AlgorithmRegistry.list_algorithms())
 
     executor = AlgorithmRegistry.get_executor(algorithm)
     result = executor(
@@ -176,6 +177,7 @@ def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
             "polish_iters": 1,
             "final_polish_iters": 1,
             "fair_comparison": {"evaluation_budget": 500, "base_seed": 1000},
+            "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths (the old registry default)
         },
         seed=42,
         run_idx=0,
@@ -189,7 +191,7 @@ def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
 
 @pytest.mark.parametrize(
     "algorithm",
-    ["Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"],
+    ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure", "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt"],
 )
 def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
     """Regression: exercise the exact _Problem wrapper path from cli_engine.
@@ -197,9 +199,7 @@ def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
     Simulates what _evaluate_param_combo does: build a _Problem from a dict
     with no dist_matrix, call prepare_matrices(), then pass to the registry.
     """
-    algorithms = set(AlgorithmRegistry.list_algorithms())
-    if algorithm not in algorithms:
-        pytest.skip(f"{algorithm} not registered (missing bildiri2026 deps?)")
+    assert algorithm in set(AlgorithmRegistry.list_algorithms())
 
     from academic_benchmark.cli_engine import _evaluate_param_combo
     from academic_benchmark.core.algorithm_resolution import (
@@ -237,6 +237,7 @@ def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
         resolution.canonical_id,
         {
             "max_iterations": 3,
+            "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths
             "pack_size": 4,
             "hawks": 4,
             "polish_iters": 1,

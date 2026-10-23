@@ -4,6 +4,7 @@ import pytest
 
 from academic_benchmark.cli_engine import _evaluate_param_combo
 from academic_benchmark.core import registry_setup  # noqa: F401
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from uniride_core.algorithms.tsp_matrix_metaheuristics.gwo_solver import GWOOptimizer
 from uniride_core.algorithms.tsp_matrix_metaheuristics.hho_solver import HHOOptimizer
 from academic_benchmark.engine_core import AlgorithmRegistry, GovernedExecutionRequest
@@ -57,6 +58,7 @@ def _problem():
 def _params():
     return {
         "fair_comparison": {"evaluation_budget": 500, "base_seed": 91},
+        "max_no_improvement": 75,  # A17 2026-10-23: explicit on fixed-budget paths (the old registry default)
         "max_iterations": 2,
         "pack_size": 6,
         "hawks": 6,
@@ -87,15 +89,24 @@ def test_every_fair_variant_reports_exact_directed_closed_tour_cost(algorithm):
 
 
 @pytest.mark.parametrize(
-    "algorithm",
-    ("Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"),
+    ("alias", "canonical"),
+    (
+        ("Core-GWO-TSP", "Core-GWO-TSP-Memetic-2opt"),
+        ("Core-HHO-TSP", "Core-HHO-TSP-Memetic-2opt"),
+        ("Numba-GWO", "Core-GWO-TSP-Memetic-2opt"),
+        ("Numba-HHO", "Core-HHO-TSP-Memetic-2opt"),
+    ),
 )
-def test_backward_compatible_gwo_hho_aliases_disclose_memetic_policy(algorithm):
-    result = AlgorithmRegistry.get_executor(algorithm)(
+def test_backward_compatible_gwo_hho_aliases_disclose_memetic_policy(alias, canonical):
+    # Gate C follow-up: the aliases have no executor of their own; the resolver sends them
+    # to the memetic-2opt canonical entry, which discloses its polish.
+    assert resolve_algorithm_id(alias, IdentifierSource.CLI).canonical_id == canonical
+    assert alias not in AlgorithmRegistry.list_algorithms()
+    result = AlgorithmRegistry.get_executor(canonical)(
         _problem(), _params(), seed=1, run_idx=1
     )
 
-    assert result.algorithm_id == algorithm
+    assert result.algorithm_id == canonical
     assert result.variant == "memetic_2opt"
     # Flags derive from executed polish (audit M19): the run has 2 iterations and the
     # default polish interval is 25, so periodic polish never executes.
@@ -261,15 +272,18 @@ def test_periodic_polish_budget_exhaustion_is_exposed(
 
 def test_public_fair_result_exposes_budget_termination():
     params = _params()
-    params["fair_comparison"]["evaluation_budget"] = 5
+    # A17 2026-10-23: a fixed-budget run needs max_iterations >= 1, so this case (budget used up
+    # inside the first iteration and the final polish) now uses 1 iteration and budget 6; with
+    # budget 5 no polish phase would execute and the memetic result would be invalid.
+    params["fair_comparison"]["evaluation_budget"] = 6
     params.update(
-        {"max_iterations": 0, "pack_size": 4, "polish_iters": 0, "final_polish_iters": 10}
+        {"max_iterations": 1, "pack_size": 4, "polish_iters": 0, "final_polish_iters": 10}
     )
     result = AlgorithmRegistry.get_executor("Core-GWO-TSP-Memetic-2opt")(
         _problem(), params, seed=1, run_idx=0
     )
 
-    assert result.objective_evaluations == 5
+    assert result.objective_evaluations == 6
     assert result.budget_terminated is True
 
 

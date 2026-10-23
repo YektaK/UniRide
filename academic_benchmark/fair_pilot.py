@@ -521,6 +521,11 @@ def _environment_metadata() -> Dict[str, Any]:
     return versions
 
 
+def _sample_sd(values: Sequence[float]) -> Optional[float]:
+    """Sample standard deviation (n-1 denominator, OQ-15 / DECISION_LOG A18); ``None`` when fewer than two values exist."""
+    return statistics.stdev(values) if len(values) >= 2 else None
+
+
 def _aggregate(rows: Sequence[Mapping[str, Any]], replay_ok: bool) -> List[Dict[str, Any]]:
     groups: Dict[Tuple[str, str], List[Mapping[str, Any]]] = {}
     for row in rows:
@@ -535,7 +540,7 @@ def _aggregate(rows: Sequence[Mapping[str, Any]], replay_ok: bool) -> List[Dict[
         output.append({
             "problem": problem, "algorithm_id": algorithm, "runs": len(values),
             "best_cost": min(costs), "mean_cost": statistics.fmean(costs),
-            "median_cost": statistics.median(costs), "stddev_cost": statistics.pstdev(costs),
+            "median_cost": statistics.median(costs), "sample_sd_cost": _sample_sd(costs),
             "mean_gap_pct": statistics.fmean(gaps), "mean_objective_evaluations": statistics.fmean(evaluations),
             "budget_terminated_count": sum(bool(item["budget_terminated"]) for item in values),
             "mean_elapsed_ms": statistics.fmean(elapsed), "median_elapsed_ms": statistics.median(elapsed),

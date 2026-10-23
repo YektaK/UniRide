@@ -514,7 +514,7 @@ def aggregate_native_records(
             "best_cost": min(costs),
             "mean_cost": statistics.fmean(costs),
             "median_cost": statistics.median(costs),
-            "stddev_cost": statistics.pstdev(costs),
+            "sample_sd_cost": statistics.stdev(costs) if len(costs) >= 2 else None,
             "mean_gap_pct": statistics.fmean(gaps),
             "mean_objective_evaluations": statistics.fmean(evaluations),
             "mean_elapsed_ms": statistics.fmean(elapsed),

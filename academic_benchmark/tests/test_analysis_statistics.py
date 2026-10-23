@@ -122,10 +122,10 @@ def failed_item(problem, algorithm, replicate, **overrides):
     return row, None
 
 
-def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=(), digest_of=None):
+def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=(), digest_of=None, extra_items=()):
     """A ``RunIndexV1`` that lists the manifest of every completed item (the campaign index the caller has verified)."""
     runs = []
-    for row, manifest in items:
+    for row, manifest in [*items, *extra_items]:
         if manifest is None or manifest.run_id in drop or any(r["run_id"] == manifest.run_id for r in runs):
             continue
         digest = comparison_cell_key(row, manifest, allow_dirty=True).digest()
@@ -801,6 +801,51 @@ def test_a_failed_row_must_belong_to_the_family(active):
     del row["study_id"]
     with pytest.raises(StatisticsRefusal, match="study_id"):
         run(good + [(row, None)], active)
+
+
+def test_the_family_algorithms_come_from_the_run_index_not_from_the_completed_rows(active):
+    """Lead decision (OQ-9 a): a failed row is valid when its algorithm is one the verified campaign ran for this study and level;
+    an algorithm that the index never lists is refused, a fully failed cell is not."""
+    good = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-GWO-TSP-Pure")})
+    failed = [failed_item("eil51", "Core-PSO-TSP", r) for r in range(5)]
+    with pytest.raises(StatisticsRefusal, match="run index"):  # PSO is not in the index: nothing shows that the campaign ran it
+        analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good))
+    elsewhere = [make_item("eil76", "Core-PSO-TSP", r, 1.0) for r in range(3)]  # the campaign ran PSO on another instance
+    result = analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=elsewhere))
+    assert result.inference is not None
+    # a PSO run of another budget level does not make PSO an algorithm of this level
+    other_level = [make_item("eil76", "Core-PSO-TSP", r, 1.0) for r in range(3)]
+    other_level = [({**row, "evaluation_budget": _levels("eil76")[1]}, manifest) for row, manifest in other_level]
+    with pytest.raises(StatisticsRefusal, match="run index"):
+        analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=other_level))
+
+
+def test_a_fully_failed_per_instance_cell_is_excluded_reported_and_the_rest_is_analysed(active):
+    """Two algorithms complete, the third failed on every replicate: its cell is excluded, the Holm family is the single remaining pair
+    (adjusted p equals p), and the report lists the pairs that dropped out and why."""
+    good = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-GWO-TSP-Pure")})
+    failed = [failed_item("eil51", "Core-PSO-TSP", r) for r in range(5)]
+    elsewhere = [make_item("eil76", "Core-PSO-TSP", r, 1.0) for r in range(3)]
+    result = analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=elsewhere))
+    assert [(e["algorithm_id"], e["dataset_identity"], e["failed_runs"]) for e in result.exclusions] == [("Core-PSO-TSP", "eil51", 5)]
+    assert {c.algorithm_id for c in result.cells} == {"Core-GA-TSP", "Core-GWO-TSP-Pure"}
+    assert result.inference_refused == ()
+    (pair,) = result.inference.pairs
+    assert (pair.algorithm_a, pair.algorithm_b) == ("Core-GA-TSP", "Core-GWO-TSP-Pure")
+    assert pair.p_holm == pytest.approx(pair.p_value, abs=1e-15)  # Holm over one pair
+    assert [(p["algorithm_a"], p["algorithm_b"]) for p in result.excluded_pairs] == [("Core-GA-TSP", "Core-PSO-TSP"), ("Core-GWO-TSP-Pure", "Core-PSO-TSP")]
+    assert all("Core-PSO-TSP" in p["reason"] and "failed" in p["reason"] for p in result.excluded_pairs)
+    assert "pair excluded from the Holm family: Core-GA-TSP vs Core-PSO-TSP" in result.text
+    assert_no_ranking_words(result.text)
+    # nothing is excluded when nothing failed
+    assert run(per_instance_items(SEPARATED), active).excluded_pairs == ()
+
+
+def test_a_fully_failed_cross_instance_cell_still_refuses_the_analysis(active):
+    items = [item for item in cross_items() if not (item[0]["problem"] == "st70" and item[0]["algorithm_id"] == "Core-PSO-TSP")]
+    items += [failed_item("st70", "Core-PSO-TSP", r) for r in range(3)]
+    with pytest.raises(StatisticsRefusal, match="excluded after a failed run"):
+        run(items, active, ACROSS)
 
 
 def test_rows_without_a_usable_gap_are_refused(active):

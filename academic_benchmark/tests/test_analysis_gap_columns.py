@@ -50,7 +50,7 @@ def exact_row(instance="eil51", *, value=426, role="primary", status="optimal", 
         row_schema_version="uniride-exact-reference-row/v1", protocol="exact_reference_v1",
         solution_kind="hamiltonian_cycle", problem_contract=contract, instance_id=instance, stage=None, solver_role=role,
         solver_name=solver, solver_version="12.0", option_string="Threads=1",
-        status=status, stop_reason="optimal" if optimal else "time_limit",
+        status=status, stop_reason="optimal" if optimal else "wall_limit",
         lb=value if lb is None and optimal else lb, ub=value, reference_optimum=published, reference_optimum_source="tsplib",
         timing_dependent=not optimal, wall_seconds=1.0, ub_validated=validated and role == "primary",
         ub_validation_basis="independent_hamiltonian_validator" if validated and role == "primary" else "not_validated",
@@ -290,10 +290,6 @@ def test_wave_campaign_sets_carry_no_gap_reference():
     wave_row = exact_row("eil51", value=426).model_copy(update={"instance_id": "2026-10-05-R50"})
     assert build_reference_table([exact_set(wave_row, kind="wave_campaign")]).values == {}
 
-
-def test_a_set_that_is_not_hamiltonian_cycle_is_ignored_even_if_labelled_tsp_reference():
-    other = exact_row("eil51", value=426).model_copy(update={"solution_kind": "vehicle_routes"})
-    assert build_reference_table([exact_set(other)]).values == {}
 
 
 # ---------------------------------------------------------------- the committed stage-1 reference

@@ -184,17 +184,32 @@ def select_smoke_rows(
 
 
 def write_rows_file(
-    path: Path, rows: Sequence[Mapping[str, Any]], *, expected_group: str, per_dataset_levels: bool = False
+    path: Path, rows: Sequence[Mapping[str, Any]], *, expected_group: str, per_dataset_levels: bool = False,
+    levels_by_dataset: Optional[Mapping[str, Sequence[int]]] = None,
 ) -> None:
     """Write one rows file; refuse rows of two pooling groups, of the wrong group or of two budget levels.
 
     ``per_dataset_levels`` (instance-scaled studies, C-19): the fixed rows of each ``dataset_id``
-    must share exactly one level, different datasets may have different levels."""
+    must share exactly one level, different datasets may have different levels.
+
+    ``levels_by_dataset`` (full campaigns, D-03; plan X8): the file may hold every level of the study, but each fixed
+    row's ``evaluation_budget`` must be one of the level list of its own ``dataset_id``; a row of an unknown dataset
+    or with a foreign level is refused, and nothing is written. Levels are compared per dataset, never across
+    instances by raw budget."""
     group = assert_single_pooling_group(rows)  # ValueError when groups meet
     if group != expected_group:
         raise StudySmokeError(f"{path.name}: rows belong to pooling group {group!r}, expected {expected_group!r}")
     levels = {row.get("evaluation_budget") for row in rows}
-    if expected_group == FIXED_GROUP and per_dataset_levels:
+    if expected_group == FIXED_GROUP and levels_by_dataset is not None:
+        bad = sorted(
+            {f"{row.get('dataset_id')}@{row.get('evaluation_budget')}" for row in rows
+             if row.get("evaluation_budget") not in tuple(levels_by_dataset.get(row.get("dataset_id"), ()))}
+        )
+        if bad:
+            raise StudySmokeError(
+                f"{path.name}: fixed-budget rows must use a budget level of their own dataset's level list, found {bad}"
+            )
+    elif expected_group == FIXED_GROUP and per_dataset_levels:
         by_dataset: Dict[Any, set] = {}
         for row in rows:
             by_dataset.setdefault(row.get("dataset_id"), set()).add(row.get("evaluation_budget"))
@@ -301,7 +316,7 @@ def _composite_row_errors(record: Mapping[str, Any], row: PlanRow, protocol_vers
 def _run_row(
     row: PlanRow, problem: Any, dataset: ResolvedDataset, plan: StudyPlan, independent, *,
     registered: frozenset, runtime_backends: RuntimeBackendAvailability,
-    registry_getter: Callable[[str], Any], gateway_executor: Callable[..., Any],
+    registry_getter: Callable[[str], Any], gateway_executor: Callable[..., Any], smoke: bool = True,
 ) -> Dict[str, Any]:
     study = plan.study
     fixed = row.protocol is ExecutionProtocol.FIXED_BUDGET
@@ -347,20 +362,20 @@ def _run_row(
     except Exception as exc:  # recorded, never converted to a numeric observation
         raise _RowFailure(stage, exc, consumed) from exc
     record.update(
-        {"study_id": study.study_id, "dataset_id": row.dataset_id, "smoke": True,
+        {"study_id": study.study_id, "dataset_id": row.dataset_id, "smoke": smoke,
          "hamiltonian_validation": "passed"}
     )
     return record
 
 
-def _failed_record(row: PlanRow, failure: _RowFailure, plan: StudyPlan) -> Dict[str, Any]:
+def _failed_record(row: PlanRow, failure: _RowFailure, plan: StudyPlan, smoke: bool = True) -> Dict[str, Any]:
     fixed = row.protocol is ExecutionProtocol.FIXED_BUDGET
     return {
         "record_kind": "failed_run",
         "validation_status": "failed",
         "study_id": plan.study.study_id,
         "dataset_id": row.dataset_id,
-        "smoke": True,
+        "smoke": smoke,
         "protocol_version": plan.study.primary_protocol.protocol_version if fixed else NATIVE_PROTOCOL,
         "comparison_regime": "fixed_evaluation_budget" if fixed else NATIVE_TERMINATION_REGIME,
         "problem": row.problem_name,
@@ -381,7 +396,7 @@ _COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 
 def _write_run_manifests(
     plan: StudyPlan, output: Path, completed: Sequence[tuple], written: Mapping[str, int], status: str,
-    git: Mapping[str, Any], environment: EnvironmentV1,
+    git: Mapping[str, Any], environment: EnvironmentV1, mode: str = "smoke",
 ) -> Optional[Dict[str, Any]]:
     """Run manifests, campaign index and detached checksums (D-02); ``None`` when the git state is unknown.
 
@@ -407,7 +422,7 @@ def _write_run_manifests(
         )
         runs.append((record, manifest))
     index = write_run_campaign(
-        output, mode="smoke", study_id=study.study_id, seed_protocol_version=study.seed_protocol_version,
+        output, mode=mode, study_id=study.study_id, seed_protocol_version=study.seed_protocol_version,
         base_seed=study.base_seed, git={"commit": revision, "dirty": dirty}, environment=environment, status=status,
         runs=runs, output_files=list(written),
     )
@@ -417,6 +432,7 @@ def _write_run_manifests(
 def _report_text(
     plan: StudyPlan, status: str, level: Any, replicates: int, written: Mapping[str, int],
     failed: Sequence[Mapping[str, Any]], git: Mapping[str, Any], run_index: Optional[Mapping[str, Any]] = None,
+    analysis_plan_label: Optional[str] = None,
 ) -> str:
     lines = [
         "UniRide study smoke run (smoke mode, no claim)",
@@ -439,6 +455,8 @@ def _report_text(
             f"{item['algorithm_id']} on {item['problem']}, replicate {item['replicate']}. "
             "Aggregation stopped; the failed-run record is in " + FAILED_FILE + "."
         )
+    if analysis_plan_label:
+        lines.append(f"Analysis plan: {analysis_plan_label}")
     for name, count in written.items():
         lines.append(f"File {name}: {count} row(s)")
     if run_index is not None:
@@ -474,6 +492,7 @@ def run_study_smoke(
     gateway_executor: Callable[..., Any] = execute_preflighted,
     git_provider: Callable[[Path], Mapping[str, Any]] = _git_metadata,
     environment_provider: Callable[[], EnvironmentV1] = collect_environment,
+    analysis_plan_label: Optional[str] = None,
 ) -> SmokeReport:
     """Run the smoke slice of ``plan``. ``problem_loader(problem_name)`` returns the problem object."""
     root = (repository_root or Path(__file__).resolve().parents[2]).resolve()
@@ -532,13 +551,14 @@ def run_study_smoke(
     status = "failed" if failed else "passed"
     git = dict(git_provider(root))
     run_index = _write_run_manifests(plan, output, completed, written, status, git, environment_provider())
-    text = _report_text(plan, status, level, cap, written, failed, git, run_index)
+    text = _report_text(plan, status, level, cap, written, failed, git, run_index, analysis_plan_label)
     assert_no_ranking_words(text)
     (output / REPORT_TEXT_FILE).write_text(text, encoding="utf-8")
     _json_atomic(output / REPORT_JSON_FILE, {
         "status": status, "study_id": plan.study.study_id, "mode": "smoke", "claims": "none",
         "budget_level": level, "replicates": cap, "planned_rows": len(rows), "rows_written": written,
-        "git": git, "environment": _environment_metadata(), "run_index": run_index, "statement": text,
+        "git": git, "environment": _environment_metadata(), "run_index": run_index,
+        "analysis_plan": analysis_plan_label, "statement": text,
     })
     return SmokeReport(
         status=status, output_dir=str(output), study_id=plan.study.study_id, budget_level=level,

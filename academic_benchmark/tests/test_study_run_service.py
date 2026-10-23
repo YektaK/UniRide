@@ -378,7 +378,7 @@ def test_paper_failure_is_recorded_the_campaign_continues_and_the_cell_is_exclud
     assert len(cells) == 1 and cells[0]["algorithm_id"] == ALGS[0] and cells[0]["budget_level"] == LEVELS[0]
     assert cells[0]["failed_replicates"] == [1]
     assert "excluded from inference" in report.text
-    assert json.loads((out / "run_report.json").read_text("utf-8"))["excluded_cells"] == cells
+    assert json.loads((out / "run_report.json").read_text("utf-8"))["excluded_cells"] == list(cells)
     assert RunIndexV1.model_validate_json((out / "run_index.json").read_bytes()).status == "failed"
     assert verify_campaign(out) == []
 

@@ -28,6 +28,12 @@ class RunIndexEntryV1(StrictContract):
 
 
 class RunIndexV1(StrictContract):
+    """Campaign index: lists every run manifest of one campaign with its checksum, plus the campaign-wide fields.
+
+    The manifests of native (algorithm_native_termination) runs carry ``budget.levels`` = [0] as a sentinel: the run
+    contract requires one level entry and a native run has no budget level. No consumer may read that 0 as a budget level;
+    the budget policy ``native_uncapped`` says there is none."""
+
     model_config = StrictContract.model_config | {"json_schema_extra": {"$id": "uniride-run-index/v1"}}
 
     schema_version: Literal["uniride-run-index/v1"]

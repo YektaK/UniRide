@@ -140,6 +140,7 @@
   "$id": "uniride-run-index/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "description": "Campaign index: lists every run manifest of one campaign with its checksum, plus the campaign-wide fields.\n\nThe manifests of native (algorithm_native_termination) runs carry ``budget.levels`` = [0] as a sentinel: the run\ncontract requires one level entry and a native run has no budget level. No consumer may read that 0 as a budget level;\nthe budget policy ``native_uncapped`` says there is none.",
   "properties": {
     "base_seed": {
       "title": "Base Seed",

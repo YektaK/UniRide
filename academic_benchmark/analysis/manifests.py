@@ -32,12 +32,12 @@ import os
 import platform
 import re
 from importlib import metadata
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
 from pydantic import BaseModel, ValidationError
 
-from academic_benchmark.analysis.identity import ComparisonIdentityError, comparison_cell_key
+from academic_benchmark.analysis.identity import SEED_PROTOCOL_VERSION, ComparisonIdentityError, comparison_cell_key
 from academic_benchmark.contracts import DatasetManifestV1, OutputChecksumV1, RunManifestV1
 from academic_benchmark.contracts.common import ChecksumV1
 from academic_benchmark.contracts.run import EnvironmentV1, GitStateV1
@@ -48,6 +48,9 @@ from academic_benchmark.protocol_registry import classify_row
 INDEX_FILE = "run_index.json"
 MANIFEST_DIR = "manifests"
 SIDECAR_SUFFIX = ".sha256"
+# result files whose every row needs a manifest (the failed-run file holds records, not observations)
+RESULT_FILES = ("fixed_runs.jsonl", "native_runs.jsonl")
+REPORT_FILES = ("smoke_report.txt", "smoke_report.json")
 # no statistics library exists before D-04a pins one (EnvironmentV1 requires a string); the literal is recorded as is
 STATISTICS_LIBRARY_NONE = "none"
 # native_uncapped runs have no budget level, but ``BudgetRecordV1.levels`` needs one entry: 0 is that sentinel
@@ -322,6 +325,11 @@ def write_run_campaign(
 
     ``runs`` are ``(row, manifest)`` pairs; ``output_files`` are the result files (relative names, already written). Nothing is
     written when the pairs are inconsistent with the campaign values or share a run id."""
+    if seed_protocol_version != SEED_PROTOCOL_VERSION:
+        raise ManifestError(
+            f"seed_protocol_version {seed_protocol_version!r} is not the implemented {SEED_PROTOCOL_VERSION!r}: "
+            "the index field and the comparison key digest must not diverge"
+        )
     output_dir = Path(output_dir)
     git_state, env = GitStateV1.model_validate(git), EnvironmentV1.model_validate(environment)
     ids = [manifest.run_id for _, manifest in runs]
@@ -408,35 +416,69 @@ def _check_output(root: Path, item: OutputChecksumV1, where: str, errors: list[s
         errors.append(f"{where}: output {item.path} checksum mismatch (recorded {item.checksum.value}, file {actual})")
 
 
-def _bind_row(manifest: RunManifestV1, rows: list[dict[str, Any]], file_name: str, digest: str, errors: list[str]) -> None:
+def _row_run_id(manifest: RunManifestV1, row: Mapping[str, Any]) -> Optional[str]:
+    """The run id this row would have under ``manifest``'s dataset, level list and policy; ``None`` when the row cannot
+    belong to it (a fixed row needs a budget that is one of the levels, a native row needs none)."""
+    native = manifest.budget.policy == "native_uncapped"
+    budget, levels = row.get("evaluation_budget"), list(manifest.budget.levels)
+    if native:
+        if budget is not None:
+            return None
+        level_index = None
+    else:
+        if not _is_int(budget) or budget not in levels:
+            return None
+        level_index = levels.index(budget)
+    if not _is_int(row.get("replicate")):
+        return None
+    return make_run_id(manifest.study_id, manifest.dataset.dataset_id, manifest.algorithm.algorithm_id, level_index, row["replicate"])
+
+
+def _bind_row(manifest: RunManifestV1, rows: list[dict[str, Any]], file_name: str, digest: str, errors: list[str]) -> list[int]:
+    """Check the manifest against its row in ``rows`` and return the indices of the matching rows.
+
+    A row matches on algorithm, protocol, dataset, run seed *and* run id (replicate and budget level): the seed depends only on
+    problem and replicate, so one seed recurs at every budget level of a campaign."""
     seed = manifest.seeds.derived.get("run_seed")
     dataset_id = manifest.dataset.dataset_id
-    matches = [
-        row for row in rows
+    indices = [
+        i for i, row in enumerate(rows)
         if row.get("algorithm_id") == manifest.algorithm.algorithm_id
         and row.get("protocol_version") == manifest.protocol_version
         and row.get("dataset_id", dataset_id) == dataset_id
         and row.get("seed") == seed
+        and _row_run_id(manifest, row) == manifest.run_id
     ]
-    if len(matches) != 1:
-        errors.append(f"{manifest.run_id}: {len(matches)} row(s) in {file_name} match the manifest (algorithm, protocol, dataset, run seed); expected exactly 1")
-        return
-    row = matches[0]
-    levels = list(manifest.budget.levels)
-    level_index = levels.index(row["evaluation_budget"]) if manifest.budget.policy != "native_uncapped" and row.get("evaluation_budget") in levels else None
-    if _is_int(row.get("replicate")) and make_run_id(
-        manifest.study_id, dataset_id, manifest.algorithm.algorithm_id, level_index, row["replicate"]
-    ) != manifest.run_id:
-        errors.append(f"{manifest.run_id}: the row's replicate and level do not give this run id")
+    if len(indices) != 1:
+        errors.append(
+            f"{manifest.run_id}: {len(indices)} row(s) in {file_name} match the manifest "
+            "(algorithm, protocol, dataset, run seed, budget level, replicate); expected exactly 1"
+        )
+        return indices
+    row = rows[indices[0]]
     if row.get("objective_evaluations") != manifest.budget.objective_evaluations:
         errors.append(f"{manifest.run_id}: row objective_evaluations differs from the manifest's")
     try:
         actual = comparison_cell_key(row, manifest, allow_dirty=True).digest()
     except ComparisonIdentityError as exc:
         errors.append(f"{manifest.run_id}: the row does not belong to its manifest: {exc}")
-        return
+        return indices
     if actual != digest:
         errors.append(f"{manifest.run_id}: comparison key digest differs from the index")
+    return indices
+
+
+def _load_rows(root: Path, path: str, cache: dict[str, list[dict[str, Any]]], errors: list[str]) -> list[dict[str, Any]]:
+    if path not in cache:
+        target = root / path
+        rows: list[dict[str, Any]] = []
+        if target.is_file():
+            try:
+                rows = [json.loads(line) for line in target.read_text(encoding="utf-8").splitlines() if line.strip()]
+            except ValueError:
+                errors.append(f"{path}: not a JSON-lines file")
+        cache[path] = rows
+    return cache[path]
 
 
 def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
@@ -455,9 +497,14 @@ def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
     except ValidationError as exc:
         errors.append(f"{INDEX_FILE}: not a valid {RunIndexV1.__name__}: {exc.error_count()} error(s)")
         return result
+    if index.seed_protocol_version != SEED_PROTOCOL_VERSION:
+        errors.append(
+            f"{INDEX_FILE}: seed_protocol_version {index.seed_protocol_version!r} is not the implemented {SEED_PROTOCOL_VERSION!r}"
+        )
     for item in index.outputs:
         _check_output(root, item, INDEX_FILE, errors)
     row_cache: dict[str, list[dict[str, Any]]] = {}
+    bound: dict[tuple[str, int], list[str]] = {}
     listed: set[str] = set()
     for entry in index.runs:
         relative = entry.manifest_path
@@ -484,26 +531,45 @@ def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
             errors.append(f"{relative}: the manifest lists manifest, checksum or index files among its outputs: {bad}")
         if not manifest.outputs:
             errors.append(f"{relative}: the manifest lists no result file")
+        if manifest.budget.policy == "native_uncapped" and list(manifest.budget.levels) != NATIVE_LEVELS:
+            errors.append(
+                f"{relative}: a native manifest carries the sentinel levels {NATIVE_LEVELS} (no budget level), "
+                f"got {list(manifest.budget.levels)}"
+            )
         for item in manifest.outputs:
             _check_output(root, item, relative, errors)
         for item in manifest.outputs:
             if not item.path.endswith(".jsonl") or not (root / item.path).is_file():
                 continue
-            if item.path not in row_cache:
-                try:
-                    row_cache[item.path] = [
-                        json.loads(line) for line in (root / item.path).read_text(encoding="utf-8").splitlines() if line.strip()
-                    ]
-                except ValueError:
-                    row_cache[item.path] = []
-                    errors.append(f"{item.path}: not a JSON-lines file")
-            _bind_row(manifest, row_cache[item.path], item.path, entry.comparison_key_digest, errors)
+            rows = _load_rows(root, item.path, row_cache, errors)
+            for i in _bind_row(manifest, rows, item.path, entry.comparison_key_digest, errors):
+                bound.setdefault((item.path, i), []).append(manifest.run_id)
+    # completeness: every result row is bound by exactly one manifest, and the index lists no other run
+    rows_total = 0
+    for item in index.outputs:
+        if item.path not in RESULT_FILES:
+            continue
+        rows = _load_rows(root, item.path, row_cache, errors)
+        rows_total += len(rows)
+        for i in range(len(rows)):
+            owners = bound.get((item.path, i), [])
+            if not owners:
+                errors.append(f"{item.path}: row {i + 1} has no run manifest")
+            elif len(owners) > 1:
+                errors.append(f"{item.path}: row {i + 1} is bound by {len(owners)} manifests {owners}")
+    if len(index.runs) != rows_total:
+        errors.append(f"{INDEX_FILE}: lists {len(index.runs)} run(s) but the result files hold {rows_total} row(s)")
     folder = root / MANIFEST_DIR
     if folder.is_dir():
         for path in sorted(folder.iterdir()):
             relative = f"{MANIFEST_DIR}/{path.name}"
             if relative not in listed:
                 errors.append(f"{relative}: file is not listed in {INDEX_FILE}")
+    expected = {INDEX_FILE, INDEX_FILE + SIDECAR_SUFFIX, MANIFEST_DIR, *REPORT_FILES}
+    expected.update(PurePosixPath(item.path).parts[0] for item in index.outputs)
+    for path in sorted(root.iterdir()):
+        if path.name not in expected:
+            errors.append(f"{path.name}: unexpected file in the campaign folder (not the index, a listed output, a report or {MANIFEST_DIR}/)")
     return result
 
 
@@ -513,7 +579,7 @@ def verify_campaign(directory: Path | str) -> list[str]:
 
 
 __all__ = [
-    "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
+    "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
     "VerificationResult", "build_run_manifest", "canonical_json_bytes", "collect_environment", "comparable_manifest_view",
     "file_sha256", "make_run_id", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
     "write_run_campaign",

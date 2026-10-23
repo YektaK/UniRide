@@ -139,6 +139,27 @@ def test_missing_or_extra_files_fail_verification(campaign, tmp_path, what):
     assert verify_campaign(copied) != []
 
 
+@pytest.mark.parametrize("which", ["manifest", "index"])
+def test_a_sidecar_with_another_digest_fails_even_when_the_file_is_untouched(campaign, tmp_path, which):
+    _plan, _report, out = campaign
+    copied = _copy(out, tmp_path)
+    target = next((copied / "manifests").glob("*.json")) if which == "manifest" else copied / "run_index.json"
+    sidecar = Path(str(target) + ".sha256")
+    sidecar.write_text(f"{'0' * 64}  {target.name}\n", encoding="ascii")
+    errors = verify_campaign(copied)
+    assert errors and any("checksum mismatch" in e and target.name in e for e in errors)
+
+
+def test_a_changed_byte_in_the_index_fails_verification(campaign, tmp_path):
+    _plan, _report, out = campaign
+    copied = _copy(out, tmp_path)
+    path = copied / "run_index.json"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace('"mode": "smoke"', '"mode": "paper"'), encoding="utf-8", newline="\n")
+    errors = verify_campaign(copied)
+    assert errors and any("run_index.json" in e and "checksum mismatch" in e for e in errors)
+
+
 def test_a_sidecar_that_names_another_file_fails(campaign, tmp_path):
     _plan, _report, out = campaign
     copied = _copy(out, tmp_path)

@@ -29,6 +29,9 @@ STUDY_PROFILES = (
     "academic_benchmark/studies/bildiri2026/study.json",
     "academic_benchmark/studies/yaem2026/study.json",
 )
+STUDY_ANALYSIS_PLANS = tuple(
+    profile.replace("study.json", "analysis_plan.json") for profile in STUDY_PROFILES
+)
 BUILD_TIMEOUT_SECONDS = 600
 IMPORT_TIMEOUT_SECONDS = 120
 
@@ -167,6 +170,12 @@ def test_wheel_ships_both_study_profiles(wheel_names: set[str]) -> None:
     assert missing == []
 
 
+def test_wheel_ships_both_analysis_plans_next_to_the_profiles(wheel_names: set[str]) -> None:
+    """load_study(mode="paper") resolves analysis_plan.json next to study.json."""
+    missing = [plan for plan in STUDY_ANALYSIS_PLANS if plan not in wheel_names]
+    assert missing == []
+
+
 def test_wheel_ships_every_referenced_dataset_manifest(wheel_names: set[str]) -> None:
     referenced = _referenced_dataset_manifests()
     assert referenced, "study profiles reference no dataset manifests"
@@ -175,13 +184,13 @@ def test_wheel_ships_every_referenced_dataset_manifest(wheel_names: set[str]) ->
 
 
 def test_wheel_ships_no_unreferenced_profile_or_dataset_files(wheel_names: set[str]) -> None:
-    """Inclusion is limited to what design :371 names: profiles and their manifests."""
+    """Inclusion is limited to profiles, their analysis plans and their manifests."""
     shipped_studies = {
         name
         for name in wheel_names
         if name.startswith("academic_benchmark/studies/") and name.endswith(".json")
     }
-    assert shipped_studies == set(STUDY_PROFILES)
+    assert shipped_studies == set(STUDY_PROFILES) | set(STUDY_ANALYSIS_PLANS)
     shipped_datasets = {
         name for name in wheel_names if name.startswith("academic_benchmark/datasets/")
     }

@@ -1,0 +1,439 @@
+{
+  "$defs": {
+    "ComparisonFamilyV1": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm_set": {
+          "const": "all_algorithms_of_the_comparison_cell",
+          "title": "Algorithm Set",
+          "type": "string"
+        },
+        "dataset_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Dataset Ids",
+          "type": "array"
+        },
+        "family_id": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "title": "Family Id",
+          "type": "string"
+        },
+        "omnibus": {
+          "$ref": "#/$defs/OmnibusV1"
+        },
+        "post_hoc": {
+          "$ref": "#/$defs/PostHocV1"
+        },
+        "problem_types": {
+          "items": {
+            "enum": [
+              "TSP",
+              "ATSP"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Problem Types",
+          "type": "array"
+        },
+        "scope": {
+          "enum": [
+            "per_instance",
+            "across_instances"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "family_id",
+        "scope",
+        "problem_types",
+        "dataset_ids",
+        "algorithm_set",
+        "omnibus",
+        "post_hoc"
+      ],
+      "title": "ComparisonFamilyV1",
+      "type": "object"
+    },
+    "DescriptiveV1": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "enum": [
+              "n",
+              "median",
+              "iqr",
+              "min",
+              "max",
+              "mean",
+              "sd"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Columns",
+          "type": "array"
+        },
+        "counts": {
+          "items": {
+            "enum": [
+              "termination_reason_counts",
+              "failed_run_count"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Counts",
+          "type": "array"
+        },
+        "quantile_method": {
+          "const": "hyndman_fan_type_7",
+          "title": "Quantile Method",
+          "type": "string"
+        },
+        "sd_convention": {
+          "enum": [
+            "sample_n_minus_1",
+            "population_n"
+          ],
+          "title": "Sd Convention",
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "enum": [
+              "cost",
+              "gap",
+              "evaluations_consumed",
+              "evaluation_budget_share"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Variables",
+          "type": "array"
+        }
+      },
+      "required": [
+        "columns",
+        "sd_convention",
+        "quantile_method",
+        "variables",
+        "counts"
+      ],
+      "title": "DescriptiveV1",
+      "type": "object"
+    },
+    "ExactReferenceLinkV1": {
+      "additionalProperties": false,
+      "description": "How the exact reference reaches the analysis (D-06): as a reference, never as pooled data.",
+      "properties": {
+        "join_identity": {
+          "const": "normalised_tsplib_problem_name",
+          "title": "Join Identity",
+          "type": "string"
+        },
+        "pooling": {
+          "const": "reference_only",
+          "title": "Pooling",
+          "type": "string"
+        },
+        "reader": {
+          "const": "exact_reference_v1",
+          "title": "Reader",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reader",
+        "join_identity",
+        "pooling"
+      ],
+      "title": "ExactReferenceLinkV1",
+      "type": "object"
+    },
+    "FailurePolicyV1": {
+      "additionalProperties": false,
+      "properties": {
+        "inference": {
+          "const": "exclude_cell",
+          "title": "Inference",
+          "type": "string"
+        },
+        "on_failed_run": {
+          "enum": [
+            "record_and_continue",
+            "stop_campaign",
+            "retry_once_then_record"
+          ],
+          "title": "On Failed Run",
+          "type": "string"
+        },
+        "reporting": {
+          "const": "report_exclusions",
+          "title": "Reporting",
+          "type": "string"
+        }
+      },
+      "required": [
+        "on_failed_run",
+        "inference",
+        "reporting"
+      ],
+      "title": "FailurePolicyV1",
+      "type": "object"
+    },
+    "MatchedUnitV1": {
+      "additionalProperties": false,
+      "description": "The per-instance summary that is the matched unit of the cross-instance tests.",
+      "properties": {
+        "over": {
+          "const": "replicates",
+          "title": "Over",
+          "type": "string"
+        },
+        "per": {
+          "const": "instance",
+          "title": "Per",
+          "type": "string"
+        },
+        "summary": {
+          "const": "median",
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "per",
+        "summary",
+        "over"
+      ],
+      "title": "MatchedUnitV1",
+      "type": "object"
+    },
+    "OmnibusV1": {
+      "additionalProperties": false,
+      "properties": {
+        "effect_size": {
+          "enum": [
+            "epsilon_squared",
+            "kendalls_w"
+          ],
+          "title": "Effect Size",
+          "type": "string"
+        },
+        "test": {
+          "enum": [
+            "kruskal_wallis",
+            "friedman"
+          ],
+          "title": "Test",
+          "type": "string"
+        }
+      },
+      "required": [
+        "test",
+        "effect_size"
+      ],
+      "title": "OmnibusV1",
+      "type": "object"
+    },
+    "PostHocV1": {
+      "additionalProperties": false,
+      "properties": {
+        "correction": {
+          "const": "holm",
+          "title": "Correction",
+          "type": "string"
+        },
+        "effect_size": {
+          "enum": [
+            "vargha_delaney_a12",
+            "matched_pairs_rank_biserial"
+          ],
+          "title": "Effect Size",
+          "type": "string"
+        },
+        "rule": {
+          "enum": [
+            "only_after_significant_omnibus",
+            "always_over_declared_family"
+          ],
+          "title": "Rule",
+          "type": "string"
+        },
+        "test": {
+          "enum": [
+            "mann_whitney_u",
+            "wilcoxon_signed_rank"
+          ],
+          "title": "Test",
+          "type": "string"
+        }
+      },
+      "required": [
+        "test",
+        "rule",
+        "correction",
+        "effect_size"
+      ],
+      "title": "PostHocV1",
+      "type": "object"
+    },
+    "ResponseV1": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "percent",
+          "title": "Unit",
+          "type": "string"
+        },
+        "variable": {
+          "const": "relative_gap_to_exact_reference",
+          "title": "Variable",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variable",
+        "unit"
+      ],
+      "title": "ResponseV1",
+      "type": "object"
+    },
+    "UnresolvedValueV1": {
+      "additionalProperties": false,
+      "description": "A value the plan does not fix yet and the decision or measurement it waits for.",
+      "properties": {
+        "field": {
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "pending": {
+          "minLength": 1,
+          "title": "Pending",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "pending"
+      ],
+      "title": "UnresolvedValueV1",
+      "type": "object"
+    }
+  },
+  "$id": "uniride-analysis-plan/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "alpha": {
+      "exclusiveMaximum": 1,
+      "exclusiveMinimum": 0,
+      "title": "Alpha",
+      "type": "number"
+    },
+    "analysis_plan_id": {
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "title": "Analysis Plan Id",
+      "type": "string"
+    },
+    "decisions": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Decisions",
+      "type": "array"
+    },
+    "descriptive": {
+      "$ref": "#/$defs/DescriptiveV1"
+    },
+    "exact_reference": {
+      "$ref": "#/$defs/ExactReferenceLinkV1"
+    },
+    "failure_policy": {
+      "$ref": "#/$defs/FailurePolicyV1"
+    },
+    "families": {
+      "items": {
+        "$ref": "#/$defs/ComparisonFamilyV1"
+      },
+      "minItems": 1,
+      "title": "Families",
+      "type": "array"
+    },
+    "matched_unit": {
+      "$ref": "#/$defs/MatchedUnitV1"
+    },
+    "minimum_n_per_cell": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Minimum N Per Cell"
+    },
+    "response": {
+      "$ref": "#/$defs/ResponseV1"
+    },
+    "schema_version": {
+      "const": "uniride-analysis-plan/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "active",
+        "archived"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "study_id": {
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "title": "Study Id",
+      "type": "string"
+    },
+    "unresolved": {
+      "items": {
+        "$ref": "#/$defs/UnresolvedValueV1"
+      },
+      "title": "Unresolved",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "analysis_plan_id",
+    "study_id",
+    "status",
+    "decisions",
+    "unresolved",
+    "response",
+    "matched_unit",
+    "families",
+    "alpha",
+    "descriptive",
+    "minimum_n_per_cell",
+    "failure_policy",
+    "exact_reference"
+  ],
+  "title": "AnalysisPlanV1",
+  "type": "object"
+}

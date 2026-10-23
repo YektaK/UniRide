@@ -122,3 +122,47 @@ def test_main_prints_json_summary(monkeypatch, capsys):
     output = capsys.readouterr().out
     assert '"run_id": "run-1"' in output
     assert '"A-n32-k5::OR-Tools"' in output
+
+
+# ---- D-08a: the summary refuses rows that must not be pooled (DECISION_LOG E12 acceptance, X4) ----
+import pytest  # noqa: E402
+
+
+def _matrix_row(**extra):
+    row = {"problem": "A-n32-k5", "algorithm": "OR-Tools", "problem_type": "CVRP", "objective_cost": 800.0,
+           "gap": 2.0, "num_vehicles": 5, "capacity_violations": 0, "tw_violations": 0,
+           "metadata": {"execution_failed": False}}
+    row.update(extra)
+    return row
+
+
+_FIXED = {"protocol_version": "uniride-fair-tsp-v2", "comparison_regime": "fixed_evaluation_budget"}
+_NATIVE = {"protocol_version": "uniride-native-tsp-v1", "comparison_regime": "algorithm_native_termination"}
+
+
+def test_summary_refuses_mixed_fixed_and_native_rows():
+    with pytest.raises(ValueError, match="pooling groups"):
+        summarize_benchmark_rows([_matrix_row(**_FIXED), _matrix_row(**_NATIVE)])
+
+
+def test_summary_refuses_exact_and_heuristic_rows_in_one_list():
+    with pytest.raises(ValueError, match="pooling groups"):
+        summarize_benchmark_rows([_matrix_row(**_FIXED), _matrix_row(protocol="exact_reference_v1")])
+
+
+def test_summary_refuses_a_row_whose_fields_contradict_each_other():
+    contradictory = _matrix_row(protocol_version="uniride-fair-tsp-v2", comparison_regime="algorithm_native_termination")
+    with pytest.raises(ValueError, match="several protocol kinds"):
+        summarize_benchmark_rows([contradictory])
+
+
+def test_summary_refuses_labelled_rows_mixed_with_unlabelled_rows():
+    with pytest.raises(ValueError, match="no protocol"):
+        summarize_benchmark_rows([_matrix_row(**_FIXED), _matrix_row()])
+
+
+def test_summary_accepts_rows_of_one_protocol_group_and_all_unlabelled_matrix_rows():
+    assert summarize_benchmark_rows([_matrix_row(**_FIXED), _matrix_row(**_FIXED)])["total_rows"] == 2
+    assert summarize_benchmark_rows([_matrix_row(**_NATIVE)])["total_rows"] == 1
+    assert summarize_benchmark_rows([_matrix_row(), _matrix_row()])["total_rows"] == 2
+    assert summarize_benchmark_rows([])["total_rows"] == 0

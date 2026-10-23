@@ -367,3 +367,33 @@ def test_fair_v2_alns_invalid_parameters_delegate_to_shared_validator(
             algorithms=_v2_algorithms_with_alns(invalid),
         ))
     assert str(loader_error.value) == str(shared_error.value)
+
+
+# ---- D-08a: pilot summaries use the SAMPLE standard deviation (n-1), named in the field (OQ-15, DECISION_LOG A18) ----
+def _agg_rows(costs, **extra):
+    return [{"record_kind": "primary", "problem": "p", "algorithm_id": "a", "objective_cost": c, "gap_pct": 1.0,
+             "elapsed_ms": 1.0, "objective_evaluations": 5, "budget_terminated": False, **extra} for c in costs]
+
+
+def test_fixed_budget_aggregate_reports_sample_sd_under_a_named_field():
+    from academic_benchmark.fair_pilot import _aggregate
+    (row,) = _aggregate(_agg_rows([10.0, 12.0, 17.0]), True)
+    assert row["sample_sd_cost"] == pytest.approx(13 ** 0.5)  # n-1 = 2; the population value would be 2.944
+    assert "stddev_cost" not in row
+
+
+def test_fixed_budget_aggregate_sample_sd_is_undefined_for_one_run():
+    from academic_benchmark.fair_pilot import _aggregate
+    (row,) = _aggregate(_agg_rows([10.0]), True)
+    assert row["sample_sd_cost"] is None
+
+
+def test_native_aggregate_reports_sample_sd_under_a_named_field():
+    from academic_benchmark.native_pilot import aggregate_native_records
+    rows = _agg_rows([10.0, 12.0, 17.0], protocol_version="uniride-native-tsp-v1",
+                     comparison_regime="algorithm_native_termination", evaluation_budget=None)
+    (row,) = aggregate_native_records(rows, True)
+    assert row["sample_sd_cost"] == pytest.approx(13 ** 0.5)
+    assert "stddev_cost" not in row
+    (single,) = aggregate_native_records(rows[:1], True)
+    assert single["sample_sd_cost"] is None

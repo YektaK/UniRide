@@ -32,6 +32,12 @@ numbered from 0, like the pilots. Neither seed depends on the algorithm or the b
 rows of one problem and replicate are paired across algorithms and levels. A native algorithm list
 of ``None`` means all study algorithms.
 
+Analysis plan (Gate D, D-09): ``analysis_plan_id`` of a study resolves to ``analysis_plan.json`` in
+the folder of the study file (schema ``uniride-analysis-plan/v1``). ``load_study(mode=...)`` and
+``load_study_with_plan`` resolve it: paper mode refuses an unknown, invalid, mismatching or
+non-``active`` plan; smoke mode keeps going and returns a label that says why the plan is not
+usable for inference. Without a mode ``load_study`` behaves as before.
+
 The service never runs a solver, never reads ``tsplib.db`` and never writes files.
 """
 
@@ -42,11 +48,11 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Sequence
+from typing import Literal, Sequence
 
 from pydantic import ValidationError
 
-from academic_benchmark.contracts import DatasetManifestV1, StudyManifestV1
+from academic_benchmark.contracts import AnalysisPlanV1, DatasetManifestV1, StudyManifestV1
 from academic_benchmark.contracts.study import TWO_OPT_SCAN_RULE, two_opt_scan_size
 from academic_benchmark.contracts.common import validate_repository_relative_path
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
@@ -142,8 +148,17 @@ def _read_json(path: Path, what: str) -> object:
         raise StudyServiceError(f"{what} is not readable JSON: {path.name} ({exc})") from exc
 
 
-def load_study(study_path: str, *, repository_root: Path) -> StudyManifestV1:
-    """Load and validate one study JSON given by a repository-relative path."""
+def load_study(
+    study_path: str, *, repository_root: Path, mode: AnalysisPlanMode | None = None
+) -> StudyManifestV1:
+    """Load and validate one study JSON given by a repository-relative path.
+
+    With ``mode`` the study's analysis plan must also resolve (see ``resolve_analysis_plan``):
+    ``"paper"`` raises ``StudyServiceError`` when it does not; ``"smoke"`` never raises for the
+    plan (use ``load_study_with_plan`` to read the label). ``mode=None`` does not look at the plan.
+    """
+    if mode is not None:
+        _check_mode(mode)
     path = _resolve_inside(Path(repository_root), study_path, "study path")
     payload = _read_json(path, "study manifest")
     try:
@@ -179,7 +194,149 @@ def load_study(study_path: str, *, repository_root: Path) -> StudyManifestV1:
             raise StudyServiceError(f"algorithm id {algorithm_id!r} is not canonical: {exc}") from exc
         if resolution.canonical_id != algorithm_id or resolution.alias_used:
             raise StudyServiceError(f"algorithm id {algorithm_id!r} is an alias")
+    if mode is not None:
+        resolve_analysis_plan(study, study_path, repository_root=repository_root, mode=mode)
     return study
+
+
+AnalysisPlanMode = Literal["smoke", "paper"]
+ANALYSIS_PLAN_FILENAME = "analysis_plan.json"
+
+
+@dataclass(frozen=True)
+class AnalysisPlanResolution:
+    """Outcome of resolving a study's ``analysis_plan_id``.
+
+    ``plan`` is the validated plan, or ``None`` when it does not resolve (``problem`` says why).
+    ``label`` is the sentence a smoke report prints about the plan.
+    """
+
+    analysis_plan_id: str
+    plan: AnalysisPlanV1 | None
+    problem: str | None
+    label: str
+
+
+@dataclass(frozen=True)
+class LoadedStudy:
+    study: StudyManifestV1
+    analysis_plan: AnalysisPlanResolution
+
+
+def _check_mode(mode: object) -> None:
+    if mode not in ("smoke", "paper"):
+        raise StudyServiceError(f"unknown mode {mode!r}; use 'smoke' or 'paper'")
+
+
+def _plan_problem(
+    study: StudyManifestV1, plan_path: Path, plan_name: str, repository_root: Path
+) -> tuple[AnalysisPlanV1 | None, str | None]:
+    """The validated plan, or ``None`` and the reason the plan id does not resolve."""
+    try:
+        payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None, f"analysis plan file not found: {plan_name}"
+    except (OSError, ValueError) as exc:
+        return None, f"analysis plan file is not readable JSON: {plan_name} ({exc})"
+    try:
+        plan = AnalysisPlanV1.model_validate(payload)
+    except ValidationError as exc:
+        return None, f"analysis plan file {plan_name} is invalid: {exc}"
+    if plan.analysis_plan_id != study.analysis_plan_id:
+        return None, (
+            f"{plan_name} declares analysis_plan_id {plan.analysis_plan_id!r}, "
+            f"the study asks for {study.analysis_plan_id!r}"
+        )
+    if plan.study_id != study.study_id:
+        return None, (
+            f"{plan_name} belongs to study_id {plan.study_id!r}, the study is {study.study_id!r}"
+        )
+    problem_types: dict[str, str] = {}
+    for ref in study.dataset_manifest_refs:
+        manifest_path = _resolve_inside(Path(repository_root), ref, "dataset manifest ref")
+        try:
+            manifest = DatasetManifestV1.model_validate(
+                _read_json(manifest_path, f"dataset manifest {ref!r}")
+            )
+        except (ValidationError, StudyServiceError) as exc:
+            return None, f"dataset manifest {ref!r} cannot be read for the plan check: {exc}"
+        problem_types[manifest.dataset_id] = manifest.problem_type
+    for family in plan.families:
+        for dataset_id in family.dataset_ids:
+            if dataset_id not in problem_types:
+                return None, (
+                    f"family {family.family_id!r} names dataset {dataset_id!r}, "
+                    "which is not a dataset of the study"
+                )
+            if problem_types[dataset_id] not in family.problem_types:
+                return None, (
+                    f"family {family.family_id!r} ({family.scope}) takes problem types "
+                    f"{family.problem_types} but dataset {dataset_id!r} is "
+                    f"{problem_types[dataset_id]}"
+                )
+    return plan, None
+
+
+def resolve_analysis_plan(
+    study: StudyManifestV1,
+    study_path: str,
+    *,
+    repository_root: Path,
+    mode: AnalysisPlanMode,
+) -> AnalysisPlanResolution:
+    """Resolve ``study.analysis_plan_id`` to the committed plan next to the study file.
+
+    The plan must be a valid ``uniride-analysis-plan/v1`` document with the study's plan id and
+    study id, and its families may only name datasets of the study with matching problem types.
+    Paper mode raises ``StudyServiceError`` unless the plan resolves and is ``active``; smoke mode
+    returns the reason in the label (descriptive output only, no inference).
+
+    D-03 note: the paper-mode preflight of the study run service must go through
+    ``load_study(mode="paper")`` or this function; a paper run that skips it would run without a
+    resolved, active analysis plan.
+    """
+    _check_mode(mode)
+    study_file = _resolve_inside(Path(repository_root), study_path, "study path")
+    plan_path = study_file.parent / ANALYSIS_PLAN_FILENAME
+    plan_name = (
+        PurePosixPath(validate_repository_relative_path(study_path)).parent / ANALYSIS_PLAN_FILENAME
+    ).as_posix()
+    plan_id = study.analysis_plan_id
+    plan, problem = _plan_problem(study, plan_path, plan_name, Path(repository_root))
+    if plan is None:
+        if mode == "paper":
+            raise StudyServiceError(f"analysis plan {plan_id!r} does not resolve: {problem}")
+        return AnalysisPlanResolution(
+            plan_id,
+            None,
+            problem,
+            f"analysis plan {plan_id} unresolved ({problem}): descriptive output only, no inference",
+        )
+    if plan.status != "active":
+        names = ", ".join(item.field for item in plan.unresolved) or "none listed"
+        if mode == "paper":
+            raise StudyServiceError(
+                f"analysis plan {plan_id!r} is {plan.status}, paper mode needs an active plan "
+                f"(unresolved: {names})"
+            )
+        return AnalysisPlanResolution(
+            plan_id,
+            plan,
+            None,
+            f"analysis plan {plan_id} ({plan.status}; unresolved: {names}): "
+            "descriptive output only, no inference",
+        )
+    return AnalysisPlanResolution(plan_id, plan, None, f"analysis plan {plan_id} (active)")
+
+
+def load_study_with_plan(
+    study_path: str, *, repository_root: Path, mode: AnalysisPlanMode
+) -> LoadedStudy:
+    """``load_study`` plus the analysis-plan resolution (and its label) for ``mode``."""
+    _check_mode(mode)
+    study = load_study(study_path, repository_root=repository_root)
+    plan = resolve_analysis_plan(study, study_path, repository_root=repository_root, mode=mode)
+    return LoadedStudy(study, plan)
 
 
 _NAME_HEADER = re.compile(r"^NAME[ \t]*[: \t][ \t]*(\S+)", re.IGNORECASE | re.MULTILINE)

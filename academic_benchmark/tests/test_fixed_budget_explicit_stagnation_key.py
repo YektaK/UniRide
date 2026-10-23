@@ -147,3 +147,33 @@ def test_fair_pilot_config_refuses_a_gwo_hho_block_without_the_key(tmp_path):
         load_fair_pilot_config(_fair_config(tmp_path, {"pack_size": 4, "max_iterations": 2}, ok_hho))
     with pytest.raises(FairPilotError, match=r"Core-HHO-TSP-Pure.*max_no_improvement"):
         load_fair_pilot_config(_fair_config(tmp_path, ok_gwo, {"hawks": 4, "max_iterations": 2}))
+
+
+# ------------------------------------------------------------------------- profiles and smoke runner
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.parametrize("study", ["bildiri2026", "yaem2026"])
+def test_every_study_profile_entry_writes_the_key_it_needs(study):
+    payload = json.loads(
+        (REPOSITORY_ROOT / "academic_benchmark" / "studies" / study / "study.json").read_text(encoding="utf-8")
+    )
+    for algorithm_id, block in payload["algorithm_parameters"].items():
+        require_fixed_budget_max_no_improvement(algorithm_id, block)  # raises when an entry lacks it
+
+
+def test_study_smoke_refuses_a_fixed_row_without_the_key_before_running():
+    from types import SimpleNamespace
+
+    from academic_benchmark.studies.smoke import StudySmokeError, _row_params
+    from uniride_core.algorithms.capabilities import ExecutionProtocol
+
+    study = SimpleNamespace(
+        algorithm_parameters={"Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 3}},
+        secondary_protocol=SimpleNamespace(termination={"max_iterations": 2}),
+    )
+    fixed = SimpleNamespace(algorithm_id="Core-GWO-TSP-Pure", protocol=ExecutionProtocol.FIXED_BUDGET)
+    native = SimpleNamespace(algorithm_id="Core-GWO-TSP-Pure", protocol=ExecutionProtocol.NATIVE_TERMINATION)
+    with pytest.raises(StudySmokeError, match=r"Core-GWO-TSP-Pure.*max_no_improvement"):
+        _row_params(study, fixed)
+    assert _row_params(study, native)["max_iterations"] == 2  # native rows are unchanged

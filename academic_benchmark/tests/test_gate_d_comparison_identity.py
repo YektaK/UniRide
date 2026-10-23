@@ -149,9 +149,9 @@ def test_the_real_bildiri_levels_give_eil51_and_kroa100_the_same_level_index_zer
 
 def test_a_row_without_a_run_manifest_such_as_a_pre_c16a_core_ga_row_is_refused():
     row = make_row(algorithm_id="Core-GA-TSP")
-    with pytest.raises(ComparisonIdentityError, match="manifest"):
+    with pytest.raises(ComparisonIdentityError, match="no run manifest"):
         comparison_cell_key(row, None)
-    with pytest.raises(ComparisonIdentityError, match="manifest"):
+    with pytest.raises(ComparisonIdentityError, match="no run manifest"):
         assert_single_comparison_family([(row, None)])
 
 

@@ -61,7 +61,11 @@ _EVIDENCE_LABELS = {
     EVIDENCE_HISTORICAL: EVIDENCE_HISTORICAL,
     "HISTORICAL_UNVERIFIED": EVIDENCE_HISTORICAL,
 }
-VARY_DIMENSIONS = {"algorithm": ("algorithm_id", "configuration_hash"), "dataset": ("dataset_identity",)}
+# the backend profile belongs to the algorithm (local search: python/none, GA and PSO: numba/none, memetic IDs: numba/python)
+VARY_DIMENSIONS = {
+    "algorithm": ("algorithm_id", "configuration_hash", "backend_profile"),
+    "dataset": ("dataset_identity",),
+}
 
 
 class ComparisonIdentityError(ValueError):
@@ -191,7 +195,8 @@ def _check_dataset(row: Mapping[str, Any], manifest: RunManifestV1, problem: str
     if "dataset_id" in row:
         if row["dataset_id"] != manifest_id:
             raise ComparisonIdentityError(f"row dataset_id {row['dataset_id']!r} differs from the manifest's {manifest_id!r}")
-        return
+        if not manifest_id.startswith("tsplib-"):
+            return  # a dataset that is not named after a TSPLIB instance cannot be checked against the problem name
     expected = f"tsplib-{normalize_problem(problem)}"
     if manifest_id != expected:
         raise ComparisonIdentityError(
@@ -259,8 +264,8 @@ def assert_single_comparison_family(
 ) -> Optional[ComparisonFamily]:
     """Raise unless every ``(row, manifest)`` pair belongs to one comparison family; ``None`` for no pairs.
 
-    The pooling-group guard runs first. ``vary`` names the dimension(s) being compared: ``"algorithm"`` (algorithm ID and
-    its configuration; each algorithm must still have exactly one configuration) and ``"dataset"`` (instance). With no
+    The pooling-group guard runs first. ``vary`` names the dimension(s) being compared: ``"algorithm"`` (algorithm ID, backend profile and
+    its configuration; each algorithm must still have exactly one configuration and backend profile) and ``"dataset"`` (instance). With no
     ``vary`` the pairs must form one cell, with every key field equal. A cross-instance design (Friedman) varies both."""
     vary = tuple(vary)
     unknown = [name for name in vary if name not in VARY_DIMENSIONS]
@@ -281,10 +286,12 @@ def assert_single_comparison_family(
     if "algorithm" in vary:
         per_algorithm: dict = {}
         for key in keys:
-            per_algorithm.setdefault(key.algorithm_id, set()).add(key.configuration_hash)
-        split = sorted(name for name, hashes in per_algorithm.items() if len(hashes) > 1)
+            per_algorithm.setdefault(key.algorithm_id, set()).add((key.configuration_hash, key.backend_profile))
+        split = sorted(name for name, variants in per_algorithm.items() if len(variants) > 1)
         if split:
-            raise ComparisonIdentityError(f"algorithm(s) {split} appear with more than one configuration hash")
+            raise ComparisonIdentityError(
+                f"algorithm(s) {split} appear with more than one configuration hash or backend profile"
+            )
     return ComparisonFamily(
         pooling_group=group,
         size=len(keys),

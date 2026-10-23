@@ -179,6 +179,10 @@ def validate_scientific_pso_params(params: Mapping[str, Any]) -> dict[str, Any]:
     return dict(params)
 
 
+def require_fixed_budget_max_no_improvement(algorithm_id: str, params: Mapping[str, Any]) -> None:
+    """RED STUB (no check yet)."""
+
+
 HYBRID_3OPT_POLISH_REQUIRED = frozenset({"max_iterations", "first_improvement", "window"})
 
 

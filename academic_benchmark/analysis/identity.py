@@ -18,6 +18,8 @@ budget_level_index     position of the row's budget in the manifest's level list
 algorithm_id           canonical ID
 configuration_hash     sha256 of the sorted JSON of the configured parameters, the normalised ``termination_policy``
                        (A17 C-16b) and the row's ``variant``; see ``configuration_hash`` for what is excluded
+backend_policy,        the manifest's backend policy and execution profile (``objective=...;polish=...``); python
+backend_profile        and numba rows are separate cells until the owner decides otherwise (Gate D DUZELT r1)
 seed_protocol_version  the one implemented seed protocol
 base_seed              of the run manifest (pairing basis)
 evidence_class         ``current`` or ``historical_unverified`` (A13); anything else is refused
@@ -75,6 +77,8 @@ class ComparisonCellKey:
     budget_level_index: Optional[int]
     algorithm_id: str
     configuration_hash: str
+    backend_policy: str
+    backend_profile: str
     seed_protocol_version: str
     base_seed: int
     evidence_class: str
@@ -97,6 +101,7 @@ class ComparisonFamily:
     size: int
     shared: Mapping[str, Any]
     varied: Mapping[str, tuple]
+    contains_dirty: bool = False  # True only when built with ``allow_dirty``: D-05 must refuse such a family
 
 
 def _canonical_json(value: Any) -> str:
@@ -174,6 +179,27 @@ def _level_index(row: Mapping[str, Any], manifest: RunManifestV1, native: bool) 
     return levels.index(budget)
 
 
+def _backend_profile(manifest: RunManifestV1) -> str:
+    profile = manifest.algorithm.backend_profile
+    return f"objective={profile['objective']};polish={profile['polish']}"
+
+
+def _check_dataset(row: Mapping[str, Any], manifest: RunManifestV1, problem: str) -> None:
+    """The row must belong to the manifest's dataset. Study smoke rows carry ``dataset_id``; pilot, CLI and
+    ``FairRunResult`` rows do not, so their TSPLIB problem name must equal ``tsplib-<normalised name>`` (A17 C-11)."""
+    manifest_id = manifest.dataset.dataset_id
+    if "dataset_id" in row:
+        if row["dataset_id"] != manifest_id:
+            raise ComparisonIdentityError(f"row dataset_id {row['dataset_id']!r} differs from the manifest's {manifest_id!r}")
+        return
+    expected = f"tsplib-{normalize_problem(problem)}"
+    if manifest_id != expected:
+        raise ComparisonIdentityError(
+            f"row problem {problem!r} (dataset {expected!r}) does not match the manifest dataset {manifest_id!r}; "
+            "a row without dataset_id is matched to its manifest by the normalised TSPLIB name"
+        )
+
+
 def comparison_cell_key(row: Mapping[str, Any], manifest: Optional[RunManifestV1], *, allow_dirty: bool = False) -> ComparisonCellKey:
     """The comparison identity of one heuristic row. Call after ``assert_single_pooling_group``.
 
@@ -183,6 +209,8 @@ def comparison_cell_key(row: Mapping[str, Any], manifest: Optional[RunManifestV1
     for descriptive smoke views, never for statistics)."""
     manifest = _require_manifest(manifest)
     row = _require_row(row)
+    if row.get("record_kind") == "failed_run" or row.get("validation_status") == "failed":
+        raise ComparisonIdentityError("a failed run is not an observation: it gets no comparison key (record it, exclude it from inference)")
     try:
         kind = classify_row(row)
     except ValueError as exc:
@@ -196,11 +224,16 @@ def comparison_cell_key(row: Mapping[str, Any], manifest: Optional[RunManifestV1
         raise ComparisonIdentityError(f"row algorithm_id {row.get('algorithm_id')!r} differs from the manifest's {manifest.algorithm.algorithm_id!r}")
     if "study_id" in row and row["study_id"] != manifest.study_id:
         raise ComparisonIdentityError(f"row study_id {row['study_id']!r} differs from the manifest's {manifest.study_id!r}")
-    if "dataset_id" in row and row["dataset_id"] != manifest.dataset.dataset_id:
-        raise ComparisonIdentityError(f"row dataset_id {row['dataset_id']!r} differs from the manifest's {manifest.dataset.dataset_id!r}")
     problem = row.get("problem")
     if not isinstance(problem, str) or not problem.strip():
         raise ComparisonIdentityError("row has no problem name (the TSPLIB identity of the dataset)")
+    _check_dataset(row, manifest, problem)
+    native = kind.pooling_group == "native"
+    expected_policy = "native_uncapped" if native else "atomic_upper_bound_v1"
+    if manifest.budget.policy != expected_policy:
+        raise ComparisonIdentityError(
+            f"manifest budget.policy {manifest.budget.policy!r} does not fit a {kind.pooling_group} row (expected {expected_policy!r})"
+        )
     if manifest.git.dirty and not allow_dirty:
         raise ComparisonIdentityError("the run manifest records a dirty working tree: no code identity (one campaign = one clean commit)")
     return ComparisonCellKey(
@@ -208,9 +241,11 @@ def comparison_cell_key(row: Mapping[str, Any], manifest: Optional[RunManifestV1
         protocol_version=version,
         study_id=manifest.study_id,
         dataset_identity=normalize_problem(problem),
-        budget_level_index=_level_index(row, manifest, native=kind.pooling_group == "native"),
+        budget_level_index=_level_index(row, manifest, native=native),
         algorithm_id=manifest.algorithm.algorithm_id,
         configuration_hash=configuration_hash(row, manifest),
+        backend_policy=manifest.algorithm.backend_policy,
+        backend_profile=_backend_profile(manifest),
         seed_protocol_version=SEED_PROTOCOL_VERSION,
         base_seed=manifest.seeds.base_seed,
         evidence_class=_evidence_class(row),
@@ -255,4 +290,5 @@ def assert_single_comparison_family(
         size=len(keys),
         shared={name: next(iter(seen)) for name, seen in values.items() if name not in masked},
         varied={name: tuple(sorted(values[name], key=repr)) for name in sorted(masked)},
+        contains_dirty=any(key.tree_dirty for key in keys),
     )

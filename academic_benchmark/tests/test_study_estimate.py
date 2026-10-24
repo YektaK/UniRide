@@ -293,3 +293,134 @@ def test_cli_refuses_in_repository_output_before_running_any_solver(capsys, monk
     code = main(["--study", BILDIRI, "--out", str(inside)])
     assert code == 2 and not inside.exists()
     assert "inside the repository" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------------------- D-04b1 DUZELT r1: backend split
+def _point(algorithm_id, elapsed, evaluations, polish=0, dataset="tsplib-eil51", n=51):
+    from academic_benchmark.studies.estimate import CalibrationPoint
+
+    return CalibrationPoint(
+        dataset, n, algorithm_id, ExecutionProtocol.FIXED_BUDGET, 63750, elapsed,
+        SolverOutcome(objective_evaluations=evaluations, iterations=10, polish_evaluations=polish,
+                      termination_reason="evaluation_budget_exhausted"),
+    )
+
+
+def _split_rows(*points):
+    from academic_benchmark.studies.estimate import Calibration
+
+    return {row.algorithm_id: row for row in Calibration(fixed=tuple(points)).backend_split()}
+
+
+def test_derived_polish_rate_uses_the_pure_row_of_the_same_family_and_counts_objective_without_polish():
+    # pure GWO 1 ms/eval, pure HHO 2 ms/eval; memetic GWO: 200 objective + 800 polish evaluations, polish 10 ms each
+    rows = _split_rows(
+        _point("Core-GWO-TSP-Pure", 1.0, 1000), _point("Core-HHO-TSP-Pure", 2.0, 1000),
+        _point("Core-GWO-TSP-Memetic-2opt", 200 * 0.001 + 800 * 0.010, 1000, polish=800),
+        _point("Core-HHO-TSP-Memetic-2opt", 200 * 0.002 + 800 * 0.020, 1000, polish=800),
+    )
+    gwo, hho = rows["Core-GWO-TSP-Memetic-2opt"], rows["Core-HHO-TSP-Memetic-2opt"]
+    assert gwo.objective_seconds_per_evaluation == pytest.approx(0.001)
+    assert gwo.polish_seconds_per_evaluation == pytest.approx(0.010)
+    assert hho.objective_seconds_per_evaluation == pytest.approx(0.002)
+    assert hho.polish_seconds_per_evaluation == pytest.approx(0.020)
+    assert "derived" in gwo.source and "Core-GWO-TSP-Pure" in gwo.source and "FALLBACK" not in gwo.source
+
+
+def test_derived_polish_rate_falls_back_to_the_mean_of_polish_free_rows_and_says_so():
+    rows = _split_rows(
+        _point("Core-GA-TSP", 1.0, 1000), _point("Core-HHO-TSP-Pure", 3.0, 1000),  # mean objective rate 2 ms
+        _point("Core-GWO-TSP-Memetic-2opt", 200 * 0.002 + 800 * 0.010, 1000, polish=800),
+    )
+    row = rows["Core-GWO-TSP-Memetic-2opt"]
+    assert row.objective_seconds_per_evaluation == pytest.approx(0.002)
+    assert row.polish_seconds_per_evaluation == pytest.approx(0.010)
+    assert "FALLBACK" in row.source
+
+
+def test_polish_rate_is_not_separable_without_a_polish_free_row_on_the_instance():
+    rows = _split_rows(
+        _point("Core-GWO-TSP-Pure", 1.0, 1000, dataset="tsplib-kroa100", n=100),  # another instance
+        _point("Core-GWO-TSP-Memetic-2opt", 5.0, 1000, polish=800),
+    )
+    row = rows["Core-GWO-TSP-Memetic-2opt"]
+    assert row.objective_seconds_per_evaluation is None and row.polish_seconds_per_evaluation is None
+    assert row.source.startswith("not separable")
+
+
+def test_a_negative_polish_time_is_not_separable_and_never_printed_as_derived_zero():
+    # 200 objective evaluations at 1 ms would take 0.2 s but the whole row took 0.1 s
+    rows = _split_rows(_point("Core-GWO-TSP-Pure", 1.0, 1000), _point("Core-GWO-TSP-Memetic-2opt", 0.1, 1000, polish=800))
+    row = rows["Core-GWO-TSP-Memetic-2opt"]
+    assert row.polish_seconds_per_evaluation is None and row.objective_seconds_per_evaluation is None
+    assert row.source.startswith("not separable") and "derived" not in row.source
+
+
+# ------------------------------------------------------------------------------- D-04b1 DUZELT r1: probe verdict
+def _probe_calibration(bildiri, reason, consumed):
+    clock = FakeClock()
+
+    def solve(row, params):
+        clock.now += 0.001
+        top = row.budget_level == 1237500
+        return SolverOutcome(objective_evaluations=consumed if top else row.budget_level, iterations=7,
+                             polish_evaluations=1, termination_reason=reason if top else "evaluation_budget_exhausted")
+
+    spec = RunPlanSpec(run_count=1, include_native=False, algorithm_ids=MEMETIC_GWO_HHO)
+    cells = build_cells(bildiri, spec)
+    return spec, cells, calibrate(bildiri, solve, clock, spec=spec, probe_250x=True)
+
+
+def test_probe_verdict_follows_the_termination_reason_and_prints_it(bildiri):
+    # a limit that stops the run exactly at the level still binds; an atomic budget stop below the level does not
+    spec, cells, binding = _probe_calibration(bildiri, "max_no_improvement", 1237500)
+    assert all(p.limit_binds_before_budget for p in binding.probes)
+    text = render_report(bildiri, spec, cells, binding, estimate(cells, binding), stub_provenance())
+    assert "stop: max_no_improvement" in text and "binds before the budget" in text
+    spec, cells, slack = _probe_calibration(bildiri, "evaluation_budget_exhausted", 1237490)
+    assert not any(p.limit_binds_before_budget for p in slack.probes)
+    assert "stop: evaluation_budget_exhausted" in render_report(bildiri, spec, cells, slack, estimate(cells, slack), stub_provenance())
+
+
+# ------------------------------------------------------------------------------- D-04b1 DUZELT r1: preload and guard
+def test_real_solver_builds_every_problem_before_the_first_timed_call(bildiri, monkeypatch):
+    from academic_benchmark.studies import estimate as estimate_module
+
+    built = []
+
+    def fake_loader_factory(plan, root):
+        def load(name):
+            built.append(name)
+            return object()
+
+        return load
+
+    monkeypatch.setattr(estimate_module, "build_artifact_loader", fake_loader_factory)
+    monkeypatch.setattr(estimate_module, "_registered_algorithm_ids", lambda: frozenset())
+    monkeypatch.setattr(estimate_module, "probe_runtime_backends", lambda: object())
+    estimate_module.make_real_solver(bildiri, REPOSITORY_ROOT)
+    assert sorted(built) == sorted(d.problem_name for d in bildiri.datasets)
+
+
+def _git_in(root: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args], cwd=root, check=True,
+                   capture_output=True, timeout=120)
+
+
+def test_output_inside_the_main_checkout_is_refused_from_a_linked_worktree(tmp_path):
+    main = tmp_path / "main"
+    main.mkdir()
+    _git_in(main, "init", "-q")
+    (main / "f.txt").write_text("x", encoding="utf-8")
+    _git_in(main, "add", "f.txt")
+    _git_in(main, "commit", "-q", "-m", "init")
+    linked = main / ".claude" / "worktrees" / "linked"  # the project keeps its worktrees inside the main checkout
+    _git_in(main, "worktree", "add", "-q", str(linked), "-b", "linked-branch")
+    for target in (main / "results", main / ".claude" / "elsewhere", linked / "results"):
+        with pytest.raises(EstimateError, match="inside the repository"):
+            write_outputs(target, "t", {"a": 1}, repository_root=linked)
+        assert not target.exists()
+    outside = tmp_path / "outside"
+    assert write_outputs(outside, "t", {"a": 1}, repository_root=linked)

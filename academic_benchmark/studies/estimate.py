@@ -247,10 +247,10 @@ class Calibration:
         return _interpolate(points, dimension)
 
     def backend_split(self) -> Tuple[SplitRow, ...]:
-        references: Dict[str, List[float]] = {}
-        for point in self.fixed:  # objective rate of the rows without any polish, per instance
+        references: Dict[str, Dict[str, float]] = {}
+        for point in self.fixed:  # objective rate of the rows without any polish, per instance and algorithm
             if point.outcome.polish_evaluations == 0 and not point.outcome.stages:
-                references.setdefault(point.dataset_id, []).append(point.seconds_per_evaluation)
+                references.setdefault(point.dataset_id, {})[point.algorithm_id] = point.seconds_per_evaluation
         rows = []
         for point in self.fixed:
             rows.append(_split(point, references.get(point.dataset_id)))
@@ -276,7 +276,22 @@ class Calibration:
         )
 
 
-def _split(point: CalibrationPoint, references: Optional[List[float]]) -> SplitRow:
+_PURE_FAMILY = (
+    ("-GWO-", "Core-GWO-TSP-Pure"), ("-HHO-", "Core-HHO-TSP-Pure"), ("-GA-", "Core-GA-TSP"), ("-PSO-", "Core-PSO-TSP"),
+)
+
+
+def _pure_counterpart(algorithm_id: str) -> Optional[str]:
+    """The polish-free ID of the same family (pure GWO for a memetic GWO, ...), or ``None``."""
+    for marker, pure in _PURE_FAMILY:
+        if marker in algorithm_id:
+            return pure
+    return None
+
+
+def _split(point: CalibrationPoint, references: Optional[Mapping[str, float]]) -> SplitRow:
+    """Objective and polish seconds per evaluation of one fixed row; ``references`` = objective rate of the polish-free rows
+    of the same instance by algorithm ID."""
     outcome = point.outcome
     base = (point.dataset_id, point.dimension, point.algorithm_id)
     stages = {str(s.get("name")): s for s in outcome.stages}
@@ -290,13 +305,19 @@ def _split(point: CalibrationPoint, references: Optional[List[float]]) -> SplitR
         return SplitRow(*base, point.seconds_per_evaluation, None, "row without polish (objective only)")
     if not references:
         return SplitRow(*base, None, None, "not separable: no polish-free row on this instance")
-    objective_rate = sum(references) / len(references)
+    pure = _pure_counterpart(point.algorithm_id)
+    if pure is not None and pure in references:
+        objective_rate = references[pure]
+        origin = f"objective rate of {pure} on this instance"
+    else:
+        objective_rate = sum(references.values()) / len(references)
+        origin = "FALLBACK objective rate = mean of all polish-free rows of this instance (no row of the same family)"
     objective_count = outcome.objective_evaluations - outcome.polish_evaluations
-    polish_seconds = max(point.elapsed_seconds - objective_count * objective_rate, 0.0)
-    return SplitRow(
-        *base, objective_rate, polish_seconds / outcome.polish_evaluations,
-        "derived: objective rate of the polish-free rows of this instance, polish = the remaining time",
-    )
+    polish_seconds = point.elapsed_seconds - objective_count * objective_rate
+    if objective_count < 0 or polish_seconds < 0:
+        return SplitRow(*base, None, None, f"not separable: {origin} exceeds the measured wall time")
+    return SplitRow(*base, objective_rate, polish_seconds / outcome.polish_evaluations,
+                    f"derived: {origin}; polish = the remaining time")
 
 
 # ---------------------------------------------------------------------------------------------------- the cells
@@ -481,11 +502,23 @@ def calibrate(
             outcome, elapsed = timed(row, params, f"probe {algorithm_id} on {largest.dataset_id} at level {top}")
             probes.append(ProbePoint(
                 algorithm_id, largest.dataset_id, top, outcome.objective_evaluations, outcome.polish_evaluations,
-                outcome.iterations, outcome.termination_reason, elapsed, outcome.objective_evaluations < top,
+                outcome.iterations, outcome.termination_reason, elapsed,
+                _limit_binds(outcome.termination_reason, outcome.objective_evaluations, top),
                 params.get("max_iterations"), params.get("max_no_improvement"),
             ))
     return Calibration(tuple(fixed), tuple(native), tuple(memetic), tuple(probes), limits, descriptions,
                        smallest.dataset_id if run_slice else None, largest.dataset_id if run_slice else None)
+
+
+BUDGET_REASON = "evaluation_budget_exhausted"
+
+
+def _limit_binds(termination_reason: Optional[str], consumed: int, top: int) -> bool:
+    """A stopping limit binds when the run ended for any reason other than spending the budget; without a reason, when it
+    consumed less than the level."""
+    if termination_reason is not None:
+        return termination_reason != BUDGET_REASON
+    return consumed < top
 
 
 def _memetic_point(dataset: ResolvedDataset, algorithm_id: str, level: int, top: int, outcome: SolverOutcome,
@@ -633,7 +666,8 @@ def render_report(plan: StudyPlan, spec: RunPlanSpec, cells: Sequence[Cell], cal
     if calibration.probes:
         lines += ["", "250x probe: one replicate of each memetic GWO/HHO ID at the top level of the largest instance"]
         for p in calibration.probes:
-            verdict = "limit binds before the budget" if p.limit_binds_before_budget else "budget spent, limit did not bind"
+            verdict = (f"limit binds before the budget (stop: {p.termination_reason})" if p.limit_binds_before_budget
+                       else f"budget spent, limit did not bind (stop: {p.termination_reason})")
             lines.append(
                 f"  {p.algorithm_id}  {p.dataset_id}  level {p.level:,}  consumed {p.consumed_evaluations:,} (polish {p.polish_evaluations:,})  "
                 f"iterations {p.iterations}  stop: {p.termination_reason}  {p.elapsed_seconds:,.1f} s  "
@@ -743,12 +777,11 @@ def make_real_solver(plan: StudyPlan, repository_root: Path) -> Solver:
     loader = build_artifact_loader(plan, repository_root)
     registered = _registered_algorithm_ids()
     runtime = probe_runtime_backends()
-    problems: Dict[str, Any] = {}
+    # every problem is built here, outside the timed region, so matrix setup never enters a measurement
+    problems: Dict[str, Any] = {dataset.problem_name: loader(dataset.problem_name) for dataset in plan.datasets}
 
     def solve(row: PlanRow, params: Mapping[str, Any]) -> SolverOutcome:
-        problem = problems.get(row.problem_name)
-        if problem is None:
-            problem = problems[row.problem_name] = loader(row.problem_name)
+        problem = problems[row.problem_name]
         fixed = row.protocol is ExecutionProtocol.FIXED_BUDGET
         config: Any = _fixed_config(plan, row.problem_name, row.budget_level) if fixed else _native_config(plan, row.problem_name)
         run_params = dict(params)

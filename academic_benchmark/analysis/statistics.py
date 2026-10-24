@@ -571,7 +571,9 @@ def _expected_algorithms(study: StudyManifestV1, pooling_group: str) -> list:
 def _check_index_algorithms(run_index: RunIndexV1, study: StudyManifestV1) -> None:
     """Every run of the verified index must belong to the study profile's algorithms (run ids are
     ``<study>.<dataset>.<fixed-l<level>|native>.<algorithm>.r<replicate>``, ``manifests.make_run_id``)."""
-    allowed = {_algorithm_token(a) for a in study.algorithm_ids}
+    native = study.secondary_protocol.algorithm_ids if study.secondary_protocol is not None else None
+    listed = [*study.algorithm_ids, *(native or [])]  # the union that studies.service runs (algorithm_ids plus the native list)
+    allowed = {_algorithm_token(a) for a in listed}
     prefix = make_run_id(study.study_id, "d", "a", None, 0).split(".d.", 1)[0]
     pattern = re.compile(rf"^{re.escape(prefix)}\..+?\.(?:fixed-l\d+|native)\.(?P<algorithm>.+)\.r\d+$")
     for entry in run_index.runs:
@@ -617,6 +619,10 @@ def analyse_family(
         raise StatisticsRefusal(f"study must be the StudyManifestV1 profile that declares the algorithms, not {type(study).__name__}")
     if study.study_id != plan.study_id:
         raise StatisticsRefusal(f"the study profile {study.study_id!r} and the analysis plan of study {plan.study_id!r} do not belong together")
+    if plan.analysis_plan_id != study.analysis_plan_id:
+        raise StatisticsRefusal(
+            f"the analysis plan {plan.analysis_plan_id!r} is not the one the study profile names (analysis_plan_id {study.analysis_plan_id!r})"
+        )
     if not isinstance(run_index, RunIndexV1):
         raise StatisticsRefusal(f"run_index must be the verified RunIndexV1 of the campaign, not {type(run_index).__name__}")
     campaign_mode = run_index.mode
@@ -645,6 +651,10 @@ def analyse_family(
         raise StatisticsRefusal(f"not one comparison family: {exc}") from exc
     if identity_family is None or identity_family.contains_dirty:
         raise StatisticsRefusal("the rows come from a dirty working tree (contains_dirty): no code identity, no statistics")
+
+    rows_study = identity_family.shared["study_id"]
+    if rows_study != plan.study_id:
+        raise StatisticsRefusal(f"the rows belong to study {rows_study!r} but the analysis plan to study {plan.study_id!r}")
 
     # the verified campaign index binds the manifests: mode, study, commit and the comparison key of every run
     if run_index.git.dirty:
@@ -684,6 +694,7 @@ def analyse_family(
         budgets.setdefault(normalize_problem(row["problem"]), set()).add(row.get("evaluation_budget"))
     expected_algorithms = _expected_algorithms(study, identity_family.pooling_group)
     protocol_version = identity_family.shared["protocol_version"]
+    analysed_instances = {normalize_problem(row["problem"]) for row, _ in good}
     failed_counts: dict = {}
     for row in failed:
         problem, algorithm = row.get("problem"), row.get("algorithm_id")
@@ -700,6 +711,13 @@ def analyse_family(
                 f"a failed run of {algorithm!r} has protocol_version {row.get('protocol_version')!r}, the family's is {protocol_version!r}"
             )
         identity = normalize_problem(problem)
+        if f"tsplib-{identity}" not in family.dataset_ids:
+            raise StatisticsRefusal(f"a failed run of {algorithm!r} is on {problem!r}, which is outside the declared family {family.family_id!r}")
+        if family.scope == "per_instance" and identity not in analysed_instances:
+            raise StatisticsRefusal(
+                f"a failed run of {algorithm!r} is on {problem!r}, not on the analysed instance {sorted(analysed_instances)}; "
+                "a per-instance family is analysed one instance at a time"
+            )
         known = budgets.get(identity)
         if known and row.get("evaluation_budget") not in known:
             raise StatisticsRefusal(f"a failed run of {algorithm!r} on {problem!r} belongs to another budget level than the analysed rows")

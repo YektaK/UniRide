@@ -1,13 +1,13 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-24 (WIP `aadaee86` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
+Son güncelleme: 2026-10-24 (WIP `81027338` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
 
 ## Çalışan işler
 
 | İş | Dal | Durum |
 |---|---|---|
 | Sabit bütçede `max_no_improvement` zorunlu + YAEM tohumu 2027 | — | BİRLEŞTİ `e24a5cd1` (Opus ONAY). |
-| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-05, D-06, D-08a, D-09, D-10, D-14. Çalışıyor: D-07 (betimsel raporlar), D-04b1 (tahmin aracı, denetimde; gerçek ölçümü şef koşacak). Sıradaki: D-08b, D-11, D-13, D-12. |
+| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-05, D-06, D-08a, D-09, D-10, D-14. BİRLEŞTİ ayrıca: D-04b1 aracı (`81027338`). Çalışıyor: D-07 (betimsel raporlar, Opus denetiminde); D-04b1 gerçek ölçümü (şef, makine boşken). Sıradaki: D-08b, D-11, D-13, D-12. |
 
 ## Bu turda biten
 

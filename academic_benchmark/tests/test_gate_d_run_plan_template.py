@@ -55,6 +55,9 @@ REQUIRED_APPROVAL_PHRASES = (
     "status: active",
     "same lead-merged commit",
     "is not paper evidence",
+    "differ from the base commit only by the approval commit",
+    "git diff <base commit> <index.git.commit> --",
+    "git diff --name-status <base commit> <index.git.commit>",
 )
 CONTRACTS: dict[str, type[BaseModel]] = {
     "manifest": RunManifestV1,

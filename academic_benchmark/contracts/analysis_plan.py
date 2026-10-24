@@ -137,7 +137,7 @@ class ExactReferenceLinkV1(StrictContract):
 
 
 class MannWhitneyConventionV1(StrictContract):
-    """SciPy ``mannwhitneyu`` conventions; ``auto`` is exact for at most 55 observations per sample without ties, else asymptotic."""
+    """SciPy ``mannwhitneyu`` conventions; ``auto`` is exact only when one sample has at most 8 observations and there are no ties, else asymptotic."""
 
     method: Literal["auto", "exact", "asymptotic"]
     continuity_correction: bool

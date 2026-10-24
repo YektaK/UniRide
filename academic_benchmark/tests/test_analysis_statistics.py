@@ -84,12 +84,12 @@ def _levels(problem):
     return (base, base * 5)
 
 
-def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None, level=0, **row_extra):
+def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None, level=0, study_id="bildiri2026", **row_extra):
     levels = _levels(problem)
     dataset_id = f"tsplib-{normalize_problem(problem)}"
     manifest = RunManifestV1.model_validate({
-        "schema_version": "uniride-run/v1", "run_id": make_run_id("bildiri2026", dataset_id, algorithm, level, replicate),
-        "study_id": "bildiri2026", "protocol_version": FAIR_V2, "git": {"commit": COMMIT, "dirty": dirty},
+        "schema_version": "uniride-run/v1", "run_id": make_run_id(study_id, dataset_id, algorithm, level, replicate),
+        "study_id": study_id, "protocol_version": FAIR_V2, "git": {"commit": COMMIT, "dirty": dirty},
         "environment": {"python": "3.13", "operating_system": "test", "cpu": "test", "numpy": "2.4.6",
                         "numba": "0.66.0", "llvmlite": "0.48.0", "statistics_library": "none"},
         "dataset": _dataset(dataset_id),
@@ -103,7 +103,7 @@ def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None,
     })
     row = {
         "protocol_version": FAIR_V2, "comparison_regime": "fixed_evaluation_budget", "problem": problem,
-        "algorithm_id": algorithm, "variant": "pure", "study_id": "bildiri2026", "evaluation_budget": levels[level],
+        "algorithm_id": algorithm, "variant": "pure", "study_id": study_id, "evaluation_budget": levels[level],
         "termination_policy": "atomic_upper_bound_v1;max_iterations=1237500;max_no_improvement=1237500",
         "polish_policy": {"enabled": False, "initial": False, "periodic": False, "final": False, "operator": None},
         "objective_cost": 500.0 + gap, "elapsed_ms": 1.0, "replicate": replicate,
@@ -144,8 +144,8 @@ def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=
     })
 
 
-def per_instance_items(samples, problem="eil51"):
-    return [make_item(problem, algorithm, r, gap) for algorithm, values in samples.items() for r, gap in enumerate(values)]
+def per_instance_items(samples, problem="eil51", study_id="bildiri2026"):
+    return [make_item(problem, algorithm, r, gap, study_id=study_id) for algorithm, values in samples.items() for r, gap in enumerate(values)]
 
 
 ALGORITHMS = ("Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure")
@@ -201,7 +201,7 @@ def study_for(items, plan=None):
     """The profile of a test: the Bildiri study with exactly the algorithms that occur in the items (completed or failed)."""
     names = {row["algorithm_id"] for row, _ in items}
     update = {"algorithm_ids": [a for a in (*ALGORITHMS, *sorted(names - set(ALGORITHMS))) if a in names]}
-    if plan is not None:
+    if getattr(plan, "study_id", None) is not None:
         update["study_id"] = plan.study_id
     return _BILDIRI.model_copy(update=update)
 
@@ -422,9 +422,9 @@ def test_mann_whitney_auto_reports_the_method_actually_used_per_pair(active):
     explicit call of that method, so a wrong label cannot hide behind equal p-values."""
     untied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4.5, 6, 7, 8, 9]}
     tied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4, 6, 7, 8, 9]}
-    nine_vs_five = {"Core-GA-TSP": [float(v) for v in range(9)], "Core-PSO-TSP": [v + 3.5 for v in range(5)]}  # one sample <= 8, no ties
+    eight = {"Core-GA-TSP": [float(v) for v in range(8)], "Core-PSO-TSP": [v + 3.5 for v in range(8)]}  # one sample <= 8, no ties
     thirty = {"Core-GA-TSP": [float(v) for v in range(30)], "Core-PSO-TSP": [v + 10.5 for v in range(30)]}  # both > 8, no ties
-    for samples, label in ((untied, "exact"), (tied, "asymptotic"), (nine_vs_five, "exact"), (thirty, "asymptotic")):
+    for samples, label in ((untied, "exact"), (tied, "asymptotic"), (eight, "exact"), (thirty, "asymptotic")):
         pair = run(per_instance_items(samples), active).inference.pairs[0]
         x, y = samples["Core-GA-TSP"], samples["Core-PSO-TSP"]
         assert pair.method_used == label
@@ -433,6 +433,10 @@ def test_mann_whitney_auto_reports_the_method_actually_used_per_pair(active):
     x, y = thirty["Core-GA-TSP"], thirty["Core-PSO-TSP"]
     assert sps.mannwhitneyu(x, y, method="exact").pvalue != pytest.approx(sps.mannwhitneyu(x, y, method="asymptotic").pvalue, rel=1e-6)
     assert sps.mannwhitneyu(x, y, method="auto").pvalue == pytest.approx(sps.mannwhitneyu(x, y, method="asymptotic").pvalue, abs=1e-15)
+    from academic_benchmark.analysis.statistics import mannwhitney_method_used
+    nine, five = [float(v) for v in range(9)], [v + 3.5 for v in range(5)]  # unequal sizes (the service needs balanced replicates): the label rule alone
+    assert mannwhitney_method_used(nine, five, "auto") == "exact" and mannwhitney_method_used(nine, [v + 0.5 for v in range(9)], "auto") == "asymptotic"
+    assert sps.mannwhitneyu(nine, five, method="auto").pvalue == pytest.approx(sps.mannwhitneyu(nine, five, method="exact").pvalue, abs=1e-15)
     big = {"Core-GA-TSP": list(range(60)), "Core-PSO-TSP": [v + 0.5 for v in range(30, 90)]}
     assert run(per_instance_items(big), active).inference.pairs[0].method_used == "asymptotic"
 
@@ -725,7 +729,7 @@ def test_across_instances_needs_at_least_two_instances(active):
 def test_both_real_plans_are_draft_and_inference_is_refused_with_descriptive_output(draft_plans):
     for study, plan in draft_plans.items():
         assert plan.status == "draft" and plan.minimum_n_per_cell is None
-        result = run(per_instance_items(SEPARATED), plan)
+        result = run(per_instance_items(SEPARATED, study_id=plan.study_id), plan, study_id=plan.study_id)
         assert result.inference is None
         assert any("draft" in reason for reason in result.inference_refused)
         assert any("minimum_n_per_cell" in reason for reason in result.inference_refused)

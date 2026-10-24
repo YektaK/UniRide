@@ -368,20 +368,27 @@ def smallest_possible_adjusted_p(n_units: int, n_pairs: int) -> float:
 
 
 def mannwhitney_method_used(x: Sequence[float], y: Sequence[float], method: str) -> str:
-    """The method SciPy applies: ``auto`` is exact for at most 55 observations per sample and no ties in the combined data, else
-    asymptotic (SciPy ``mannwhitneyu`` documentation); an explicit method is used as given."""
+    """The method SciPy 1.18.1 applies (``_mwu_choose_method``): ``auto`` is asymptotic when both samples have more than 8 observations,
+    asymptotic when there are ties in the combined data, and exact otherwise (one sample of at most 8 observations, no ties); an explicit
+    method is used as given."""
     if method != "auto":
         return method
-    tied = len(set(x) | set(y)) < len(x) + len(y)
-    return "exact" if max(len(x), len(y)) <= 55 and not tied else "asymptotic"
+    if len(x) > 8 and len(y) > 8:
+        return "asymptotic"
+    if len(set(x) | set(y)) < len(x) + len(y):
+        return "asymptotic"
+    return "exact"
 
 
 def wilcoxon_method_used(x: Sequence[float], y: Sequence[float], method: str) -> str:
-    """The method SciPy applies (``_wilcoxon_nd``): ``auto`` is exact without zero differences and without tied absolute differences;
-    otherwise a deterministic permutation test for at most 13 units and the asymptotic test above that."""
+    """The method SciPy 1.18.1 applies (``_wilcoxon_iv``, ``_wilcoxon_nd``): ``auto`` is asymptotic for more than 50 differences; otherwise
+    exact without zero differences and without tied absolute differences, a deterministic permutation test for at most 13 units with ties
+    or zeros, and asymptotic above that."""
     if method != "auto":
         return method
     diffs = [a - b for a, b in zip(x, y)]
+    if len(diffs) > 50:
+        return "asymptotic"
     magnitudes = [abs(d) for d in diffs if d != 0]
     if len(magnitudes) == len(diffs) and len(set(magnitudes)) == len(magnitudes):
         return "exact"
@@ -481,7 +488,12 @@ def _render(values: dict, plan: AnalysisPlanV1, family: ComparisonFamilyV1) -> s
         columns = ", ".join(f"{k}={_fmt(v)}" for k, v in cell.summary.items())
         lines.append(f"  {cell.dataset_identity} / {cell.algorithm_id}: {columns}")
     for item in exclusions:
-        who = f"{item['algorithm_id']} on {item['dataset_identity']}" if item.get("algorithm_id") else f"instance {item['dataset_identity']}"
+        if item.get("algorithm_id") and item.get("dataset_identity"):
+            who = f"{item['algorithm_id']} on {item['dataset_identity']}"
+        elif item.get("algorithm_id"):
+            who = f"algorithm {item['algorithm_id']} (all instances)"
+        else:
+            who = f"instance {item['dataset_identity']}"
         lines.append(f"  excluded from inference: {who} ({item['reason']})")
     for item in values["excluded_pairs"]:
         lines.append(f"  pair excluded from the Holm family: {item['algorithm_a']} vs {item['algorithm_b']} ({item['reason']})")
@@ -489,12 +501,19 @@ def _render(values: dict, plan: AnalysisPlanV1, family: ComparisonFamilyV1) -> s
         lines.append("Inference not performed (descriptive output only): " + "; ".join(refused))
     else:
         o = inference.omnibus
+        if o.test == "friedman" and o.statistic == math.inf:
+            core = "Iman-Davenport F infinite (perfect agreement), p below machine precision"
+        else:
+            core = f"{o.statistic_name} {_fmt(o.statistic)}, p {_fmt(o.p_value)} ({o.p_value_method})"
         lines.append(
-            f"Omnibus {o.test}: status {o.status}, {o.statistic_name} {_fmt(o.statistic)}, p {_fmt(o.p_value)} ({o.p_value_method}), "
+            f"Omnibus {o.test}: status {o.status}, {core}, "
             f"{o.effect_size_name} {_fmt(o.effect_size)}, alpha {inference.alpha}, groups {o.n_groups}, n {o.n_observations}."
         )
         if o.chi_square_statistic is not None:
-            lines.append(f"  chi-square beside it: statistic {_fmt(o.chi_square_statistic)}, p {_fmt(o.chi_square_p_value)}.")
+            lines.append(
+                "  F is computed from the tie-corrected chi-square, F = (b - 1) chi2 / (b (k - 1) - chi2); "
+                f"chi-square beside it: statistic {_fmt(o.chi_square_statistic)}, p {_fmt(o.chi_square_p_value)}."
+            )
         lines.append(f"Post-hoc ({inference.correction}): {inference.post_hoc_reason}")
         for pair in inference.pairs:
             lines.append(
@@ -532,26 +551,35 @@ def _render(values: dict, plan: AnalysisPlanV1, family: ComparisonFamilyV1) -> s
     return "\n".join(lines)
 
 
-def _algorithm_token(algorithm: str, level_index: Optional[int]) -> str:
+def _algorithm_token(algorithm: str) -> str:
     """The algorithm part of a run id (``manifests.make_run_id`` lower-cases and sanitises it)."""
-    run_id = make_run_id("s", "d", algorithm, level_index, 0)
-    protocol = "native" if level_index is None else f"fixed-l{level_index}"
-    return run_id[len(f"s.d.{protocol}."):-len(".r0")]
+    run_id = make_run_id("s", "d", algorithm, None, 0)
+    return run_id[len("s.d.native."):-len(".r0")]
 
 
-def _campaign_algorithm_tokens(run_index: RunIndexV1, study_id: str, level_index: Optional[int]) -> set:
-    """The algorithms that the verified campaign ran for this study and budget level (native: no level), read from the run ids of the
-    index: ``<study>.<dataset>.<protocol>.<algorithm>.r<replicate>``. A fully failed cell has no manifest, but its algorithm has runs
-    on other instances of the campaign, so the family's algorithm set does not depend on which cells completed (OQ-9)."""
-    protocol = "native" if level_index is None else f"fixed-l{level_index}"
-    study = make_run_id(study_id, "d", "a", level_index, 0).split(".d.", 1)[0]
-    pattern = re.compile(rf"^{re.escape(study)}\..+?\.{re.escape(protocol)}\.(?P<algorithm>.+)\.r\d+$")
-    tokens = set()
+def _expected_algorithms(study: StudyManifestV1, pooling_group: str) -> list:
+    """The algorithms the profile declares for the protocol of the family: the primary (fixed-budget) list, or the native list
+    (``secondary_protocol.algorithm_ids``; ``None`` there means all study algorithms, as in ``studies.service``)."""
+    if pooling_group == "native":
+        if study.secondary_protocol is None:
+            raise StatisticsRefusal(f"study {study.study_id!r} declares no native protocol, so native rows have no expected algorithms")
+        listed = study.secondary_protocol.algorithm_ids
+        return list(study.algorithm_ids if listed is None else listed)
+    return list(study.algorithm_ids)
+
+
+def _check_index_algorithms(run_index: RunIndexV1, study: StudyManifestV1) -> None:
+    """Every run of the verified index must belong to the study profile's algorithms (run ids are
+    ``<study>.<dataset>.<fixed-l<level>|native>.<algorithm>.r<replicate>``, ``manifests.make_run_id``)."""
+    allowed = {_algorithm_token(a) for a in study.algorithm_ids}
+    prefix = make_run_id(study.study_id, "d", "a", None, 0).split(".d.", 1)[0]
+    pattern = re.compile(rf"^{re.escape(prefix)}\..+?\.(?:fixed-l\d+|native)\.(?P<algorithm>.+)\.r\d+$")
     for entry in run_index.runs:
         match = pattern.match(entry.run_id)
-        if match:
-            tokens.add(match.group("algorithm"))
-    return tokens
+        if match is None or match.group("algorithm") not in allowed:
+            raise StatisticsRefusal(
+                f"the run index lists a run ({entry.run_id!r}) that is not of the study profile's algorithms {sorted(study.algorithm_ids)}"
+            )
 
 
 def _check_conventions(plan: AnalysisPlanV1) -> None:
@@ -624,6 +652,7 @@ def analyse_family(
     study_id = identity_family.shared["study_id"]
     if run_index.study_id != study_id:
         raise StatisticsRefusal(f"the run index belongs to study {run_index.study_id!r}, the rows to study {study_id!r}")
+    _check_index_algorithms(run_index, study)
     listed = {entry.run_id: entry for entry in run_index.runs}
     for row, manifest in good:
         entry = listed.get(manifest.run_id)
@@ -653,17 +682,16 @@ def analyse_family(
     budgets: dict = {}
     for row, _ in good:
         budgets.setdefault(normalize_problem(row["problem"]), set()).add(row.get("evaluation_budget"))
-    level_index = identity_family.shared["budget_level_index"]
-    campaign_algorithms = _campaign_algorithm_tokens(run_index, study_id, level_index)
+    expected_algorithms = _expected_algorithms(study, identity_family.pooling_group)
     protocol_version = identity_family.shared["protocol_version"]
     failed_counts: dict = {}
     for row in failed:
         problem, algorithm = row.get("problem"), row.get("algorithm_id")
         if not isinstance(problem, str) or not isinstance(algorithm, str):
             raise StatisticsRefusal("a failed run needs its algorithm_id and problem name to be reported")
-        if _algorithm_token(algorithm, level_index) not in campaign_algorithms:
+        if algorithm not in expected_algorithms:
             raise StatisticsRefusal(
-                f"a failed run names algorithm_id {algorithm!r}, which the run index does not list for study {study_id!r} at this budget level"
+                f"a failed run names algorithm_id {algorithm!r}, which is not an algorithm of the study profile {sorted(expected_algorithms)}"
             )
         if row.get("study_id") != study_id:
             raise StatisticsRefusal(f"a failed run of {algorithm!r} has study_id {row.get('study_id')!r}, the family's is {study_id!r}")
@@ -682,6 +710,11 @@ def analyse_family(
         for (dataset, algorithm), count in sorted(failed_counts.items())
     ]
     seen_algorithms = sorted({a for _, a in samples} | {a for _, a in failed_counts})
+    seen_datasets = sorted({d for d, _ in samples} | {d for d, _ in failed_counts})
+    unrun = [a for a in expected_algorithms if a not in set(seen_algorithms)]
+    for algorithm in unrun:
+        exclusions.append({"algorithm_id": algorithm, "dataset_identity": None, "failed_runs": 0,
+                           "reason": "algorithm declared by the study profile has no completed and no failed rows in the analysed input"})
     for key in failed_counts:
         samples.pop(key, None)
     excluded_pairs: list = []
@@ -730,6 +763,12 @@ def analyse_family(
 
     inference = None
     if not reasons:
+        if unrun:
+            raise StatisticsRefusal(
+                f"the study profile declares algorithm(s) {unrun} for this protocol, but the input has no completed and no failed rows "
+                "for them; the analysis plan has no mechanism to declare that an algorithm does not apply to an instance, so a family "
+                "over fewer algorithms than declared is refused"
+            )
         if family.scope == "per_instance":
             lengths = {algorithm: sorted(samples[(datasets[0], algorithm)]) for algorithm in algorithms}
             if len({tuple(v) for v in lengths.values()}) != 1:
@@ -746,7 +785,7 @@ def analyse_family(
                     f"declared instance(s) {absent} of family {family.family_id!r} have no completed and no failed rows; the matched "
                     "design must cover every declared instance (no instance is dropped or added after results are seen)"
                 )
-            missing = [(d, a) for d in datasets for a in algorithms if (d, a) not in samples]
+            missing = [(d, a) for d in seen_datasets for a in seen_algorithms if (d, a) not in samples]
             if missing:
                 excluded = {(e["dataset_identity"], e["algorithm_id"]) for e in exclusions}
                 detail = ", ".join(f"{a} on {d} ({'excluded after a failed run' if (d, a) in excluded else 'missing'})" for d, a in missing)

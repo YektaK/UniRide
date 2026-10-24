@@ -61,6 +61,64 @@
       "title": "ComparisonFamilyV1",
       "type": "object"
     },
+    "ConventionsV1": {
+      "additionalProperties": false,
+      "description": "Numerical conventions of the tests (owner decisions, DECISION_LOG A18 2026-10-23 \"owner decisions on the D-05 statistics\nconventions\"). The statistics service reads them from here and refuses a value it does not implement.",
+      "properties": {
+        "all_zero_wilcoxon_pair": {
+          "const": "all_differences_zero_p_one_in_holm_family",
+          "title": "All Zero Wilcoxon Pair",
+          "type": "string"
+        },
+        "alternative": {
+          "const": "two_sided",
+          "title": "Alternative",
+          "type": "string"
+        },
+        "correction_across_instances": {
+          "const": "none",
+          "title": "Correction Across Instances",
+          "type": "string"
+        },
+        "friedman": {
+          "$ref": "#/$defs/FriedmanConventionV1"
+        },
+        "holm_scope": {
+          "const": "within_comparison_cell",
+          "title": "Holm Scope",
+          "type": "string"
+        },
+        "identical_value_omnibus": {
+          "const": "undefined_not_significant",
+          "title": "Identical Value Omnibus",
+          "type": "string"
+        },
+        "mann_whitney": {
+          "$ref": "#/$defs/MannWhitneyConventionV1"
+        },
+        "significance": {
+          "const": "p_less_than_or_equal_alpha",
+          "title": "Significance",
+          "type": "string"
+        },
+        "wilcoxon": {
+          "$ref": "#/$defs/WilcoxonConventionV1"
+        }
+      },
+      "required": [
+        "alternative",
+        "significance",
+        "holm_scope",
+        "correction_across_instances",
+        "mann_whitney",
+        "wilcoxon",
+        "friedman",
+        "all_zero_wilcoxon_pair",
+        "identical_value_omnibus"
+      ],
+      "title": "ConventionsV1",
+      "type": "object"
+    },
     "DescriptiveV1": {
       "additionalProperties": false,
       "properties": {
@@ -190,6 +248,57 @@
       "title": "FailurePolicyV1",
       "type": "object"
     },
+    "FriedmanConventionV1": {
+      "additionalProperties": false,
+      "description": "The Friedman p-value that decides the omnibus gate (Iman-Davenport F, Demsar 2006) and the one reported beside it.",
+      "properties": {
+        "also_report": {
+          "items": {
+            "const": "chi_square",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Also Report",
+          "type": "array"
+        },
+        "primary_p_value": {
+          "const": "iman_davenport_f",
+          "title": "Primary P Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "primary_p_value",
+        "also_report"
+      ],
+      "title": "FriedmanConventionV1",
+      "type": "object"
+    },
+    "MannWhitneyConventionV1": {
+      "additionalProperties": false,
+      "description": "SciPy ``mannwhitneyu`` conventions; ``auto`` is exact only when one sample has at most 8 observations and there are no ties, else asymptotic.",
+      "properties": {
+        "continuity_correction": {
+          "title": "Continuity Correction",
+          "type": "boolean"
+        },
+        "method": {
+          "enum": [
+            "auto",
+            "exact",
+            "asymptotic"
+          ],
+          "title": "Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "continuity_correction"
+      ],
+      "title": "MannWhitneyConventionV1",
+      "type": "object"
+    },
     "MatchedUnitV1": {
       "additionalProperties": false,
       "description": "The per-instance summary that is the matched unit of the cross-instance tests.",
@@ -287,6 +396,34 @@
       "title": "PostHocV1",
       "type": "object"
     },
+    "PowerDeclarationV1": {
+      "additionalProperties": false,
+      "description": "Declared in advance: where the pairwise and the cross-instance evidence comes from. ``statement`` is printed verbatim in the\ncross-instance report text together with the computed smallest possible adjusted p-value.",
+      "properties": {
+        "cross_instance_evidence": {
+          "const": "friedman_with_kendalls_w",
+          "title": "Cross Instance Evidence",
+          "type": "string"
+        },
+        "pairwise_evidence": {
+          "const": "per_instance_mann_whitney",
+          "title": "Pairwise Evidence",
+          "type": "string"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pairwise_evidence",
+        "cross_instance_evidence",
+        "statement"
+      ],
+      "title": "PowerDeclarationV1",
+      "type": "object"
+    },
     "ResponseV1": {
       "additionalProperties": false,
       "properties": {
@@ -329,6 +466,41 @@
       ],
       "title": "UnresolvedValueV1",
       "type": "object"
+    },
+    "WilcoxonConventionV1": {
+      "additionalProperties": false,
+      "description": "SciPy ``wilcoxon`` conventions; ``zero_method`` states how zero differences are ranked.",
+      "properties": {
+        "continuity_correction": {
+          "title": "Continuity Correction",
+          "type": "boolean"
+        },
+        "method": {
+          "enum": [
+            "auto",
+            "exact",
+            "asymptotic"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "zero_method": {
+          "enum": [
+            "wilcox",
+            "pratt",
+            "zsplit"
+          ],
+          "title": "Zero Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "continuity_correction",
+        "zero_method"
+      ],
+      "title": "WilcoxonConventionV1",
+      "type": "object"
     }
   },
   "$id": "uniride-analysis-plan/v1",
@@ -346,6 +518,9 @@
       "pattern": "^[a-z0-9][a-z0-9._-]*$",
       "title": "Analysis Plan Id",
       "type": "string"
+    },
+    "conventions": {
+      "$ref": "#/$defs/ConventionsV1"
     },
     "decisions": {
       "items": {
@@ -386,6 +561,9 @@
         }
       ],
       "title": "Minimum N Per Cell"
+    },
+    "power_declaration": {
+      "$ref": "#/$defs/PowerDeclarationV1"
     },
     "response": {
       "$ref": "#/$defs/ResponseV1"
@@ -432,7 +610,9 @@
     "descriptive",
     "minimum_n_per_cell",
     "failure_policy",
-    "exact_reference"
+    "exact_reference",
+    "conventions",
+    "power_declaration"
   ],
   "title": "AnalysisPlanV1",
   "type": "object"

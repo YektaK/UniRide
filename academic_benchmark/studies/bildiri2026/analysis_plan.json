@@ -9,7 +9,8 @@
     "DECISION_LOG A18 OQ-8 a: TSP-only family for the cross-instance test; ft53 (ATSP) per instance only",
     "DECISION_LOG A18 OQ-9 a: paper mode records a failed run, continues, excludes the cell from inference and reports it",
     "DECISION_LOG A18 OQ-15 a: descriptive columns n, median, IQR, min, max, mean and sample SD (n-1)",
-    "DECISION_LOG A18 owner answers to the D-09 review questions: IQR with Q1/Q3 by linear interpolation (Hyndman-Fan type 7); effect size A12 for the per-instance Mann-Whitney U post-hoc and matched-pairs rank-biserial correlation for the across-instance Wilcoxon post-hoc; OQ-15 columns/variables/counts reading confirmed"
+    "DECISION_LOG A18 owner answers to the D-09 review questions: IQR with Q1/Q3 by linear interpolation (Hyndman-Fan type 7); effect size A12 for the per-instance Mann-Whitney U post-hoc and matched-pairs rank-biserial correlation for the across-instance Wilcoxon post-hoc; OQ-15 columns/variables/counts reading confirmed",
+    "DECISION_LOG A18 owner decisions on the D-05 statistics conventions: Mann-Whitney U method auto with continuity correction; Wilcoxon signed-rank method auto, no continuity correction, zero differences by Pratt; the method actually used is reported per pair; significance is p <= alpha everywhere; Holm within each comparison cell (no correction across instances); Friedman primary p-value = Iman-Davenport F (Demsar 2006) with the chi-square reported beside it; an all-zero Wilcoxon pair is reported with p = 1 and stays in the Holm family; an omnibus over identical values is undefined, not significant; power declared in advance"
   ],
   "unresolved": [
     {
@@ -85,5 +86,21 @@
     "reader": "exact_reference_v1",
     "join_identity": "normalised_tsplib_problem_name",
     "pooling": "reference_only"
+  },
+  "conventions": {
+    "alternative": "two_sided",
+    "significance": "p_less_than_or_equal_alpha",
+    "holm_scope": "within_comparison_cell",
+    "correction_across_instances": "none",
+    "mann_whitney": {"method": "auto", "continuity_correction": true},
+    "wilcoxon": {"method": "auto", "continuity_correction": false, "zero_method": "pratt"},
+    "friedman": {"primary_p_value": "iman_davenport_f", "also_report": ["chi_square"]},
+    "all_zero_wilcoxon_pair": "all_differences_zero_p_one_in_holm_family",
+    "identical_value_omnibus": "undefined_not_significant"
+  },
+  "power_declaration": {
+    "pairwise_evidence": "per_instance_mann_whitney",
+    "cross_instance_evidence": "friedman_with_kendalls_w",
+    "statement": "Declared in advance: with 6 instances the pairwise cross-instance Wilcoxon signed-rank test after Holm cannot reach significance at alpha (the smallest possible adjusted p-value is above alpha), so pairwise evidence comes from the per-instance Mann-Whitney U tests over the replicates and the cross-instance evidence from the Friedman test with Kendall's W; there is no correction across instances, and no instance is added after results are seen."
   }
 }

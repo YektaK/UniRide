@@ -60,6 +60,8 @@ FAIR_V2 = "uniride-fair-tsp-v2"
 COMMIT = "a" * 40
 PER_INSTANCE = "per-instance-independent"
 ACROSS = "across-instances-tsp-matched"
+_BILDIRI = load_study_with_plan("academic_benchmark/studies/bildiri2026/study.json", repository_root=REPO, mode="smoke").study
+STUDY3 = _BILDIRI.model_copy(update={"algorithm_ids": ["Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure"]})  # the three algorithms of the fixtures
 CROSS_INSTANCES = ["berlin52", "eil51", "st70", "kroA100", "rd100", "eil76"]
 SEPARATED = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [6, 7, 8, 9, 10], "Core-GWO-TSP-Pure": [11, 12, 13, 14, 15]}
 INTERLEAVED = {"Core-GA-TSP": [1, 4, 7, 10, 13], "Core-PSO-TSP": [2, 5, 8, 11, 14], "Core-GWO-TSP-Pure": [3, 6, 9, 12, 15]}
@@ -195,8 +197,14 @@ def active(draft):
     return activate(draft)
 
 
-def run(items, plan, family=PER_INSTANCE, *, mode="paper", **index_options):
-    return analyse_family(items, plan=plan, family_id=family, run_index=index_for(items, mode, **index_options))
+def study_for(items):
+    """The profile of a test: the Bildiri study with exactly the algorithms that occur in the items (completed or failed)."""
+    names = {row["algorithm_id"] for row, _ in items}
+    return _BILDIRI.model_copy(update={"algorithm_ids": [a for a in (*ALGORITHMS, *sorted(names - set(ALGORITHMS))) if a in names]})
+
+
+def run(items, plan, family=PER_INSTANCE, *, mode="paper", study=None, **index_options):
+    return analyse_family(items, study=study or study_for(items), plan=plan, family_id=family, run_index=index_for(items, mode, **index_options))
 
 
 # ---------------------------------------------------------------- effect sizes against independent values
@@ -406,17 +414,74 @@ def test_a_plan_without_the_convention_fields_is_refused(draft, field):
 
 
 def test_mann_whitney_auto_reports_the_method_actually_used_per_pair(active):
-    """scipy ``method="auto"``: exact when both samples have at most 55 observations and there are no ties, else asymptotic
-    (with the plan's continuity correction). The reported label is checked against an explicit call of that method."""
+    """scipy 1.18.1 ``method="auto"`` (``_mwu_choose_method``): exact only when at least one sample has at most 8 observations and there
+    are no ties; asymptotic otherwise (with the plan's continuity correction). Each reported label is checked against the p-value of an
+    explicit call of that method, so a wrong label cannot hide behind equal p-values."""
     untied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4.5, 6, 7, 8, 9]}
     tied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4, 6, 7, 8, 9]}
-    for samples, label in ((untied, "exact"), (tied, "asymptotic")):
+    nine_vs_five = {"Core-GA-TSP": [float(v) for v in range(9)], "Core-PSO-TSP": [v + 3.5 for v in range(5)]}  # one sample <= 8, no ties
+    thirty = {"Core-GA-TSP": [float(v) for v in range(30)], "Core-PSO-TSP": [v + 10.5 for v in range(30)]}  # both > 8, no ties
+    for samples, label in ((untied, "exact"), (tied, "asymptotic"), (nine_vs_five, "exact"), (thirty, "asymptotic")):
         pair = run(per_instance_items(samples), active).inference.pairs[0]
-        direct = sps.mannwhitneyu(samples["Core-GA-TSP"], samples["Core-PSO-TSP"], method=label, use_continuity=True).pvalue
+        x, y = samples["Core-GA-TSP"], samples["Core-PSO-TSP"]
         assert pair.method_used == label
-        assert pair.p_value == pytest.approx(direct, abs=1e-12)
+        assert pair.p_value == pytest.approx(sps.mannwhitneyu(x, y, method=label, use_continuity=True).pvalue, abs=1e-12)
+    # 30 against 30 without ties: scipy auto is asymptotic and differs from the exact p-value (the former wrong label was "exact")
+    x, y = thirty["Core-GA-TSP"], thirty["Core-PSO-TSP"]
+    assert sps.mannwhitneyu(x, y, method="exact").pvalue != pytest.approx(sps.mannwhitneyu(x, y, method="asymptotic").pvalue, rel=1e-6)
+    assert sps.mannwhitneyu(x, y, method="auto").pvalue == pytest.approx(sps.mannwhitneyu(x, y, method="asymptotic").pvalue, abs=1e-15)
     big = {"Core-GA-TSP": list(range(60)), "Core-PSO-TSP": [v + 0.5 for v in range(30, 90)]}
-    assert run(per_instance_items(big), active).inference.pairs[0].method_used == "asymptotic"  # more than 55 per sample
+    assert run(per_instance_items(big), active).inference.pairs[0].method_used == "asymptotic"
+
+
+def test_the_iman_davenport_p_not_the_chi_square_p_opens_the_omnibus_gate(draft):
+    """Rank sums 8, 12, 16 over six blocks (four blocks A < B < C, one C < A < B, one B < A < C): chi2_F = 464/6 - 72 = 16/3, chi-square
+    p = exp(-8/3) = 0.0695, Iman-Davenport F = 5 * (16/3) / (12 - 16/3) = 4 with (2, 10) df, p = 1.8^-5 = 0.0529. At alpha 0.06 only
+    the F p-value is significant, so the post-hoc tests must run under only_after_significant_omnibus; at alpha 0.05 neither is."""
+    orders = [(0, 1, 2)] * 4 + [(1, 2, 0), (1, 0, 2)]
+    centres = {(problem, algorithm): 10.0 * i + orders[i][a]
+               for i, problem in enumerate(CROSS_INSTANCES) for a, algorithm in enumerate(ALGORITHMS)}
+    items = cross_items(centres=centres)
+    relaxed = run(items, activate(draft, alpha=0.06), ACROSS)
+    omnibus = relaxed.inference.omnibus
+    assert omnibus.chi_square_statistic == pytest.approx(16 / 3, abs=1e-9) and omnibus.statistic == pytest.approx(4.0, abs=1e-9)
+    assert omnibus.chi_square_p_value == pytest.approx(math.exp(-8 / 3), rel=1e-9) and omnibus.chi_square_p_value > 0.06
+    assert omnibus.p_value == pytest.approx(1.8 ** -5, rel=1e-9) and omnibus.p_value <= 0.06
+    assert omnibus.significant is True and relaxed.inference.post_hoc_ran is True and len(relaxed.inference.pairs) == 3
+    strict = run(items, activate(draft, alpha=0.05), ACROSS).inference
+    assert strict.omnibus.significant is False and strict.post_hoc_ran is False
+
+
+def test_wilcoxon_auto_is_asymptotic_above_fifty_units():
+    """scipy ``_wilcoxon_iv``: ``method="auto"`` with more than 50 differences is asymptotic even without ties or zeros."""
+    from academic_benchmark.analysis.statistics import wilcoxon_method_used
+    x = [float(v) for v in range(51)]
+    y = [v * 1.37 + 0.11 for v in x]  # 51 distinct non-zero differences
+    assert len({abs(a - b) for a, b in zip(x, y)}) == 51 and all(a != b for a, b in zip(x, y))
+    assert wilcoxon_method_used(x, y, "auto") == "asymptotic"
+    assert sps.wilcoxon(x, y, zero_method="pratt", method="auto").pvalue == pytest.approx(
+        sps.wilcoxon(x, y, zero_method="pratt", method="asymptotic").pvalue, abs=1e-15)
+    assert wilcoxon_method_used(x[:50], y[:50], "auto") == "exact"
+
+
+def test_perfect_agreement_text_states_that_f_is_infinite_and_where_f_comes_from(active):
+    text = run(cross_items(), active, ACROSS).text
+    assert "F infinite (perfect agreement), p below machine precision" in text
+    assert "tie-corrected chi-square" in text and "p 0" not in text.replace("p 0.", "p x.")  # no bare "p 0" for the infinite F
+    assert_no_ranking_words(text)
+    swapped = run(swapped_cross_items(), active, ACROSS).text
+    assert "F infinite" not in swapped and "tie-corrected chi-square" in swapped
+
+
+def test_the_study_profile_must_match_the_plan_and_the_index(active):
+    items = per_instance_items(SEPARATED)
+    wrong = _BILDIRI.model_copy(update={"study_id": "yaem2026", "algorithm_ids": list(ALGORITHMS)})
+    with pytest.raises(StatisticsRefusal, match="study"):
+        run(items, active, study=wrong)
+    with pytest.raises(StatisticsRefusal, match="StudyManifestV1"):
+        run(items, active, study="bildiri2026")
+
+
 
 
 def test_the_plan_conventions_not_the_code_decide_the_method(draft):
@@ -676,25 +741,25 @@ def test_the_campaign_mode_comes_from_the_verified_run_index(active):
     assert run(items, active, mode="paper").campaign_mode == "paper"
     # a caller can no longer name the mode: a bare string is not an index, and the old keyword does not exist
     with pytest.raises(StatisticsRefusal, match="RunIndexV1"):
-        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index="paper")
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index="paper")
     with pytest.raises(TypeError):
-        analyse_family(items, plan=active, family_id=PER_INSTANCE, campaign_mode="paper")
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, campaign_mode="paper")
 
 
 def test_manifests_that_the_index_does_not_list_are_refused(active):
     items = per_instance_items(SEPARATED)
     unlisted = items[0][1].run_id
     with pytest.raises(StatisticsRefusal, match="not listed in the run index"):
-        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, drop=(unlisted,)))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, drop=(unlisted,)))
     with pytest.raises(StatisticsRefusal, match="comparison key digest"):
-        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, digest_of="wrong"))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, digest_of="wrong"))
     with pytest.raises(StatisticsRefusal, match="study"):
-        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, study_id="yaem2026"))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, study_id="yaem2026"))
     with pytest.raises(StatisticsRefusal, match="dirty"):
-        analyse_family(items, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, dirty=True))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, dirty=True))
     other_commit = [(row, manifest.model_copy(update={"git": manifest.git.model_copy(update={"commit": "c" * 40})})) for row, manifest in items]
     with pytest.raises(StatisticsRefusal, match="commit"):
-        analyse_family(other_commit, plan=active, family_id=PER_INSTANCE, run_index=index_for(items))
+        analyse_family(other_commit, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items))
 
 
 def test_a_sample_below_the_plan_minimum_gives_insufficient_sample_and_no_p_value(draft):
@@ -797,27 +862,53 @@ def test_a_failed_row_must_belong_to_the_family(active):
     }
     for field, item in cases.items():
         with pytest.raises(StatisticsRefusal, match=field):
-            run(good + [item], active)
+            run(good + [item], active, study=STUDY3)
     row, _ = failed_item("eil51", "Core-PSO-TSP", 0)
     del row["study_id"]
     with pytest.raises(StatisticsRefusal, match="study_id"):
-        run(good + [(row, None)], active)
+        run(good + [(row, None)], active, study=STUDY3)
 
 
-def test_the_family_algorithms_come_from_the_run_index_not_from_the_completed_rows(active):
-    """Lead decision (OQ-9 a): a failed row is valid when its algorithm is one the verified campaign ran for this study and level;
-    an algorithm that the index never lists is refused, a fully failed cell is not."""
+def test_the_expected_algorithm_set_comes_from_the_study_profile(active):
+    """Lead decision (OQ-9 a): the algorithms of a family are the profile's algorithm IDs, not the ones that happen to have rows. A failed
+    row of a profile algorithm is excluded and reported even when the index lists no run of it; an algorithm outside the profile is
+    refused, as is an index run of such an algorithm."""
     good = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-GWO-TSP-Pure")})
     failed = [failed_item("eil51", "Core-PSO-TSP", r) for r in range(5)]
-    with pytest.raises(StatisticsRefusal, match="run index"):  # PSO is not in the index: nothing shows that the campaign ran it
-        analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good))
-    elsewhere = [make_item("eil76", "Core-PSO-TSP", r, 1.0) for r in range(3)]  # the campaign ran PSO on another instance
-    result = analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=elsewhere))
-    assert result.inference is not None
-    # a PSO run of another budget level does not make PSO an algorithm of this level
-    other_level = [make_item("eil76", "Core-PSO-TSP", r, 1.0, level=1) for r in range(3)]
+    result = run(good + failed, active, study=STUDY3)  # PSO is in the profile; the index lists none of its runs
+    assert result.inference is not None and [e["algorithm_id"] for e in result.exclusions] == ["Core-PSO-TSP"]
+    with pytest.raises(StatisticsRefusal, match="profile"):
+        run(good + [failed_item("eil51", "Core-ALIEN-TSP", 0)], active, study=STUDY3)
+    alien_run = [make_item("eil76", "Core-ALIEN-TSP", r, 1.0) for r in range(3)]
     with pytest.raises(StatisticsRefusal, match="run index"):
-        analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=other_level))
+        run(good + failed, active, study=STUDY3, extra_items=alien_run)
+
+
+def test_an_expected_algorithm_without_completed_or_failed_rows_refuses_the_per_instance_analysis(active):
+    """The profile names three algorithms; the input has rows for two. Kruskal-Wallis over two groups would silently answer a different
+    question, so it is refused (the plan has no way to declare that an algorithm does not apply to an instance)."""
+    two = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-GWO-TSP-Pure")})
+    with pytest.raises(StatisticsRefusal, match="Core-PSO-TSP"):
+        run(two, active, study=STUDY3)
+    with pytest.raises(StatisticsRefusal, match="no mechanism"):
+        run(two, active, study=STUDY3)
+    # a descriptive (smoke) view is still offered, with the missing algorithm listed
+    smoke = run(two, active, mode="smoke", study=STUDY3)
+    assert smoke.inference is None and any(e["algorithm_id"] == "Core-PSO-TSP" and e["dataset_identity"] is None for e in smoke.exclusions)
+    # the real profile lists ten algorithms: three of them are not a family
+    with pytest.raises(StatisticsRefusal, match="Core-TwoOpt-TSP"):
+        run(per_instance_items(SEPARATED), active, study=_BILDIRI)
+
+
+def test_an_expected_algorithm_without_rows_on_any_instance_refuses_the_cross_instance_analysis(active):
+    four = STUDY3.model_copy(update={"algorithm_ids": [*STUDY3.algorithm_ids, "Core-HHO-TSP-Pure"]})
+    with pytest.raises(StatisticsRefusal, match="Core-HHO-TSP-Pure"):
+        run(cross_items(), active, ACROSS, study=four)  # the profile says four algorithms, the rows hold three
+    # with a failed row on every instance the algorithm has rows; the cross-instance design still refuses the failed cells
+    failed = [failed_item(problem, "Core-HHO-TSP-Pure", 0) for problem in CROSS_INSTANCES]
+    with pytest.raises(StatisticsRefusal, match="excluded after a failed run"):
+        run(cross_items() + failed, active, ACROSS, study=four)
+    assert run(cross_items(), active, ACROSS).inference is not None  # the matching three-algorithm profile is fine
 
 
 def test_a_fully_failed_per_instance_cell_is_excluded_reported_and_the_rest_is_analysed(active):
@@ -825,8 +916,8 @@ def test_a_fully_failed_per_instance_cell_is_excluded_reported_and_the_rest_is_a
     (adjusted p equals p), and the report lists the pairs that dropped out and why."""
     good = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-GWO-TSP-Pure")})
     failed = [failed_item("eil51", "Core-PSO-TSP", r) for r in range(5)]
-    elsewhere = [make_item("eil76", "Core-PSO-TSP", r, 1.0) for r in range(3)]
-    result = analyse_family(good + failed, plan=active, family_id=PER_INSTANCE, run_index=index_for(good, extra_items=elsewhere))
+
+    result = run(good + failed, active)
     assert [(e["algorithm_id"], e["dataset_identity"], e["failed_runs"]) for e in result.exclusions] == [("Core-PSO-TSP", "eil51", 5)]
     assert {c.algorithm_id for c in result.cells} == {"Core-GA-TSP", "Core-GWO-TSP-Pure"}
     assert result.inference_refused == ()

@@ -671,3 +671,11 @@ def test_one_table_refuses_a_backend_policy_mix(draft):
     python_only = manifest.model_copy(update={"algorithm": manifest.algorithm.model_copy(update={"backend_policy": "python_only"})})
     with pytest.raises(ReportError, match="backend_policy"):
         build_descriptive_table([(row, python_only), *items[1:]], draft)
+
+
+def test_a_refused_rebuild_leaves_no_old_report_next_to_the_campaign(tmp_path):
+    _, out, root = _campaign_dir(tmp_path)
+    assert (out / "descriptive_report.txt").is_file()
+    (out / "fixed_runs.jsonl").write_bytes((out / "fixed_runs.jsonl").read_bytes() + b" ")
+    assert cr.main([str(out), "--study", svc.STUDY, "--repository-root", str(root)]) == 2
+    assert not (out / "descriptive_report.txt").exists() and not (out / "descriptive_report.json").exists()

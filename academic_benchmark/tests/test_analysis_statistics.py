@@ -203,6 +203,7 @@ def study_for(items, plan=None):
     update = {"algorithm_ids": [a for a in (*ALGORITHMS, *sorted(names - set(ALGORITHMS))) if a in names]}
     if getattr(plan, "study_id", None) is not None:
         update["study_id"] = plan.study_id
+        update["analysis_plan_id"] = plan.analysis_plan_id
     return _BILDIRI.model_copy(update=update)
 
 
@@ -1007,3 +1008,91 @@ def test_the_service_calls_the_identity_guards_in_order():
     calls = sorted((n.lineno, n.col_offset, n.func.id) for n in ast.walk(func) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name))
     order = [name for _, _, name in calls if name in ("require_analysis_environment", "assert_rankable", "assert_single_comparison_family")]
     assert order[:3] == ["require_analysis_environment", "assert_rankable", "assert_single_comparison_family"]
+
+
+# ---------------------------------------------------------------- round 4: instance-bound failed rows, plan identity, native algorithm set
+NATIVE = "uniride-native-tsp-v1"
+
+
+def native_item(problem, algorithm, replicate, gap, study_id="bildiri2026"):
+    """A native-protocol (secondary) run: its manifest has the ``native_uncapped`` policy and no budget level."""
+    row, manifest = make_item(problem, algorithm, replicate, gap, study_id=study_id)
+    data = manifest.model_dump(mode="json")
+    data["protocol_version"] = NATIVE
+    data["run_id"] = make_run_id(study_id, data["dataset"]["dataset_id"], algorithm, None, replicate)
+    data["budget"] = {"levels": [0], "policy": "native_uncapped", "objective_evaluations": 5, "stage_allocation": {}}
+    row.update(protocol_version=NATIVE, comparison_regime="algorithm_native_termination", evaluation_budget=None,
+               termination_policy="algorithm_native_termination;max_iterations=2")
+    return row, RunManifestV1.model_validate(data)
+
+
+def native_study(listed, *, algorithm_ids=None):
+    update = {"secondary_protocol": STUDY3.secondary_protocol.model_copy(update={"algorithm_ids": listed})}
+    if algorithm_ids is not None:
+        update["algorithm_ids"] = algorithm_ids
+    return STUDY3.model_copy(update=update)
+
+
+def test_a_per_instance_failed_row_must_be_on_the_analysed_instance(active):
+    """Reviewer repro: eil51 has GA and PSO completed and the profile names GA, PSO and GWO; the only GWO row is a failure on st70. That
+    must not count as GWO being 'run' on eil51 (the analysis would silently cover two algorithms)."""
+    items = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-PSO-TSP")}) + [failed_item("st70", "Core-GWO-TSP-Pure", 0)]
+    with pytest.raises(StatisticsRefusal, match="analysed instance"):
+        run(items, active, study=STUDY3)
+    # without any GWO row the missing algorithm is refused instead
+    with pytest.raises(StatisticsRefusal, match="Core-GWO-TSP-Pure"):
+        run(items[:-1], active, study=STUDY3)
+    # a failed row on the analysed instance still excludes only its cell
+    on_instance = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-PSO-TSP")}) + [failed_item("eil51", "Core-GWO-TSP-Pure", 0)]
+    assert run(on_instance, active, study=STUDY3).inference is not None
+
+
+def test_a_failed_row_outside_the_declared_family_is_refused(active):
+    with pytest.raises(StatisticsRefusal, match="outside the declared family"):
+        run(cross_items() + [failed_item("ft53", "Core-GA-TSP", 0)], active, ACROSS)
+    with pytest.raises(StatisticsRefusal, match="outside the declared family"):
+        run(per_instance_items(SEPARATED) + [failed_item("pr76", "Core-GA-TSP", 0)], active, study=STUDY3)
+
+
+def test_the_analysis_plan_must_be_the_one_the_study_profile_names(draft):
+    items = per_instance_items(SEPARATED)
+    other = activate(draft, mutate=lambda data: data.update(analysis_plan_id="some-other-plan"))
+    assert other.study_id == STUDY3.study_id and other.analysis_plan_id != STUDY3.analysis_plan_id
+    with pytest.raises(StatisticsRefusal, match="analysis_plan_id"):
+        run(items, other, study=STUDY3)
+    assert run(items, activate(draft), study=STUDY3).inference is not None
+
+
+def test_rows_of_another_study_than_the_plan_are_refused_with_a_named_reason(active):
+    items = per_instance_items(SEPARATED, study_id="yaem2026")
+    with pytest.raises(StatisticsRefusal, match="rows belong to study 'yaem2026' but the analysis plan to study 'bildiri2026'"):
+        run(items, active, study=STUDY3, study_id="yaem2026")
+
+
+def test_native_families_expect_the_secondary_protocol_algorithms(active):
+    """Native expected algorithms: ``secondary_protocol.algorithm_ids`` when listed (a subset of the study's), all study algorithms when
+    it is null (as in ``studies.service``)."""
+    two = [native_item("eil51", name, r, gap) for name, values in SEPARATED.items() if name != "Core-GWO-TSP-Pure" for r, gap in enumerate(values)]
+    subset = run(two, active, study=native_study(["Core-GA-TSP", "Core-PSO-TSP"]))
+    assert subset.inference is not None and {c.algorithm_id for c in subset.cells} == {"Core-GA-TSP", "Core-PSO-TSP"}
+    with pytest.raises(StatisticsRefusal, match="Core-GWO-TSP-Pure"):
+        run(two, active, study=native_study(None))  # null: all three study algorithms are expected
+    with pytest.raises(StatisticsRefusal, match="Core-GWO-TSP-Pure"):
+        run(two, active, study=native_study(["Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure"]))
+    no_native = STUDY3.model_copy(update={"secondary_protocol": None})
+    with pytest.raises(StatisticsRefusal, match="native"):
+        run(two, active, study=no_native)
+
+
+def test_the_index_may_hold_native_only_algorithms_of_the_study(active):
+    """``studies.service`` runs the union of ``algorithm_ids`` and the native list: a native-only algorithm in the index is accepted."""
+    fixed_study = STUDY3.model_copy(update={
+        "algorithm_ids": ["Core-GA-TSP", "Core-PSO-TSP"],
+        "secondary_protocol": STUDY3.secondary_protocol.model_copy(update={"algorithm_ids": ["Core-GWO-TSP-Pure"]}),
+    })
+    items = per_instance_items({name: SEPARATED[name] for name in ("Core-GA-TSP", "Core-PSO-TSP")})
+    native_only = [native_item("eil51", "Core-GWO-TSP-Pure", r, 1.0) for r in range(3)]
+    assert run(items, active, study=fixed_study, extra_items=native_only).inference is not None
+    alien = [native_item("eil51", "Core-ALIEN-TSP", r, 1.0) for r in range(3)]
+    with pytest.raises(StatisticsRefusal, match="run index"):
+        run(items, active, study=fixed_study, extra_items=alien)

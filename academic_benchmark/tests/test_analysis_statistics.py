@@ -197,14 +197,17 @@ def active(draft):
     return activate(draft)
 
 
-def study_for(items):
+def study_for(items, plan=None):
     """The profile of a test: the Bildiri study with exactly the algorithms that occur in the items (completed or failed)."""
     names = {row["algorithm_id"] for row, _ in items}
-    return _BILDIRI.model_copy(update={"algorithm_ids": [a for a in (*ALGORITHMS, *sorted(names - set(ALGORITHMS))) if a in names]})
+    update = {"algorithm_ids": [a for a in (*ALGORITHMS, *sorted(names - set(ALGORITHMS))) if a in names]}
+    if plan is not None:
+        update["study_id"] = plan.study_id
+    return _BILDIRI.model_copy(update=update)
 
 
 def run(items, plan, family=PER_INSTANCE, *, mode="paper", study=None, **index_options):
-    return analyse_family(items, study=study or study_for(items), plan=plan, family_id=family, run_index=index_for(items, mode, **index_options))
+    return analyse_family(items, study=study or study_for(items, plan), plan=plan, family_id=family, run_index=index_for(items, mode, **index_options))
 
 
 # ---------------------------------------------------------------- effect sizes against independent values

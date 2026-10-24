@@ -40,6 +40,7 @@ from academic_benchmark.analysis.identity import ComparisonIdentityError, assert
 from academic_benchmark.analysis.manifests import make_run_id
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1, ComparisonFamilyV1, DescriptiveV1
 from academic_benchmark.contracts.run_index import RunIndexV1
+from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.protocol_registry import assert_rankable
 
@@ -573,7 +574,9 @@ def _check_conventions(plan: AnalysisPlanV1) -> None:
         raise StatisticsRefusal("the plan's degenerate-case conventions are not the implemented ones")
 
 
-def analyse_family(items: Iterable[tuple], *, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV1) -> FamilyAnalysis:
+def analyse_family(
+    items: Iterable[tuple], *, study: StudyManifestV1, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV1
+) -> FamilyAnalysis:
     """Analyse one declared comparison family. ``items`` are ``(row, manifest)`` pairs: rows with the D-06 gap column and their
     ``RunManifestV1``; failed runs are ``(row, None)``. ``run_index`` is the ``RunIndexV1`` of the campaign that the caller has verified
     (``manifests.verify_campaign``): its ``mode`` is the campaign mode ("smoke" or "paper"), and every manifest must be listed in it
@@ -582,6 +585,10 @@ def analyse_family(items: Iterable[tuple], *, plan: AnalysisPlanV1, family_id: s
     require_analysis_environment()
     family = _plan_family(plan, family_id)
     _check_conventions(plan)
+    if not isinstance(study, StudyManifestV1):
+        raise StatisticsRefusal(f"study must be the StudyManifestV1 profile that declares the algorithms, not {type(study).__name__}")
+    if study.study_id != plan.study_id:
+        raise StatisticsRefusal(f"the study profile {study.study_id!r} and the analysis plan of study {plan.study_id!r} do not belong together")
     if not isinstance(run_index, RunIndexV1):
         raise StatisticsRefusal(f"run_index must be the verified RunIndexV1 of the campaign, not {type(run_index).__name__}")
     campaign_mode = run_index.mode

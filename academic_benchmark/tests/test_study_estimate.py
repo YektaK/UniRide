@@ -222,7 +222,7 @@ def test_memetic_report_gives_iterations_evaluations_per_iteration_and_projectio
     assert {m.dataset_id for m in rows} == {"tsplib-eil51", "tsplib-kroa100"}
     small = next(m for m in rows if m.dataset_id == "tsplib-eil51" and m.algorithm_id == MEMETIC_GWO_HHO[0])
     assert small.iterations == 100
-    assert small.objective_evaluations_per_iteration == pytest.approx(63750 * 0.25 / 100)
+    assert small.objective_evaluations_per_iteration == pytest.approx((63750 - int(63750 * 0.75)) / 100)
     assert small.polish_evaluations_per_iteration == pytest.approx(int(63750 * 0.75) / 100)
     assert small.evaluations_per_iteration == pytest.approx(63750 / 100)
     assert small.top_level == 318750

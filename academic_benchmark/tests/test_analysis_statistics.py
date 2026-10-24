@@ -483,7 +483,7 @@ def test_perfect_agreement_text_states_that_f_is_infinite_and_where_f_comes_from
 def test_the_study_profile_must_match_the_plan_and_the_index(active):
     items = per_instance_items(SEPARATED)
     wrong = _BILDIRI.model_copy(update={"study_id": "yaem2026", "algorithm_ids": list(ALGORITHMS)})
-    with pytest.raises(StatisticsRefusal, match="study"):
+    with pytest.raises(StatisticsRefusal, match="do not belong together"):
         run(items, active, study=wrong)
     with pytest.raises(StatisticsRefusal, match="StudyManifestV1"):
         run(items, active, study="bildiri2026")
@@ -760,7 +760,7 @@ def test_manifests_that_the_index_does_not_list_are_refused(active):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, drop=(unlisted,)))
     with pytest.raises(StatisticsRefusal, match="comparison key digest"):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, digest_of="wrong"))
-    with pytest.raises(StatisticsRefusal, match="study"):
+    with pytest.raises(StatisticsRefusal, match="do not belong together"):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, study_id="yaem2026"))
     with pytest.raises(StatisticsRefusal, match="dirty"):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, dirty=True))

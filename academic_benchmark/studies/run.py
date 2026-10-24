@@ -48,21 +48,12 @@ from academic_benchmark.analysis.environment import (
     require_analysis_environment,
     statistics_library_identifier,
 )
-from academic_benchmark.analysis.gaps import ExactReferenceTable, add_gap_columns, load_reference_table
-from academic_benchmark.analysis.manifests import (
-    INDEX_FILE,
-    MANIFEST_DIR,
-    SIDECAR_SUFFIX,
-    ManifestError,
-    collect_environment,
-    load_verified_campaign,
-)
-from academic_benchmark.analysis.report import REPORT_TEXT_FILE, ReportError, build_report, write_report
+from academic_benchmark.analysis.campaign_report import CampaignReportError, write_smoke_descriptive_report
+from academic_benchmark.analysis.manifests import INDEX_FILE, MANIFEST_DIR, SIDECAR_SUFFIX, collect_environment
 from academic_benchmark.committed_bytes import GitQueryFailed, run_git
 from academic_benchmark.contracts.run import EnvironmentV1
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import RuntimeBackendAvailability, probe_runtime_backends
-from academic_benchmark.protocol_registry import classify_row
 from academic_benchmark.fair_pilot import (
     FairPilotError,
     _git_metadata,
@@ -532,52 +523,10 @@ def _run_paper(
 
 
 # ----------------------------------------------------------------------------------------------------- smoke mode
-def _smoke_descriptive_report(
-    output: Path, loaded: Any, root: Path, reference_table_provider: Callable[[Path], ExactReferenceTable]
-) -> List[str]:
-    """Write the D-07 descriptive report of a smoke campaign; returns the lines to append to the run report text.
-
-    The campaign is verified first (``load_verified_campaign``). The gap column comes from the exact reference table
-    (``analysis.gaps``); when the table cannot be loaded every gap is ``null`` with its reason and the report says why. Nothing is
-    written when there are no run manifests (unknown git state) or the analysis plan does not resolve; the lines say so."""
-    if not (output / INDEX_FILE).is_file():
-        return ["Descriptive report not written: there are no run manifests (the git state is unknown), so rows have no comparison identity."]
-    resolution = loaded.analysis_plan
-    if resolution.plan is None:
-        return [f"Descriptive report not written: the analysis plan does not resolve ({resolution.problem})."]
-    try:
-        campaign = load_verified_campaign(output)
-    except ManifestError as exc:
-        raise StudyRunError(f"descriptive report refused: {exc}") from exc
-    notes: List[str] = []
-    try:
-        table = reference_table_provider(root)
-    except Exception as exc:  # noqa: BLE001 - the reference is optional for a smoke report; the reason is printed, never hidden
-        table = ExactReferenceTable()
-        notes.append(f"exact reference unavailable ({type(exc).__name__}: {exc}); every gap is null")
-    groups: Dict[str, List[tuple]] = {}
-    for row, manifest in campaign.items:
-        groups.setdefault(classify_row(row).pooling_group, []).append((row, manifest))
-    items: List[tuple] = []
-    try:
-        for members in groups.values():
-            converted = add_gap_columns([row for row, _ in members], table, plan=resolution.plan)
-            items.extend((new, manifest) for new, (_, manifest) in zip(converted, members))
-        items.extend((row, None) for row in campaign.failed)
-        report = build_report(
-            items, study=loaded.study, plan=resolution.plan, run_index=campaign.index, index_sha256=campaign.index_sha256,
-            notes=notes,
-        )
-    except (ValueError, ReportError) as exc:  # GapColumnError, ReportError, the wording check
-        raise StudyRunError(f"descriptive report refused: {exc}") from exc
-    write_report(report, output)
-    return [f"Descriptive report: {REPORT_TEXT_FILE} ({len(report.data['tables'])} table(s), index sha256 {campaign.index_sha256})"]
-
-
 def _run_smoke(
     study_path: str, output_dir: str | Path, *, root: Path, problem_loader: Optional[Callable[[str], Any]],
     replicates: int, budget_level: Optional[int], overwrite: bool, backend_policy: BackendPolicy,
-    reference_table_provider: Callable[[Path], ExactReferenceTable] = load_reference_table, **providers: Any,
+    reference_table_provider: Optional[Callable[[Path], Any]] = None, **providers: Any,
 ) -> RunReport:
     try:
         loaded = load_study_with_plan(study_path, repository_root=root, mode="smoke")
@@ -593,7 +542,13 @@ def _run_smoke(
     written = dict(report.rows_written)
     completed = written.get(FIXED_FILE, 0) + written.get(NATIVE_FILE, 0)
     output = Path(report.output_dir)
-    extra = _smoke_descriptive_report(output, loaded, root, reference_table_provider)
+    try:  # the gap columns and the report belong to the analysis layer; the run service only calls it
+        extra = write_smoke_descriptive_report(
+            output, study=loaded.study, plan=loaded.analysis_plan.plan, plan_problem=loaded.analysis_plan.problem,
+            root=root, reference_table_provider=reference_table_provider,
+        )
+    except CampaignReportError as exc:
+        raise StudyRunError(f"descriptive report refused: {exc}") from exc
     return RunReport(
         status=report.status, mode="smoke", output_dir=report.output_dir, study_id=report.study_id,
         rows_planned=report.planned_rows, rows_completed=completed, rows_failed=len(report.failed_rows),
@@ -620,7 +575,7 @@ def run_study(
     gateway_executor: Callable[..., Any] = execute_preflighted,
     git_provider: Callable[[Path], Mapping[str, Any]] = _git_metadata,
     environment_provider: Optional[Callable[[str], EnvironmentV1]] = None,
-    reference_table_provider: Callable[[Path], ExactReferenceTable] = load_reference_table,
+    reference_table_provider: Optional[Callable[[Path], Any]] = None,
 ) -> RunReport:
     """Run one study in ``mode`` ("smoke" or "paper"); ``study_path`` is repository-relative.
 

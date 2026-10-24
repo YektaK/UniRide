@@ -20,7 +20,9 @@ import test_analysis_statistics as fx
 import test_study_run_service as svc
 import test_study_smoke_composite as comp
 from academic_benchmark.analysis import report as report_module
+from academic_benchmark.analysis import campaign_report as cr
 from academic_benchmark.analysis.gaps import ExactReferenceTable
+from academic_benchmark.exact_reference.reader import ExactReferenceRefused
 from academic_benchmark.analysis.identity import ComparisonIdentityError
 from academic_benchmark.analysis.manifests import ManifestError, load_verified_campaign, verify_campaign
 from academic_benchmark.analysis.report import (
@@ -31,7 +33,7 @@ from academic_benchmark.analysis.report import (
 )
 from academic_benchmark.analysis.statistics import analyse_family
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
-from academic_benchmark.studies.run import run_study
+from academic_benchmark.studies.run import StudyRunError, run_study
 from academic_benchmark.studies.service import load_study_with_plan
 from academic_benchmark.studies.smoke import assert_no_ranking_words
 
@@ -471,3 +473,201 @@ def test_smoke_integration_without_manifests_says_so_and_writes_no_descriptive_r
                     replicates=1, reference_table_provider=lambda _r: ExactReferenceTable())
     assert not (out / "descriptive_report.txt").exists()
     assert "descriptive report not written" in run.text.lower()
+
+
+# ------------------------------------------------------------------------------------------------ review polish (round 2)
+def _sha(path):
+    import hashlib
+
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _smoke_with(tmp_path, provider, *, out=None, replicates=1, overwrite=False, git=None, root=None):
+    root = root or svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    out = out or tmp_path / "out"
+    run = run_study(svc.STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(),
+                    git_provider=git or svc.CLEAN, replicates=replicates, overwrite=overwrite, reference_table_provider=provider)
+    return run, out, root
+
+
+def _raises(exc):
+    def provider(_root):
+        raise exc
+
+    return provider
+
+
+def test_an_unavailable_reference_is_said_in_the_run_text_and_in_the_report(tmp_path):
+    run, out, _ = _smoke_with(tmp_path, _raises(FileNotFoundError("no results index")))
+    assert run.status == "passed"
+    assert "unavailable" in run.text and "every gap is null" in run.text
+    data = json.loads((out / "descriptive_report.json").read_text("utf-8"))
+    assert any("unavailable" in note for note in data["notes"])
+
+
+def test_an_integrity_refusal_of_the_reference_fails_the_smoke_loudly_and_writes_no_report(tmp_path):
+    provider = _raises(ExactReferenceRefused("reference.csv: sha256 differs from the manifest outputs entry"))
+    with pytest.raises(StudyRunError, match="descriptive report refused.*sha256 differs"):
+        _smoke_with(tmp_path, provider)
+    assert not (tmp_path / "out" / "descriptive_report.txt").exists()
+
+
+def test_only_a_missing_reference_is_swallowed_other_provider_errors_propagate(tmp_path):
+    with pytest.raises(RuntimeError, match="boom"):
+        _smoke_with(tmp_path, _raises(RuntimeError("boom")))
+
+
+def test_the_default_reference_reader_reports_a_missing_index_as_unavailable(tmp_path):
+    run, out, _ = _smoke_with(tmp_path, None)  # the default provider reads the repository's results_index.json: absent in the fixture
+    assert run.status == "passed" and "unavailable" in run.text
+
+
+def test_the_default_reference_reader_fails_on_a_corrupt_index_instead_of_nulling_the_gaps(tmp_path):
+    root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    index = root / "academic_benchmark" / "exact_reference" / "results_index.json"
+    index.parent.mkdir(parents=True, exist_ok=True)
+    index.write_text("{not json", encoding="utf-8")
+    with pytest.raises(StudyRunError, match="descriptive report refused"):
+        _smoke_with(tmp_path, None, root=root)
+
+
+def test_overwrite_removes_a_stale_descriptive_report_before_a_refused_run(tmp_path):
+    run, out, root = _smoke_with(tmp_path, _raises(FileNotFoundError("none")))
+    assert (out / "descriptive_report.txt").is_file() and (out / "descriptive_report.json").is_file()
+    refused = _raises(ExactReferenceRefused("tampered"))
+    with pytest.raises(StudyRunError):
+        _smoke_with(tmp_path, refused, out=out, overwrite=True, root=root)
+    assert not (out / "descriptive_report.txt").exists() and not (out / "descriptive_report.json").exists()
+
+
+def test_the_manifest_presence_comes_from_the_smoke_report_not_from_a_stale_index_on_disk(tmp_path):
+    first, out, root = _smoke_with(tmp_path, _raises(FileNotFoundError("none")))
+    assert (out / "run_index.json").is_file()
+    second, _, _ = _smoke_with(tmp_path, _raises(FileNotFoundError("none")), out=out, overwrite=True, root=root, git=svc.UNKNOWN)
+    assert "descriptive report not written" in second.text.lower()
+    assert not (out / "descriptive_report.txt").exists()  # the stale report of the first run is gone and none was rebuilt from the stale index
+
+
+def test_the_smoke_report_carries_the_index_the_run_wrote(tmp_path):
+    run, out, _ = _smoke_with(tmp_path, _raises(FileNotFoundError("none")))
+    assert f"index sha256 {_sha(out / 'run_index.json')}" in run.text
+
+
+def _campaign_dir(tmp_path):
+    run, out, root = _smoke_with(tmp_path, _raises(FileNotFoundError("none")))
+    return run, out, root
+
+
+def test_a_run_index_summary_that_differs_from_the_file_is_refused(tmp_path):
+    _, out, root = _campaign_dir(tmp_path)
+    loaded = load_study_with_plan(svc.STUDY, repository_root=root, mode="smoke")
+    with pytest.raises(cr.CampaignReportError, match="sha256"):
+        cr.write_smoke_descriptive_report(
+            out, study=loaded.study, plan=loaded.analysis_plan.plan, plan_problem=None, root=root,
+            run_index={"path": "run_index.json", "sha256": "0" * 64, "manifests": 1}, reference_table_provider=_raises(FileNotFoundError("x")),
+        )
+
+
+def test_a_plan_that_does_not_resolve_writes_no_report_and_says_why(tmp_path):
+    _, out, root = _campaign_dir(tmp_path)
+    for name in ("descriptive_report.txt", "descriptive_report.json"):
+        (out / name).unlink()
+    loaded = load_study_with_plan(svc.STUDY, repository_root=root, mode="smoke")
+    lines = cr.write_smoke_descriptive_report(
+        out, study=loaded.study, plan=None, plan_problem="analysis_plan.json is missing", root=root,
+        run_index={"path": "run_index.json", "sha256": _sha(out / "run_index.json"), "manifests": 1},
+    )
+    assert len(lines) == 1 and "does not resolve" in lines[0] and "analysis_plan.json is missing" in lines[0]
+    assert not (out / "descriptive_report.txt").exists()
+
+
+# ---- rebuild from an existing campaign folder (a crash after the index)
+def test_the_report_can_be_rebuilt_from_a_campaign_folder_and_equals_the_original(tmp_path):
+    _, out, root = _campaign_dir(tmp_path)
+    original = (out / "descriptive_report.txt").read_bytes(), (out / "descriptive_report.json").read_bytes()
+    for name in ("descriptive_report.txt", "descriptive_report.json"):
+        (out / name).unlink()
+    lines = cr.rebuild_descriptive_report(out, svc.STUDY, repository_root=root, reference_table_provider=_raises(FileNotFoundError("none")))
+    assert any("Descriptive report:" in line for line in lines)
+    assert ((out / "descriptive_report.txt").read_bytes(), (out / "descriptive_report.json").read_bytes()) == original
+    assert verify_campaign(out) == []
+
+
+def test_the_rebuild_command_exit_codes_follow_the_run_service(tmp_path, capsys):
+    _, out, root = _campaign_dir(tmp_path)
+    for name in ("descriptive_report.txt", "descriptive_report.json"):
+        (out / name).unlink()
+    args = ["--study", svc.STUDY, "--repository-root", str(root)]
+    assert cr.main([str(out), *args]) == 0
+    assert (out / "descriptive_report.txt").is_file()
+    assert cr.main([str(tmp_path / "nowhere"), *args]) == 2
+    (out / "fixed_runs.jsonl").write_bytes((out / "fixed_runs.jsonl").read_bytes() + b" ")  # the campaign no longer verifies
+    assert cr.main([str(out), *args]) == 2
+    assert "REFUSED" in capsys.readouterr().err
+
+
+def test_the_rebuild_refuses_a_folder_inside_the_repository(tmp_path, capsys):
+    import shutil
+
+    _, out, root = _campaign_dir(tmp_path)
+    inside = root / "copied_campaign"
+    shutil.copytree(out, inside)
+    assert cr.main([str(inside), "--study", svc.STUDY, "--repository-root", str(root)]) == 2
+    assert "inside the repository" in capsys.readouterr().err
+    assert (inside / "descriptive_report.txt").is_file()  # the copy keeps its old report: nothing was touched
+
+
+# ------------------------------------------------------------------------------------------------ guards behind other guards
+def test_the_evaluation_budget_check_is_a_guard_of_its_own(draft, monkeypatch):
+    real = report_module.assert_single_comparison_family  # with the identity check silenced, the budget check must still refuse
+    monkeypatch.setattr(report_module, "assert_single_comparison_family", lambda good, **kw: real(good[:1], **kw))
+    with pytest.raises(ReportError, match="different evaluation budgets"):
+        build_descriptive_table(_items(level=0) + _items(level=1), draft)
+
+
+def test_the_wording_check_runs_when_the_report_is_built_also_in_paper_mode(active):
+    with pytest.raises(ReportError, match="ranking"):
+        _report(_items(), plan=active, mode="paper", notes=["the best algorithm wins"])
+    with pytest.raises(ReportError, match="ranking"):
+        _report(_items(), plan=active, mode="smoke", notes=["the best algorithm wins"])
+
+
+def test_a_manifest_written_at_another_commit_than_the_run_index_is_refused(draft):
+    items = _items()
+    index = fx.index_for(items, "smoke")
+    index = index.model_copy(update={"git": index.git.model_copy(update={"commit": "b" * 40})})
+    with pytest.raises(ReportError, match="commit"):
+        build_report(items, study=fx.study_for(items, draft), plan=draft, run_index=index, index_sha256=SHA)
+
+
+def test_a_failed_run_of_another_cell_is_refused_by_the_table(draft):
+    other = fx.failed_item("berlin52", "Core-GA-TSP", 0, evaluation_budget=fx._levels("berlin52")[0])
+    with pytest.raises(ReportError, match="another comparison cell"):
+        build_descriptive_table(_items() + [other], draft)
+    wrong_budget = fx.failed_item("eil51", "Core-GA-TSP", 0, evaluation_budget=fx._levels("eil51")[1])
+    with pytest.raises(ReportError, match="another comparison cell"):
+        build_descriptive_table(_items() + [wrong_budget], draft)
+
+
+def test_a_historical_unverified_row_is_never_reported(draft):
+    with pytest.raises(ReportError, match="historical"):
+        _report(_items(evidence="historical_unverified"), plan=draft)
+    with pytest.raises(ReportError, match="historical"):
+        build_descriptive_table(_items(evidence="invalid"), draft)
+
+
+def test_one_table_refuses_a_fixed_budget_and_a_native_row(draft):
+    native_row, native_manifest = fx.make_item(
+        "eil51", "Core-GA-TSP", 9, 1.0, objective_evaluations=5, termination_reason="converged",
+        protocol_version="uniride-native-tsp-v1", comparison_regime="algorithm_native_termination", evaluation_budget=None,
+    )
+    with pytest.raises(ReportError, match="pooling groups"):
+        build_descriptive_table(_items() + [(native_row, native_manifest)], draft)
+
+
+def test_one_table_refuses_a_backend_policy_mix(draft):
+    items = _items({"Core-GA-TSP": [1.0, 2.0], "Core-PSO-TSP": [2.0, 4.0]})
+    row, manifest = items[0]
+    python_only = manifest.model_copy(update={"algorithm": manifest.algorithm.model_copy(update={"backend_policy": "python_only"})})
+    with pytest.raises(ReportError, match="backend_policy"):
+        build_descriptive_table([(row, python_only), *items[1:]], draft)

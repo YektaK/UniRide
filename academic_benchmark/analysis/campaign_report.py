@@ -1,57 +1,77 @@
-"""Descriptive report of a written smoke campaign (Gate D, D-07), the analysis-layer glue behind ``studies.run``.
+"""Descriptive report of a written campaign folder (Gate D, D-07), the analysis-layer glue behind ``studies.run``.
 
 The gap columns come from the exact reference (``analysis.gaps``) and the rows are classified by ``protocol_registry``; both are
 analysis-layer concerns, and the E12/D-06 boundary tests keep them out of the study modules (``studies/*.py``). The run service
-therefore calls this one function and imports neither: it verifies the campaign folder, adds the gap columns, builds the report
-(``analysis.report``) and writes ``descriptive_report.txt/json`` next to the campaign.
+therefore calls ``write_smoke_descriptive_report`` and imports neither: it verifies the campaign folder, adds the gap columns, builds the
+report (``analysis.report``) and writes ``descriptive_report.txt/json`` next to the campaign.
+
+``rebuild_descriptive_report`` and ``python -m academic_benchmark.analysis.campaign_report <campaign dir> [--study <study.json>]`` build
+the report again from an existing campaign folder (for example after a crash between the run index and the report). Exit codes as in
+``studies.run``: 0 written, 1 written for a campaign whose run status is "failed", 2 refused (campaign folder inside the repository, a
+folder that does not verify, an exact reference that fails its integrity checks, a refused report).
+
+The exact reference is optional for a descriptive report, but only in one sense: when ``results_index.json`` is absent (or lists no
+TSP reference) the gap column is ``null`` with its reason and the report and the run text say so. An integrity refusal of the reference
+(``ExactReferenceRefused``: checksum, manifest or validation failure) is never turned into null gaps: it refuses the report.
+
+Descriptive reports are not covered by a checksum (like ``run_report``: the run index quotes nothing of them and they quote the index
+checksum) and nothing ever reads them back as input.
 """
 from __future__ import annotations
 
+import argparse
+import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from academic_benchmark.analysis.gaps import ExactReferenceTable, add_gap_columns, load_reference_table
-from academic_benchmark.analysis.manifests import INDEX_FILE, ManifestError, load_verified_campaign
+from academic_benchmark.analysis.manifests import (
+    DESCRIPTIVE_REPORT_FILES,
+    ManifestError,
+    VerifiedCampaign,
+    load_verified_campaign,
+)
 from academic_benchmark.analysis.report import REPORT_TEXT_FILE, ReportError, build_report, write_report
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.contracts.study import StudyManifestV1
+from academic_benchmark.exact_reference import reader as reference_reader
 from academic_benchmark.protocol_registry import classify_row
 
 
 class CampaignReportError(ValueError):
-    """The campaign folder does not verify, a gap cannot be computed without a silent choice, or the report was refused."""
+    """The campaign folder does not verify, a gap cannot be computed without a silent choice, the reference failed its integrity
+    checks, or the report was refused."""
 
 
-def write_smoke_descriptive_report(
-    output: str | Path,
-    *,
-    study: StudyManifestV1,
-    plan: Optional[AnalysisPlanV1],
-    plan_problem: Optional[str],
-    root: Path,
-    reference_table_provider: Optional[Callable[[Path], Any]] = None,
+def default_reference_table(root: Path) -> ExactReferenceTable:
+    """The exact reference table of the repository at ``root``.
+
+    Raises ``FileNotFoundError`` when there is no reference to read (``results_index.json`` absent, or no TSP reference listed): that is
+    "not available". Everything else the reader refuses (``ExactReferenceRefused``) is an integrity failure and propagates."""
+    index_path = Path(root) / reference_reader.INDEX_RELATIVE_PATH
+    if not index_path.is_file():
+        raise FileNotFoundError(f"{reference_reader.INDEX_RELATIVE_PATH} is not in {root}")
+    entries = reference_reader.read_index(root)  # a corrupt index is ExactReferenceRefused, not "unavailable"
+    if not any(isinstance(entry, Mapping) and entry.get("manifest_kind") == reference_reader.KIND_TSP for entry in entries):
+        raise FileNotFoundError("results_index.json lists no tsp_reference results")
+    return load_reference_table(root)
+
+
+def _write_from_campaign(
+    output: Path, campaign: VerifiedCampaign, *, study: StudyManifestV1, plan: AnalysisPlanV1, root: Path,
+    reference_table_provider: Optional[Callable[[Path], Any]],
 ) -> List[str]:
-    """Write the descriptive report of the smoke campaign in ``output``; returns the lines to append to the run report text.
-
-    The campaign is verified first (``load_verified_campaign``); a campaign that does not verify raises ``CampaignReportError``.
-    The gap column comes from the exact reference table (``reference_table_provider(root)``, default ``load_reference_table``);
-    when the table cannot be loaded every gap is ``null`` with its reason and the report says why. Nothing is written, and the
-    returned lines say so, when there are no run manifests (unknown git state) or the analysis plan does not resolve."""
-    output = Path(output)
-    if not (output / INDEX_FILE).is_file():
-        return ["Descriptive report not written: there are no run manifests (the git state is unknown), so rows have no comparison identity."]
-    if plan is None:
-        return [f"Descriptive report not written: the analysis plan does not resolve ({plan_problem})."]
-    try:
-        campaign = load_verified_campaign(output)
-    except ManifestError as exc:
-        raise CampaignReportError(str(exc)) from exc
+    lines: List[str] = []
     notes: List[str] = []
     try:
-        table = (reference_table_provider or load_reference_table)(root)
-    except Exception as exc:  # noqa: BLE001 - the reference is optional for a smoke report; the reason is printed, never hidden
+        table = (reference_table_provider or default_reference_table)(root)
+    except FileNotFoundError as exc:  # no reference to read: the gap is null with its reason, and the text says so
         table = ExactReferenceTable()
-        notes.append(f"exact reference unavailable ({type(exc).__name__}: {exc}); every gap is null")
+        note = f"exact reference unavailable ({type(exc).__name__}: {exc}); every gap is null"
+        notes.append(note)
+        lines.append(f"Note: {note}")
+    except reference_reader.ExactReferenceRefused as exc:  # an integrity failure is never turned into null gaps
+        raise CampaignReportError(f"the exact reference was refused (integrity): {exc}") from exc
     groups: Dict[str, List[tuple]] = {}
     for row, manifest in campaign.items:
         groups.setdefault(classify_row(row).pooling_group, []).append((row, manifest))
@@ -67,7 +87,112 @@ def write_smoke_descriptive_report(
     except (ValueError, ReportError) as exc:  # GapColumnError, ReportError (including the wording check)
         raise CampaignReportError(str(exc)) from exc
     write_report(report, output)
-    return [f"Descriptive report: {REPORT_TEXT_FILE} ({len(report.data['tables'])} table(s), index sha256 {campaign.index_sha256})"]
+    lines.append(f"Descriptive report: {REPORT_TEXT_FILE} ({len(report.data['tables'])} table(s), index sha256 {campaign.index_sha256})")
+    return lines
 
 
-__all__ = ["CampaignReportError", "write_smoke_descriptive_report"]
+def write_smoke_descriptive_report(
+    output: str | Path,
+    *,
+    study: StudyManifestV1,
+    plan: Optional[AnalysisPlanV1],
+    plan_problem: Optional[str],
+    root: Path,
+    run_index: Optional[Mapping[str, Any]],
+    reference_table_provider: Optional[Callable[[Path], Any]] = None,
+) -> List[str]:
+    """Write the descriptive report of the smoke campaign in ``output``; returns the lines to append to the run report text.
+
+    ``run_index`` is the summary the smoke run itself returned (``SmokeReport.run_index``: ``path``, ``sha256``, ``manifests``) or
+    ``None`` when it wrote no manifests (unknown git state); whether manifests exist is taken from it, never from the files on disk.
+    The campaign folder is verified (``load_verified_campaign``) and the index checksum must equal the one the run reported; any
+    difference raises ``CampaignReportError``. Nothing is written, and the returned lines say so, when there are no run manifests or the
+    analysis plan does not resolve. The exact reference is read with ``reference_table_provider(root)`` (default
+    ``default_reference_table``): ``FileNotFoundError`` means unavailable (null gaps, noted in the report and in the returned lines),
+    ``ExactReferenceRefused`` refuses the report."""
+    output = Path(output)
+    if run_index is None:
+        return ["Descriptive report not written: there are no run manifests (the git state is unknown), so rows have no comparison identity."]
+    if plan is None:
+        return [f"Descriptive report not written: the analysis plan does not resolve ({plan_problem})."]
+    try:
+        campaign = load_verified_campaign(output)
+    except ManifestError as exc:
+        raise CampaignReportError(str(exc)) from exc
+    if campaign.index_sha256 != run_index.get("sha256"):
+        raise CampaignReportError(
+            f"the run index on disk has sha256 {campaign.index_sha256}, the smoke run reported {run_index.get('sha256')}: the folder changed after the run"
+        )
+    return _write_from_campaign(output, campaign, study=study, plan=plan, root=root, reference_table_provider=reference_table_provider)
+
+
+def _rebuild(
+    campaign_dir: str | Path, study_path: Optional[str], root: Path, reference_table_provider: Optional[Callable[[Path], Any]],
+) -> tuple:
+    """``(lines, run status)`` of a rebuilt report."""
+    from academic_benchmark.fair_pilot import _is_within  # local imports: the run service imports this module
+    from academic_benchmark.studies.run import _main_working_tree
+    from academic_benchmark.studies.service import load_study_with_plan
+
+    output = Path(campaign_dir).expanduser().resolve()
+    if not output.is_dir():
+        raise CampaignReportError(f"{output} is not a campaign folder")
+    main_tree = _main_working_tree(root)
+    if _is_within(output, root) or (main_tree is not None and _is_within(output, main_tree)):
+        raise CampaignReportError(f"the campaign folder {output} is inside the repository; reports are rebuilt only for output outside it")
+    for name in DESCRIPTIVE_REPORT_FILES:  # a refused rebuild must not leave an old report next to a campaign it no longer describes
+        (output / name).unlink(missing_ok=True)
+    try:
+        campaign = load_verified_campaign(output)
+    except ManifestError as exc:
+        raise CampaignReportError(str(exc)) from exc
+    relative = study_path or f"academic_benchmark/studies/{campaign.index.study_id}/study.json"
+    loaded = load_study_with_plan(relative, repository_root=root, mode="smoke")
+    if loaded.analysis_plan.plan is None:
+        raise CampaignReportError(f"the analysis plan does not resolve ({loaded.analysis_plan.problem}); there is nothing to build the report from")
+    lines = _write_from_campaign(
+        output, campaign, study=loaded.study, plan=loaded.analysis_plan.plan, root=root, reference_table_provider=reference_table_provider,
+    )
+    return lines, campaign.index.status
+
+
+def rebuild_descriptive_report(
+    campaign_dir: str | Path,
+    study_path: Optional[str] = None,
+    *,
+    repository_root: Optional[Path] = None,
+    reference_table_provider: Optional[Callable[[Path], Any]] = None,
+) -> List[str]:
+    """Build ``descriptive_report.txt/json`` again from an existing campaign folder; returns the report lines.
+
+    ``study_path`` is repository-relative (default ``academic_benchmark/studies/<study id of the run index>/study.json``). Refuses a folder
+    inside the repository, a folder that does not verify and a reference that fails its integrity checks (``CampaignReportError``);
+    any old descriptive report in the folder is removed first."""
+    root = (Path(repository_root) if repository_root is not None else Path(__file__).resolve().parents[2]).resolve()
+    return _rebuild(campaign_dir, study_path, root, reference_table_provider)[0]
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    from academic_benchmark.studies.service import StudyServiceError
+
+    parser = argparse.ArgumentParser(description="Rebuild the descriptive report of an existing campaign folder (Gate D, D-07)")
+    parser.add_argument("campaign_dir", help="campaign output directory (holds run_index.json), outside the repository")
+    parser.add_argument("--study", default=None, help="repository-relative study.json (default: the run index's study folder)")
+    parser.add_argument("--repository-root", default=None, help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    root = (Path(args.repository_root) if args.repository_root else Path(__file__).resolve().parents[2]).resolve()
+    try:
+        lines, status = _rebuild(args.campaign_dir, args.study, root, None)
+    except (CampaignReportError, StudyServiceError) as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return 2
+    print("\n".join(lines))
+    return 0 if status == "passed" else 1
+
+
+__all__ = [
+    "CampaignReportError", "default_reference_table", "main", "rebuild_descriptive_report", "write_smoke_descriptive_report",
+]
+
+if __name__ == "__main__":
+    sys.exit(main())

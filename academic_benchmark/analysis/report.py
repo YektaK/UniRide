@@ -16,6 +16,9 @@
   (method used per pair, exclusions, the reasons inference was not performed). Nothing is recomputed here. A smoke report refuses
   an inferential section: smoke runs support no claim.
 
+The report is not covered by a checksum, like ``run_report``: it quotes the index checksum, so the index cannot list it, and nothing ever
+reads a descriptive report back as input (the rows and manifests it describes are the verified campaign files).
+
 Smoke reports pass the no-ranking wording check (``studies.smoke.assert_no_ranking_words``, A15) before they are returned or written.
 Every refusal raises ``ReportError`` naming the reason: a plan without a column or variable list, rows of two comparison cells in
 one table, a row without a manifest, an exact/union/joint row, a row without gap columns, a campaign whose index does not list the

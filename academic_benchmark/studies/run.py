@@ -545,7 +545,7 @@ def _run_smoke(
     try:  # the gap columns and the report belong to the analysis layer; the run service only calls it
         extra = write_smoke_descriptive_report(
             output, study=loaded.study, plan=loaded.analysis_plan.plan, plan_problem=loaded.analysis_plan.problem,
-            root=root, reference_table_provider=reference_table_provider,
+            root=root, run_index=report.run_index, reference_table_provider=reference_table_provider,
         )
     except CampaignReportError as exc:
         raise StudyRunError(f"descriptive report refused: {exc}") from exc

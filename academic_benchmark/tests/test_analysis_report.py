@@ -454,7 +454,7 @@ def test_load_verified_campaign_refuses_a_campaign_that_does_not_verify(tmp_path
 
 def test_smoke_integration_still_works_when_the_reference_cannot_be_loaded(tmp_path):
     def broken(_root):
-        raise RuntimeError("reference unavailable in this test")
+        raise FileNotFoundError("reference unavailable in this test")  # only a missing reference is tolerated (round 2)
 
     root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
     out = tmp_path / "out"

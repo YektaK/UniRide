@@ -51,11 +51,10 @@ MANIFEST_DIR = "manifests"
 SIDECAR_SUFFIX = ".sha256"
 # result files whose every row needs a manifest (the failed-run file holds records, not observations)
 RESULT_FILES = ("fixed_runs.jsonl", "native_runs.jsonl")
-# the reports quote the index checksum, so the index cannot list them (D-02 contract); D-07 adds the descriptive report
-REPORT_FILES = (
-    "smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json",
-    "descriptive_report.txt", "descriptive_report.json",
-)
+# The reports quote the index checksum, so the index cannot list them (D-02 contract): none of these files is covered by a checksum,
+# and nothing reads them back as input. D-07 adds the descriptive report, which is no different from run_report in this respect.
+DESCRIPTIVE_REPORT_FILES = ("descriptive_report.txt", "descriptive_report.json")
+REPORT_FILES = ("smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json", *DESCRIPTIVE_REPORT_FILES)
 FAILED_FILE = "failed_runs.jsonl"
 # no statistics library exists before D-04a pins one (EnvironmentV1 requires a string); the literal is recorded as is
 STATISTICS_LIBRARY_NONE = "none"
@@ -630,7 +629,7 @@ def verify_campaign(directory: Path | str) -> list[str]:
 
 
 __all__ = [
-    "FAILED_FILE", "VerifiedCampaign", "load_verified_campaign", "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
+    "DESCRIPTIVE_REPORT_FILES", "FAILED_FILE", "VerifiedCampaign", "load_verified_campaign", "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
     "VerificationResult", "build_run_manifest", "canonical_json_bytes", "collect_environment", "comparable_manifest_view",
     "file_sha256", "make_run_id", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
     "write_run_campaign",

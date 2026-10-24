@@ -282,7 +282,13 @@ def test_in_repository_output_is_refused_and_nothing_is_created(tmp_path):
         write_outputs(tmp_path / "out", "text\n", {"a": 1}, repository_root=REPOSITORY_ROOT)
 
 
-def test_cli_refuses_in_repository_output_before_running_any_solver(capsys):
+def test_cli_refuses_in_repository_output_before_running_any_solver(capsys, monkeypatch):
+    from academic_benchmark.studies import estimate as estimate_module
+
+    def _no_solver(*_args, **_kwargs):
+        raise AssertionError("the real solver must not be built when the output location is refused")
+
+    monkeypatch.setattr(estimate_module, "make_real_solver", _no_solver)
     inside = REPOSITORY_ROOT / "estimate_cli_out_must_not_exist"
     code = main(["--study", BILDIRI, "--out", str(inside)])
     assert code == 2 and not inside.exists()

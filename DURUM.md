@@ -1,13 +1,13 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-24 (WIP `7fd27979` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
+Son güncelleme: 2026-10-24 (WIP `d8259753` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
 
 ## Çalışan işler
 
 | İş | Dal | Durum |
 |---|---|---|
 | Sabit bütçede `max_no_improvement` zorunlu + YAEM tohumu 2027 | — | BİRLEŞTİ `e24a5cd1` (Opus ONAY). |
-| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-06, D-08a, D-09, D-14. Çalışıyor: D-05 (istatistik, son DÜZELT turu 3). Sıradaki: D-07 (D-05 sonrası), D-04b1 ölçümü. |
+| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-05, D-06, D-08a, D-09, D-14. Sıradaki: D-07 (betimsel raporlar), D-04b1 ölçümü, D-08b, D-10. |
 
 ## Bu turda biten
 
@@ -29,4 +29,7 @@ Son güncelleme: 2026-10-24 (WIP `7fd27979` sonrası). Kararlar `docs/DECISION_L
 - Gate C uygunluk testinin A17 penceresi `## ` başlığında da durmalı.
 - `scratch/test_hho.py`; eski cila listesi (C-12/C-16b/J3/ayrıştırıcı).
 - ALNS birleşik cila dalı için iki yardımcı test (mutant kaldı); Smart/CLI parametre bloklarının ön kontrolü (isteğe bağlı).
+- D-03 cila: smoke varsayılanı 3 tekrar için test; yarım kalan checkpoint silmesinin elle temizlenmesi docstring'e.
+- D-05 cila: başarısız satır aile kontrolü `tsplib-<ad>` veri kümesi kimliğini varsayıyor; plana örnek başına uygulanabilirlik beyanı yok (karma aile reddedilir).
+- D-02/D-03 izleme: başarısız koşular run index'e yazılsın (OQ-9 a doğrulanabilir olsun).
 - Lisans tekrar denemesi: `real_deps` üzerinden Gurobi probe sayısının manifeste ulaştığını sınayan test (mutant kaldı).

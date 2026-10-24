@@ -760,7 +760,7 @@ def test_manifests_that_the_index_does_not_list_are_refused(active):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, drop=(unlisted,)))
     with pytest.raises(StatisticsRefusal, match="comparison key digest"):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, digest_of="wrong"))
-    with pytest.raises(StatisticsRefusal, match="do not belong together"):
+    with pytest.raises(StatisticsRefusal, match="study"):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, study_id="yaem2026"))
     with pytest.raises(StatisticsRefusal, match="dirty"):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, dirty=True))

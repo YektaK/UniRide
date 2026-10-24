@@ -276,7 +276,7 @@
     },
     "MannWhitneyConventionV1": {
       "additionalProperties": false,
-      "description": "SciPy ``mannwhitneyu`` conventions; ``auto`` is exact for at most 55 observations per sample without ties, else asymptotic.",
+      "description": "SciPy ``mannwhitneyu`` conventions; ``auto`` is exact only when one sample has at most 8 observations and there are no ties, else asymptotic.",
       "properties": {
         "continuity_correction": {
           "title": "Continuity Correction",

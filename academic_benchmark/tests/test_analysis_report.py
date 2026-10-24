@@ -323,6 +323,9 @@ def test_a_cell_that_failed_completely_is_listed_and_not_dropped(draft):
 # ------------------------------------------------------------------------------------------------ paper section
 def _paper_inference(active):
     items = fx.per_instance_items(fx.SEPARATED)
+    for row, _ in items:  # a real row always carries what the run consumed and why it stopped
+        row.setdefault("objective_evaluations", row["evaluation_budget"])
+        row.setdefault("termination_reason", "budget_exhausted")
     analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,
                               run_index=fx.index_for(items, "paper"))
     return items, analysis
@@ -456,4 +459,4 @@ def test_smoke_integration_without_manifests_says_so_and_writes_no_descriptive_r
     run = run_study(svc.STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(), git_provider=svc.UNKNOWN,
                     replicates=1, reference_table_provider=lambda _r: ExactReferenceTable())
     assert not (out / "descriptive_report.txt").exists()
-    assert "descriptive report not written" in run.text
+    assert "descriptive report not written" in run.text.lower()

@@ -64,7 +64,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
 }
 TOKEN = re.compile(r"`((?:manifest|index|study|plan)\.[A-Za-z0-9_.\[\]<>]+)`")
 GAP_REF = re.compile(r"\bG\d+\b")
-CITATION = re.compile(r"`([A-Za-z0-9_./-]+\.(?:py|json)):(\d+)`")
+CITATION = re.compile(r"`([A-Za-z0-9_./-]+\.(?:py|json|md)):(\d+)`")
 
 
 def _template_text() -> str:
@@ -188,6 +188,8 @@ def test_a_field_without_a_manifest_counterpart_names_a_listed_gap() -> None:
             gap_cell = row[3] if section == "Field table" else check
             refs = set(GAP_REF.findall(gap_cell))
             referenced |= refs
+            if section == "Field table" and "NO MANIFEST FIELD" in check:
+                assert refs, f"row {row[0]!r}: 'NO MANIFEST FIELD' needs a gap number in the gap column"
             if not has_manifest_field:
                 assert "NO MANIFEST FIELD" in check, f"row {row[0]!r}: no manifest/index field and no explicit 'NO MANIFEST FIELD'"
                 assert refs, f"row {row[0]!r}: 'NO MANIFEST FIELD' must name a gap (G1, G2, ...)"
@@ -202,19 +204,22 @@ def test_evidence_lines_exist_and_name_a_field_of_the_row() -> None:
         cites = CITATION.findall(evidence)
         assert cites, f"row {row[0]!r}: no `file:line` evidence"
         leaves = {
-            (_token_parts(t)[1] or [""])[-1]
+            piece
             for cell in row[1:3]
             for t in TOKEN.findall(cell)
+            for piece in _token_parts(t)[1]
         } - {""}
-        named = not leaves  # a row without contract tokens only needs existing lines
+        # a row that admits a missing manifest field only needs existing lines; every other cited line must name a field
+        strict = bool(leaves) and "NO MANIFEST FIELD" not in row[2]
+        named = True
         for path, line in cites:
             target = REPO / path
             assert target.is_file(), f"row {row[0]!r}: {path} does not exist"
             lines = target.read_text(encoding="utf-8").splitlines()
             assert 1 <= int(line) <= len(lines), f"row {row[0]!r}: {path}:{line} is beyond the file ({len(lines)} lines)"
-            if any(leaf in lines[int(line) - 1] for leaf in leaves):
-                named = True
-        assert named, f"row {row[0]!r}: no cited line contains one of {sorted(leaves)} (stale line numbers?)"
+            if strict and not any(leaf in lines[int(line) - 1] for leaf in leaves):
+                named = False
+                assert named, f"row {row[0]!r}: {path}:{line} contains none of {sorted(leaves)} (stale line number?)"
 
 
 def test_placeholders_do_not_decide_a_scientific_value() -> None:

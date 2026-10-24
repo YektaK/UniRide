@@ -50,7 +50,7 @@ MANIFEST_DIR = "manifests"
 SIDECAR_SUFFIX = ".sha256"
 # result files whose every row needs a manifest (the failed-run file holds records, not observations)
 RESULT_FILES = ("fixed_runs.jsonl", "native_runs.jsonl")
-REPORT_FILES = ("smoke_report.txt", "smoke_report.json")
+REPORT_FILES = ("smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json")
 # no statistics library exists before D-04a pins one (EnvironmentV1 requires a string); the literal is recorded as is
 STATISTICS_LIBRARY_NONE = "none"
 # native_uncapped runs have no budget level, but ``BudgetRecordV1.levels`` needs one entry: 0 is that sentinel

@@ -200,6 +200,12 @@ def test_a_table_refuses_rows_of_two_instances(draft):
         build_descriptive_table(mixed, draft)
 
 
+def test_a_table_refuses_two_instances_even_when_their_budgets_are_equal(draft):
+    assert fx._levels("eil51") == fx._levels("eil76")  # same budget: only the instance identity tells the cells apart
+    with pytest.raises(ReportError, match="comparison cell"):
+        build_descriptive_table(_items(problem="eil51") + _items(problem="eil76"), draft)
+
+
 def test_a_table_refuses_rows_of_two_budget_levels(draft):
     mixed = _items(level=0) + _items(level=1)
     with pytest.raises(ReportError, match="comparison cell"):
@@ -370,6 +376,11 @@ def test_a_paper_report_refuses_a_dirty_campaign(active):
     items = _items(dirty=True)
     with pytest.raises(ReportError, match="dirty"):
         _report(items, plan=active, mode="paper", dirty=True)
+
+
+def test_a_paper_report_refuses_a_run_index_that_records_a_dirty_tree_even_when_the_manifests_say_clean(active):
+    with pytest.raises(ReportError, match="dirty"):
+        _report(_items(), plan=active, mode="paper", dirty=True)  # clean manifests, dirty index
 
 
 def test_report_py_computes_no_inferential_statistic_itself():

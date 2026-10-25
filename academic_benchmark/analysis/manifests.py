@@ -31,6 +31,7 @@ import json
 import os
 import platform
 import re
+from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Optional, Sequence
@@ -50,7 +51,11 @@ MANIFEST_DIR = "manifests"
 SIDECAR_SUFFIX = ".sha256"
 # result files whose every row needs a manifest (the failed-run file holds records, not observations)
 RESULT_FILES = ("fixed_runs.jsonl", "native_runs.jsonl")
-REPORT_FILES = ("smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json")
+# The reports quote the index checksum, so the index cannot list them (D-02 contract): none of these files is covered by a checksum,
+# and nothing reads them back as input. D-07 adds the descriptive report, which is no different from run_report in this respect.
+DESCRIPTIVE_REPORT_FILES = ("descriptive_report.txt", "descriptive_report.json")
+REPORT_FILES = ("smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json", *DESCRIPTIVE_REPORT_FILES)
+FAILED_FILE = "failed_runs.jsonl"
 # no statistics library exists before D-04a pins one (EnvironmentV1 requires a string); the literal is recorded as is
 STATISTICS_LIBRARY_NONE = "none"
 # native_uncapped runs have no budget level, but ``BudgetRecordV1.levels`` needs one entry: 0 is that sentinel
@@ -573,13 +578,58 @@ def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
     return result
 
 
+@dataclass(frozen=True)
+class VerifiedCampaign:
+    """A campaign directory that verified: its index, the sha256 of ``run_index.json``, every completed row paired with its
+    run manifest (``items``, in result-file order) and the failed-run records (``failed``)."""
+
+    index: RunIndexV1
+    index_sha256: str
+    items: list
+    failed: list
+
+
+def load_verified_campaign(directory: Path | str) -> VerifiedCampaign:
+    """Verify ``directory`` (``verify_campaign_detailed``) and return its rows bound to their manifests.
+
+    Raises ``ManifestError`` listing the verification errors when the campaign does not verify, so that a report or an
+    analysis never reads rows whose checksums, manifests or index do not hold. Rows are returned as read (no gap columns)."""
+    root = Path(directory)
+    result = verify_campaign_detailed(root)
+    if not result.ok:
+        raise ManifestError(f"{root}: the campaign does not verify ({len(result.errors)} problem(s)): " + "; ".join(result.errors[:5]))
+    index_bytes = (root / INDEX_FILE).read_bytes()
+    index = RunIndexV1.model_validate_json(index_bytes)
+    row_cache: dict[str, list[dict[str, Any]]] = {}
+    items: list = []
+    errors: list[str] = []
+    for entry in index.runs:
+        manifest = RunManifestV1.model_validate_json((root / entry.manifest_path).read_bytes())
+        for output in manifest.outputs:
+            if output.path not in RESULT_FILES:
+                continue
+            rows = _load_rows(root, output.path, row_cache, errors)
+            for i in _bind_row(manifest, rows, output.path, entry.comparison_key_digest, errors):
+                items.append((output.path, i, rows[i], manifest))
+    if errors:
+        raise ManifestError(f"{root}: rows could not be bound to their manifests: " + "; ".join(errors[:5]))
+    order = {name: position for position, name in enumerate(RESULT_FILES)}
+    items.sort(key=lambda item: (order[item[0]], item[1]))
+    failed_path = root / FAILED_FILE
+    failed = [json.loads(line) for line in failed_path.read_text(encoding="utf-8").splitlines() if line.strip()] if failed_path.is_file() else []
+    return VerifiedCampaign(
+        index=index, index_sha256=hashlib.sha256(index_bytes).hexdigest(),
+        items=[(row, manifest) for _, _, row, manifest in items], failed=failed,
+    )
+
+
 def verify_campaign(directory: Path | str) -> list[str]:
     """The verification errors of a campaign directory; an empty list means it verifies."""
     return verify_campaign_detailed(directory).errors
 
 
 __all__ = [
-    "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
+    "DESCRIPTIVE_REPORT_FILES", "FAILED_FILE", "VerifiedCampaign", "load_verified_campaign", "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
     "VerificationResult", "build_run_manifest", "canonical_json_bytes", "collect_environment", "comparable_manifest_view",
     "file_sha256", "make_run_id", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
     "write_run_campaign",

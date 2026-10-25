@@ -34,6 +34,7 @@ from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from academic_benchmark.analysis.manifests import (
+    DESCRIPTIVE_REPORT_FILES,
     INDEX_FILE,
     build_run_manifest,
     collect_environment,
@@ -145,6 +146,7 @@ class SmokeReport:
     failed_rows: tuple
     text: str
     files: tuple = field(default_factory=tuple)
+    run_index: Optional[Dict[str, Any]] = None  # {path, sha256, manifests} of the index this run wrote; None when it wrote no manifests
 
 
 def assert_no_ranking_words(text: str) -> None:
@@ -517,6 +519,8 @@ def run_study_smoke(
     output = _prepare_output_dir(
         output_dir, SimpleNamespace(allow_repository_output=False, overwrite=overwrite), root
     )
+    for name in DESCRIPTIVE_REPORT_FILES:  # an overwritten folder must not keep a descriptive report of an earlier run
+        (output / name).unlink(missing_ok=True)
     runtime_backends = runtime_probe()
     registered = frozenset(registered_algorithms_provider())
     fixed_rows: List[Dict[str, Any]] = []
@@ -563,7 +567,7 @@ def run_study_smoke(
     return SmokeReport(
         status=status, output_dir=str(output), study_id=plan.study.study_id, budget_level=level,
         replicates=cap, rows_written=written, planned_rows=len(rows), failed_rows=tuple(failed),
-        text=text, files=tuple(sorted(p.name for p in output.iterdir())),
+        text=text, files=tuple(sorted(p.name for p in output.iterdir())), run_index=run_index,
     )
 
 

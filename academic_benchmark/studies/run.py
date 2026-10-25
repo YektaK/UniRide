@@ -5,7 +5,9 @@
 One entry point over the C-11 plan and the C-12 row runner (``studies.smoke``, reused, not copied):
 
 * **smoke mode** keeps today's behaviour (a small slice, the first failure stops the run, draft profiles allowed) and adds
-  the analysis-plan label to its report. Its output is descriptive only and supports no claim.
+  the analysis-plan label to its report. Its output is descriptive only and supports no claim. After the campaign is written
+  and verified, a descriptive report (D-07, ``analysis.report``: one table per comparison cell with the analysis plan's columns,
+  the gap against the exact reference, a banner with the index checksum) is written next to it as ``descriptive_report.txt/json``.
 * **paper mode** runs the whole plan and is built and tested here; Gate D does not use it for paper-scale runs. It refuses,
   before any execution or write: a study profile that is not ``active`` (A17 C-13 note, X9), an analysis plan that does not
   resolve or is not ``active`` (``load_study(mode="paper")``, D-09), a dirty working tree or an unknown git state (design
@@ -46,6 +48,7 @@ from academic_benchmark.analysis.environment import (
     require_analysis_environment,
     statistics_library_identifier,
 )
+from academic_benchmark.analysis.campaign_report import CampaignReportError, write_smoke_descriptive_report
 from academic_benchmark.analysis.manifests import INDEX_FILE, MANIFEST_DIR, SIDECAR_SUFFIX, collect_environment
 from academic_benchmark.committed_bytes import GitQueryFailed, run_git
 from academic_benchmark.contracts.run import EnvironmentV1
@@ -522,7 +525,8 @@ def _run_paper(
 # ----------------------------------------------------------------------------------------------------- smoke mode
 def _run_smoke(
     study_path: str, output_dir: str | Path, *, root: Path, problem_loader: Optional[Callable[[str], Any]],
-    replicates: int, budget_level: Optional[int], overwrite: bool, backend_policy: BackendPolicy, **providers: Any,
+    replicates: int, budget_level: Optional[int], overwrite: bool, backend_policy: BackendPolicy,
+    reference_table_provider: Optional[Callable[[Path], Any]] = None, **providers: Any,
 ) -> RunReport:
     try:
         loaded = load_study_with_plan(study_path, repository_root=root, mode="smoke")
@@ -537,10 +541,18 @@ def _run_smoke(
     )
     written = dict(report.rows_written)
     completed = written.get(FIXED_FILE, 0) + written.get(NATIVE_FILE, 0)
+    output = Path(report.output_dir)
+    try:  # the gap columns and the report belong to the analysis layer; the run service only calls it
+        extra = write_smoke_descriptive_report(
+            output, study=loaded.study, plan=loaded.analysis_plan.plan, plan_problem=loaded.analysis_plan.problem,
+            root=root, run_index=report.run_index, reference_table_provider=reference_table_provider,
+        )
+    except CampaignReportError as exc:
+        raise StudyRunError(f"descriptive report refused: {exc}") from exc
     return RunReport(
         status=report.status, mode="smoke", output_dir=report.output_dir, study_id=report.study_id,
         rows_planned=report.planned_rows, rows_completed=completed, rows_failed=len(report.failed_rows),
-        text=report.text, files=report.files,
+        text=report.text + "\n".join(extra) + "\n", files=tuple(sorted(p.name for p in output.iterdir())),
     )
 
 
@@ -563,6 +575,7 @@ def run_study(
     gateway_executor: Callable[..., Any] = execute_preflighted,
     git_provider: Callable[[Path], Mapping[str, Any]] = _git_metadata,
     environment_provider: Optional[Callable[[str], EnvironmentV1]] = None,
+    reference_table_provider: Optional[Callable[[Path], Any]] = None,
 ) -> RunReport:
     """Run one study in ``mode`` ("smoke" or "paper"); ``study_path`` is repository-relative.
 
@@ -590,7 +603,7 @@ def run_study(
         budget_level=budget_level, overwrite=overwrite, backend_policy=backend_policy, registry_getter=registry_getter,
         runtime_probe=runtime_probe, registered_algorithms_provider=registered_algorithms_provider,
         gateway_executor=gateway_executor, git_provider=git_provider,
-        environment_provider=lambda: make_environment("none"),
+        environment_provider=lambda: make_environment("none"), reference_table_provider=reference_table_provider,
     )
 
 

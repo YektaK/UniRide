@@ -1,13 +1,13 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-24 (WIP `81027338` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
+Son güncelleme: 2026-10-24 (WIP `25333088` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
 
 ## Çalışan işler
 
 | İş | Dal | Durum |
 |---|---|---|
 | Sabit bütçede `max_no_improvement` zorunlu + YAEM tohumu 2027 | — | BİRLEŞTİ `e24a5cd1` (Opus ONAY). |
-| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-05, D-06, D-08a, D-09, D-10, D-14. BİRLEŞTİ ayrıca: D-04b1 aracı (`81027338`). Çalışıyor: D-07 (betimsel raporlar, Opus denetiminde); D-04b1 gerçek ölçümü (şef, makine boşken). Sıradaki: D-08b, D-11, D-13, D-12. |
+| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-04b1 aracı, D-05, D-06, D-07, D-08a, D-09, D-10, D-14. Sıradaki: D-04b1 gerçek ölçümü (şef), D-08b, D-11, D-13, D-12. |
 
 ## Bu turda biten
 
@@ -20,6 +20,8 @@ Son güncelleme: 2026-10-24 (WIP `81027338` sonrası). Kararlar `docs/DECISION_L
 
 - MT6 planı (H10 + M25 birlikte, H11, M14): Gate C planı Q4 gereği Gate C sonrası, her makale ölçeğindeki koşudan önce; henüz başlamadı.
 - Run index tamlığı (D-02/D-03 izleme): profil özeti, analiz planı özeti ve kimliği, planlanan koşu sayısı, çıktı yeri ve başarısız koşular run index'e yazılsın (D-10 boşlukları G1, G2, G3, G6, G7).
+
+- Paper raporunun paper koşu servisine bağlanması (D-07 izleme): önce `FamilyAnalysis` kampanya kimliğini (indeks sha256 + commit) taşısın, rapor bunu banner ile karşılaştırsın.
 
 ## Sahibin kararını bekleyenler
 
@@ -37,4 +39,6 @@ Son güncelleme: 2026-10-24 (WIP `81027338` sonrası). Kararlar `docs/DECISION_L
 - D-03 cila: smoke varsayılanı 3 tekrar için test; yarım kalan checkpoint silmesinin elle temizlenmesi docstring'e.
 - D-05 cila: başarısız satır aile kontrolü `tsplib-<ad>` veri kümesi kimliğini varsayıyor; plana örnek başına uygulanabilirlik beyanı yok (karma aile reddedilir).
 - D-02/D-03 izleme: başarısız koşular run index'e yazılsın (OQ-9 a doğrulanabilir olsun).
+- D-07 cila: `ReferenceCrossCheckError` bütünlük reddi sayılsın (yeniden kurma çıkış 2); 3 mutasyon için test; yeniden kurma planı kampanya commit'inden okusun.
+- D-04b1 cila: `objective_count < 0` koruması ve nedensiz prob yedeği için test.
 - Lisans tekrar denemesi: `real_deps` üzerinden Gurobi probe sayısının manifeste ulaştığını sınayan test (mutant kaldı).

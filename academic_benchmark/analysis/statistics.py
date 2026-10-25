@@ -42,6 +42,7 @@ from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1, Compariso
 from academic_benchmark.contracts.run_index import RunIndexV1
 from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.fairness import normalize_problem
+from academic_benchmark.obsolete_results import evidence_refusal
 from academic_benchmark.protocol_registry import assert_rankable
 
 GAP_COLUMN = "gap_to_exact_reference"  # D-06 (analysis/gaps.py); not imported, so this module needs no reference reader
@@ -636,6 +637,9 @@ def analyse_family(
             raise StatisticsRefusal(
                 f"evidence_class {row.get('evidence_class')!r}: historical_unverified and invalid rows are never analysed (A13)"
             )
+        reason = evidence_refusal(row) if isinstance(row, Mapping) else None  # INVALID marker (A06), Gate D D-08b
+        if reason:
+            raise StatisticsRefusal(reason)
     try:
         assert_rankable(rows)
     except (ValueError, TypeError) as exc:

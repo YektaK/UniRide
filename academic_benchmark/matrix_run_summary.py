@@ -7,7 +7,7 @@ import json
 import math
 from typing import Any, Dict, Iterable, Optional, Tuple
 
-from academic_benchmark.obsolete_results import filter_obsolete_rows
+from academic_benchmark.obsolete_results import evidence_refusal, filter_obsolete_rows
 from academic_benchmark.protocol_registry import assert_single_pooling_group
 from academic_benchmark.tsplib_manager import DB_PATH, query_benchmark_results
 
@@ -34,13 +34,19 @@ def _guard_pooling(rows: list) -> None:
     assert_single_pooling_group(rows)
 
 
-def summarize_benchmark_rows(rows: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_benchmark_rows(rows: Iterable[Dict[str, Any]], *, allow_obsolete: bool = False) -> Dict[str, Any]:
     """Return feasibility and hierarchical BKS counters for benchmark rows.
 
     Raises ``ValueError`` when the rows belong to different protocol pooling groups (fixed budget, native termination,
-    exact reference, ...), contradict themselves, or mix labelled with unlabelled rows.
+    exact reference, ...), contradict themselves, or mix labelled with unlabelled rows, and (Gate D, D-08b) when a row is
+    not current evidence: labelled ``historical_unverified``/``invalid`` (A13) or marked ``metadata.obsolete`` (A06; accepted
+    only with ``allow_obsolete``, the explicit INVALID switch of ``summarize_run``).
     """
     rows = list(rows)
+    for row in rows:
+        reason = evidence_refusal(row, allow_obsolete)
+        if reason:
+            raise ValueError(reason)
     _guard_pooling(rows)
     summary: Dict[str, Any] = {
         "total_rows": 0,
@@ -103,7 +109,7 @@ def summarize_run(
         ),
         include_obsolete
     )
-    summary = summarize_benchmark_rows(rows)
+    summary = summarize_benchmark_rows(rows, allow_obsolete=include_obsolete)
     summary["run_id"] = run_id
     return summary
 

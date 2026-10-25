@@ -485,19 +485,22 @@ def patched_reader(db, monkeypatch):
 def router():
     """``optimizer_api.routers.benchmark`` imported in-process (no app, no network). The module imports its siblings by bare name
     (``models``, ``strategies``, ...), so ``optimizer_api/`` is put on ``sys.path`` for the import, exactly like
-    ``optimizer_api/conftest.py``; sys.path and every module this import added are restored afterwards so other academic tests see
-    the interpreter as before."""
+    ``optimizer_api/conftest.py``. Afterwards sys.path is restored and the bare-name modules this import loaded FROM that folder are
+    dropped. Modules of ``academic_benchmark`` / ``uniride_core`` / ``optimizer_api.*`` are deliberately kept: dropping them made a
+    later test re-import a second copy of the capability catalog (``CapabilityEvidenceError`` in ``test_analysis_report.py``)."""
     before = set(sys.modules)
-    path = str(REPO / "optimizer_api")
-    sys.path.insert(0, path)
+    folder = (REPO / "optimizer_api").resolve()
+    sys.path.insert(0, str(folder))
     try:
         module = importlib.import_module("optimizer_api.routers.benchmark")
         yield module
     finally:
-        if path in sys.path:
-            sys.path.remove(path)
+        if str(folder) in sys.path:
+            sys.path.remove(str(folder))
         for name in set(sys.modules) - before:
-            sys.modules.pop(name, None)
+            origin = getattr(sys.modules.get(name), "__file__", None)
+            if origin and "." not in name and Path(origin).resolve().is_relative_to(folder):
+                sys.modules.pop(name, None)
 
 
 def _academic_routes(router):

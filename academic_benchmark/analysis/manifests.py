@@ -63,7 +63,10 @@ RESULT_FILES = ("fixed_runs.jsonl", "native_runs.jsonl")
 # The reports quote the index checksum, so the index cannot list them (D-02 contract): none of these files is covered by a checksum,
 # and nothing reads them back as input. D-07 adds the descriptive report, which is no different from run_report in this respect.
 DESCRIPTIVE_REPORT_FILES = ("descriptive_report.txt", "descriptive_report.json")
-REPORT_FILES = ("smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json", *DESCRIPTIVE_REPORT_FILES)
+# A20 L12: the paper report (descriptive tables plus the inferential section) is built from a verified paper campaign by a separate command
+# and is written next to the campaign; like the other reports it is not covered by a checksum and nothing reads it back.
+PAPER_REPORT_FILES = ("paper_report.txt", "paper_report.json")
+REPORT_FILES = ("smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json", *DESCRIPTIVE_REPORT_FILES, *PAPER_REPORT_FILES)
 FAILED_FILE = "failed_runs.jsonl"
 # the schema version the verifier refuses with a message of its own (v1 holds no profile/plan hash, planned counts, output location or failed list)
 REFUSED_INDEX_SCHEMA = "uniride-run-index/v1"
@@ -846,7 +849,7 @@ def verify_campaign(directory: Path | str) -> list[str]:
 
 
 __all__ = [
-    "DESCRIPTIVE_REPORT_FILES", "FAILED_FILE", "VerifiedCampaign", "load_verified_campaign", "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
+    "DESCRIPTIVE_REPORT_FILES", "PAPER_REPORT_FILES", "FAILED_FILE", "VerifiedCampaign", "load_verified_campaign", "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
     "ANALYSIS_PLAN_FILE_NAME", "INDEX_SCHEMA", "REFUSED_INDEX_SCHEMA", "VerificationResult", "build_run_manifest", "failed_run_entries", "canonical_json_bytes", "collect_environment", "comparable_manifest_view",
     "expand_home", "file_sha256", "home_relative", "make_run_id", "outside_location", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
     "write_run_campaign",

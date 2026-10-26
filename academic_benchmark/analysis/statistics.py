@@ -130,8 +130,8 @@ class FamilyAnalysis:
     inference_refused: tuple
     inference: Optional[InferenceResult]
     excluded_pairs: tuple  # per-instance pairs that left the Holm family because a cell was excluded (OQ-9)
-    # the campaign this analysis was computed from: the commit of its run index and the sha256 of its ``run_index.json`` (``None``
-    # when the caller did not say; a paper report refuses an analysis whose identity it cannot match with its verified index)
+    # the campaign this analysis was computed from: the commit of its run index and the sha256 of its ``run_index.json`` (given by
+    # the caller since A20 L7; a paper report still refuses an analysis whose identity it cannot match with its verified index)
     campaign_commit: str
     index_sha256: Optional[str]
     text: str
@@ -672,14 +672,14 @@ def _check_conventions(plan: AnalysisPlanV1) -> None:
 
 def analyse_family(
     items: Iterable[tuple], *, study: StudyManifestV1, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV2,
-    index_sha256: Optional[str] = None,
+    index_sha256: str,
 ) -> FamilyAnalysis:
     """Analyse one declared comparison family. ``items`` are ``(row, manifest)`` pairs: rows with the D-06 gap column and their
     ``RunManifestV1``; failed runs are ``(row, None)``. ``run_index`` is the ``RunIndexV2`` of the campaign that the caller has verified
     (``manifests.verify_campaign``): its ``mode`` is the campaign mode ("smoke" or "paper"), and every manifest must be listed in it
     with the comparison key digest of its row. ``index_sha256`` is the sha256 of that campaign's ``run_index.json``
-    (``VerifiedCampaign.index_sha256``); the result carries it with the campaign commit so that a paper report can check it quotes an
-    analysis of the campaign it reports. Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must
+    (``VerifiedCampaign.index_sha256``) and is a required keyword (A20 L7): the result carries it with the campaign commit so that a
+    paper report can check it quotes an analysis of the campaign it reports. Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must
     not be analysed; otherwise returns descriptive cells plus either the inference or the named reasons why it was not performed."""
     require_analysis_environment()
     family = _plan_family(plan, family_id)

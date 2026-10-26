@@ -35,23 +35,35 @@ import sys
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
+from academic_benchmark.analysis.environment import AnalysisEnvironmentError
 from academic_benchmark.analysis.gaps import (
     ExactReferenceTable,
     ReferenceCrossCheckError,
     add_gap_columns,
     load_reference_table,
 )
+from academic_benchmark.analysis.identity import comparison_cell_key
 from academic_benchmark.committed_bytes import GitQueryFailed, run_git
 from academic_benchmark.analysis.manifests import (
     DESCRIPTIVE_REPORT_FILES,
+    PAPER_REPORT_FILES,
     ManifestError,
     VerifiedCampaign,
     load_verified_campaign,
 )
-from academic_benchmark.analysis.report import REPORT_TEXT_FILE, ReportError, build_report, write_report
+from academic_benchmark.analysis.problem_contract import ProblemContractError, canonical_problem_contract
+from academic_benchmark.analysis.report import (
+    PAPER_REPORT_TEXT_FILE,
+    REPORT_TEXT_FILE,
+    ReportError,
+    build_report,
+    write_report,
+)
+from academic_benchmark.analysis.statistics import NOT_A_LEVEL, StatisticsRefusal, _level_index_of, analyse_family
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.exact_reference import reader as reference_reader
+from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.protocol_registry import classify_row
 
 
@@ -74,15 +86,116 @@ def default_reference_table(root: Path) -> ExactReferenceTable:
     return load_reference_table(root)
 
 
+FIXED_GROUP = "fixed_budget"
+NATIVE_GROUP = "native"
+
+
+def _paper_analyses(
+    items: Sequence[tuple], *, study: StudyManifestV1, plan: AnalysisPlanV1, campaign: VerifiedCampaign
+) -> tuple:
+    """``(analyses, cells, notes)``: ``analyse_family`` for every comparison family the plan declares, over the rows of the campaign.
+
+    ``items`` are the ``(row, manifest)`` pairs of the campaign with their gap columns, failed runs as ``(row, None)``. One analysis is
+    made for each comparison cell of a family: the protocols are never pooled (fixed budget and native are separate analyses), a
+    fixed-budget family is analysed at each budget level separately, and a per-instance family one instance at a time; a family over
+    all instances takes every instance of one protocol and level together. Each analysis gets the campaign's run index, its sha256 and
+    (through the index) its commit. ``cells`` names the cell of each analysis for the report. Rows that belong to no declared family,
+    and failed runs of a cell that has no completed run, are never dropped silently: they come back in ``notes``. A refusal of the
+    statistics service raises ``CampaignReportError`` naming the family and the cell."""
+    completed = [(row, manifest) for row, manifest in items if manifest is not None]
+    failed = [row for row, manifest in items if manifest is None]
+    keyed = []
+    for row, manifest in completed:
+        key = comparison_cell_key(row, manifest)
+        keyed.append((row, manifest, key.pooling_group, key.budget_level_index, key.dataset_identity))
+    analyses: List[Any] = []
+    cells: List[Dict[str, Any]] = []
+    notes: List[str] = []
+    used_completed: set = set()
+    used_failed: set = set()
+    for family in plan.families:
+        try:
+            allowed = {canonical_problem_contract(problem_type) for problem_type in family.problem_types}
+        except ProblemContractError as exc:
+            raise CampaignReportError(f"family {family.family_id!r} declares a problem type that is not a TSP/ATSP contract: {exc}") from exc
+        per_instance = family.scope == "per_instance"
+        groups: Dict[tuple, tuple] = {}  # (protocol, level index, instance or None) -> (completed items, failed rows)
+        for position, (row, manifest, pooling, level, identity) in enumerate(keyed):
+            if manifest.dataset.dataset_id not in family.dataset_ids:
+                continue
+            try:
+                if canonical_problem_contract(manifest.dataset.problem_type) not in allowed:
+                    continue
+            except ProblemContractError:
+                continue  # not a TSP/ATSP row: outside every family of this plan
+            groups.setdefault((pooling, level, identity if per_instance else None), ([], []))[0].append((row, manifest))
+            used_completed.add(position)
+        for position, row in enumerate(failed):
+            problem = row.get("problem")
+            if not isinstance(problem, str) or not problem.strip():
+                raise CampaignReportError("a failed run of the campaign has no problem name, so it belongs to no comparison cell")
+            identity = normalize_problem(problem)
+            dataset_id = f"tsplib-{identity}"
+            if dataset_id not in family.dataset_ids:
+                continue
+            level = _level_index_of(study, dataset_id, row.get("evaluation_budget"))
+            if level == NOT_A_LEVEL:
+                raise CampaignReportError(
+                    f"a failed run of {row.get('algorithm_id')!r} on {identity!r} has evaluation budget {row.get('evaluation_budget')}, "
+                    "which is not a budget level of the study profile for that instance: the campaign did not run with this profile"
+                )
+            pooling = FIXED_GROUP if row.get("comparison_regime") == "fixed_evaluation_budget" else NATIVE_GROUP
+            key = (pooling, level, identity if per_instance else None)
+            used_failed.add(position)
+            if key in groups:
+                groups[key][1].append(row)
+            else:
+                notes.append(
+                    f"family {family.family_id}: no analysis for protocol {pooling}, level index {level}"
+                    + (f", instance {identity}" if per_instance else "")
+                    + f": a failed run of {row.get('algorithm_id')} and no completed run in that cell"
+                )
+        for key in sorted(groups, key=lambda k: (k[0], -1 if k[1] is None else k[1], k[2] or "")):
+            members, failures = groups[key]
+            budget = members[0][0].get("evaluation_budget") if per_instance else None
+            cell = {"pooling_group": key[0], "budget_level_index": key[1], "evaluation_budget": budget, "dataset_identity": key[2]}
+            try:
+                analysis = analyse_family(
+                    [*members, *((row, None) for row in failures)], study=study, plan=plan, family_id=family.family_id,
+                    run_index=campaign.index, index_sha256=campaign.index_sha256,
+                )
+            except StatisticsRefusal as exc:
+                raise CampaignReportError(
+                    f"the statistics service refused family {family.family_id!r} (protocol {key[0]}, level index {key[1]}"
+                    + (f", instance {key[2]}" if per_instance else "") + f"): {exc}"
+                ) from exc
+            analyses.append(analysis)
+            cells.append(cell)
+    outside = len(keyed) - len(used_completed)
+    if outside:
+        notes.append(f"{outside} completed row(s) belong to no comparison family of the analysis plan and have no inferential analysis")
+    outside_failed = len(failed) - len(used_failed)
+    if outside_failed:
+        notes.append(f"{outside_failed} failed run(s) belong to no comparison family of the analysis plan and are listed only in the descriptive tables")
+    if not analyses:
+        raise CampaignReportError("the analysis plan declares no comparison family that has a row in this campaign: there is nothing to analyse")
+    return analyses, cells, notes
+
+
 def _write_from_campaign(
     output: Path, campaign: VerifiedCampaign, *, study: StudyManifestV1, plan: AnalysisPlanV1, root: Path,
     reference_table_provider: Optional[Callable[[Path], Any]],
     plan_hashes: Optional[Sequence[str]] = None,
+    paper: bool = False,
 ) -> List[str]:
     """Build and write the report. ``plan_hashes`` are the sha256 values that count as "the analysis plan file this report loaded"
     (one for the working-tree file; the caller may offer more than one for a file read from git, see ``_plan_bytes_hashes``).
     The plan hash the run index records must be one of them: a difference refuses a paper campaign's report and is a warning in the
-    report and in the returned lines for a smoke campaign. The verifier's notes (checks it could not make) are shown in both."""
+    report and in the returned lines for a smoke campaign. The verifier's notes (checks it could not make) are shown in both.
+
+    ``paper=True`` (the paper report, A20 L12) needs a paper campaign and adds the inferential section: every comparison family of
+    the plan is analysed (``_paper_analyses``) and the result is written as ``paper_report.txt/json``; otherwise the descriptive
+    report is written as before."""
     lines: List[str] = []
     notes: List[str] = []
     for verifier_note in campaign.notes:  # a note is not a pass: it is shown, never dropped
@@ -120,11 +233,25 @@ def _write_from_campaign(
             converted = add_gap_columns([row for row, _ in members], table, plan=plan)
             items.extend((new, manifest) for new, (_, manifest) in zip(converted, members))
         items.extend((row, None) for row in campaign.failed)
+        analyses: List[Any] = []
+        cells: List[Dict[str, Any]] = []
+        if paper:
+            analyses, cells, analysis_notes = _paper_analyses(items, study=study, plan=plan, campaign=campaign)
+            notes.extend(analysis_notes)
+            lines.extend(f"Note: {note}" for note in analysis_notes)
         report = build_report(
             items, study=study, plan=plan, run_index=campaign.index, index_sha256=campaign.index_sha256, notes=notes,
+            inference=analyses, inference_cells=cells,
         )
     except (ValueError, ReportError) as exc:  # GapColumnError, ReportError (including the wording check)
         raise CampaignReportError(str(exc)) from exc
+    if paper:
+        write_report(report, output, names=PAPER_REPORT_FILES)
+        lines.append(
+            f"Paper report: {PAPER_REPORT_TEXT_FILE} ({len(report.data['tables'])} table(s), {len(analyses)} analysis result(s), "
+            f"index sha256 {campaign.index_sha256})"
+        )
+        return lines
     write_report(report, output)
     lines.append(f"Descriptive report: {REPORT_TEXT_FILE} ({len(report.data['tables'])} table(s), index sha256 {campaign.index_sha256})")
     return lines
@@ -185,8 +312,11 @@ def _plan_bytes_hashes(plan_bytes: bytes) -> tuple:
 
 def _rebuild(
     campaign_dir: str | Path, study_path: Optional[str], root: Path, reference_table_provider: Optional[Callable[[Path], Any]],
+    paper: bool = False,
 ) -> tuple:
-    """``(lines, run status)`` of a rebuilt report."""
+    """``(lines, run status)`` of a rebuilt report; ``paper=True`` builds the paper report (``--paper``, A20 L12) instead of the
+    descriptive one and accepts only a paper campaign."""
+    from academic_benchmark.studies.service import StudyServiceError  # local import, like the others below
     from academic_benchmark.fair_pilot import _is_within  # local imports: the run service imports this module
     from academic_benchmark.studies.run import _main_working_tree
     from academic_benchmark.studies.service import ANALYSIS_PLAN_FILENAME, load_study_bytes, resolve_analysis_plan_bytes
@@ -197,12 +327,20 @@ def _rebuild(
     main_tree = _main_working_tree(root)
     if _is_within(output, root) or (main_tree is not None and _is_within(output, main_tree)):
         raise CampaignReportError(f"the campaign folder {output} is inside the repository; reports are rebuilt only for output outside it")
-    for name in DESCRIPTIVE_REPORT_FILES:  # a refused rebuild must not leave an old report next to a campaign it no longer describes
+    for name in (PAPER_REPORT_FILES if paper else DESCRIPTIVE_REPORT_FILES):  # a refused rebuild must not leave an old report next to a campaign it no longer describes
         (output / name).unlink(missing_ok=True)
     try:
         campaign = load_verified_campaign(output, repository_root=root)
     except ManifestError as exc:
         raise CampaignReportError(str(exc)) from exc
+    if paper:
+        if campaign.index.mode != "paper":
+            raise CampaignReportError(
+                f"--paper builds the paper report of a paper campaign; this run index records mode {campaign.index.mode!r} "
+                "(smoke runs support no inferential claim)"
+            )
+        if campaign.index.git.dirty:
+            raise CampaignReportError("the run index records a dirty working tree: a paper report needs one clean commit")
     # both files as they were when the campaign ran (git at the campaign's commit), not the working-tree files, which may have moved on;
     # the paths default to the ones the run index recorded (the plan lies next to the profile when the index recorded none)
     index = campaign.index
@@ -230,14 +368,19 @@ def _rebuild(
             f"index records {index.profile.sha256}: the campaign did not run with the committed profile, so it cannot be rebuilt from it"
         )
     study = load_study_bytes(profile_bytes, relative)
-    resolution = resolve_analysis_plan_bytes(study, plan_name, plan_bytes, repository_root=root, mode="smoke")
+    if paper and study.status != "active":
+        raise CampaignReportError(f"the study profile {relative} at the campaign commit has status {study.status!r}; a paper report needs an active profile")
+    try:
+        resolution = resolve_analysis_plan_bytes(study, plan_name, plan_bytes, repository_root=root, mode="paper" if paper else "smoke")
+    except StudyServiceError as exc:  # paper mode: an analysis plan that does not resolve or is not active
+        raise CampaignReportError(str(exc)) from exc
     if resolution.plan is None:
         raise CampaignReportError(
             f"the analysis plan at the campaign commit {commit[:12]} does not resolve ({resolution.problem}); there is nothing to build the report from"
         )
     lines = _write_from_campaign(
         output, campaign, study=study, plan=resolution.plan, root=root, reference_table_provider=reference_table_provider,
-        plan_hashes=_plan_bytes_hashes(plan_bytes),
+        plan_hashes=_plan_bytes_hashes(plan_bytes), paper=paper,
     )
     return lines, campaign.index.status
 
@@ -258,18 +401,40 @@ def rebuild_descriptive_report(
     return _rebuild(campaign_dir, study_path, root, reference_table_provider)[0]
 
 
+def rebuild_paper_report(
+    campaign_dir: str | Path,
+    study_path: Optional[str] = None,
+    *,
+    repository_root: Optional[Path] = None,
+    reference_table_provider: Optional[Callable[[Path], Any]] = None,
+) -> List[str]:
+    """Build ``paper_report.txt/json`` from a finished, verified, clean paper campaign; returns the report lines.
+
+    Same arguments and refusals as ``rebuild_descriptive_report`` (``CampaignReportError``), plus: a campaign whose run index is not
+    a paper campaign, a dirty one, a profile or plan that is not active, and any refusal of the statistics service. Any old paper
+    report in the folder is removed first."""
+    root = (Path(repository_root) if repository_root is not None else Path(__file__).resolve().parents[2]).resolve()
+    return _rebuild(campaign_dir, study_path, root, reference_table_provider, paper=True)[0]
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     from academic_benchmark.studies.service import StudyServiceError
 
-    parser = argparse.ArgumentParser(description="Rebuild the descriptive report of an existing campaign folder (Gate D, D-07)")
+    parser = argparse.ArgumentParser(
+        description="Rebuild the descriptive report, or with --paper the paper report, of an existing campaign folder (Gate D, D-07; A20 L12)"
+    )
     parser.add_argument("campaign_dir", help="campaign output directory (holds run_index.json), outside the repository")
     parser.add_argument("--study", default=None, help="repository-relative study.json (default: the run index's profile.path)")
+    parser.add_argument(
+        "--paper", action="store_true",
+        help="build paper_report.txt/json (descriptive tables plus the inferential section) from a finished, verified paper campaign",
+    )
     parser.add_argument("--repository-root", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     root = (Path(args.repository_root) if args.repository_root else Path(__file__).resolve().parents[2]).resolve()
     try:
-        lines, status = _rebuild(args.campaign_dir, args.study, root, None)
-    except (CampaignReportError, StudyServiceError) as exc:
+        lines, status = _rebuild(args.campaign_dir, args.study, root, None, paper=args.paper)
+    except (CampaignReportError, StudyServiceError, AnalysisEnvironmentError) as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
         return 2
     print("\n".join(lines))
@@ -277,7 +442,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 
 __all__ = [
-    "CampaignReportError", "default_reference_table", "main", "rebuild_descriptive_report", "write_smoke_descriptive_report",
+    "CampaignReportError", "default_reference_table", "main", "rebuild_descriptive_report", "rebuild_paper_report",
+    "write_smoke_descriptive_report",
 ]
 
 if __name__ == "__main__":

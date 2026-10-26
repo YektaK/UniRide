@@ -40,6 +40,7 @@ from academic_benchmark.analysis.identity import (
     assert_single_comparison_family,
     comparison_cell_key,
 )
+from academic_benchmark.analysis.manifests import PAPER_REPORT_FILES
 from academic_benchmark.analysis.statistics import FamilyAnalysis, describe_sample
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.contracts.run_index import RunIndexV2
@@ -51,6 +52,7 @@ from academic_benchmark.studies.smoke import StudySmokeError, assert_no_ranking_
 REPORT_SCHEMA = "uniride-descriptive-report/v1"
 REPORT_TEXT_FILE = "descriptive_report.txt"
 REPORT_JSON_FILE = "descriptive_report.json"
+PAPER_REPORT_TEXT_FILE, PAPER_REPORT_JSON_FILE = PAPER_REPORT_FILES  # the paper report (A20 L12): the same report plus the inferential section
 GAP_COLUMN = "gap_to_exact_reference"
 GAP_UNIT_COLUMN = "gap_unit"
 GAP_REASON_COLUMN = "gap_missing_reason"
@@ -342,9 +344,23 @@ def _jsonable(value: Any) -> Any:
     return value
 
 
-def _inference_section(analysis: FamilyAnalysis) -> dict:
+def _cell_label(cell: Mapping[str, Any]) -> str:
+    """One line naming the comparison cell an analysis belongs to (``comparison_cell`` of an inferential section)."""
+    level = (
+        "native protocol (no budget level)" if cell.get("budget_level_index") is None
+        else f"budget level index {cell['budget_level_index']}"
+        + ("" if cell.get("evaluation_budget") is None else f" (evaluation budget {cell['evaluation_budget']})")
+    )
+    dataset = cell.get("dataset_identity")
+    return f"Comparison cell: protocol {cell['pooling_group']} | {level} | " + (
+        f"instance {dataset}" if dataset is not None else "all instances of the family"
+    )
+
+
+def _inference_section(analysis: FamilyAnalysis, cell: Optional[Mapping[str, Any]] = None) -> dict:
     inference = analysis.inference
     return _jsonable({
+        "comparison_cell": dict(cell) if cell is not None else None,
         "family_id": analysis.family_id, "scope": analysis.scope, "campaign_mode": analysis.campaign_mode,
         "analysis_plan_id": analysis.analysis_plan_id, "plan_status": analysis.plan_status,
         "statistics_library": analysis.statistics_library, "conventions": dict(analysis.conventions),
@@ -398,6 +414,7 @@ def build_report(
     run_index: RunIndexV2,
     index_sha256: str,
     inference: Sequence[FamilyAnalysis] = (),
+    inference_cells: Sequence[Mapping[str, Any]] = (),
     notes: Sequence[str] = (),
 ) -> DescriptiveReport:
     """The descriptive report of one verified campaign.
@@ -405,8 +422,12 @@ def build_report(
     ``items`` are ``(row, manifest)`` pairs (failed runs ``(row, None)``); rows carry the D-06 gap columns. ``run_index`` is the
     ``RunIndexV2`` of the campaign the caller verified (``manifests.load_verified_campaign``) and ``index_sha256`` the sha256 of its
     ``run_index.json``. The mode (smoke or paper), commit and dirty flag in the banner are the index's. ``inference`` holds the
-    ``analyse_family`` results of a paper campaign and is refused for a smoke campaign."""
+    ``analyse_family`` results of a paper campaign and is refused for a smoke campaign. ``inference_cells`` (one mapping per analysis:
+    ``pooling_group``, ``budget_level_index``, ``evaluation_budget``, ``dataset_identity`` or ``None`` for a family over all instances)
+    names the comparison cell each analysis was computed for; it is quoted in the text and in the section's ``comparison_cell``."""
     plan = _check_plan(plan)
+    if inference_cells and len(inference_cells) != len(inference):
+        raise ReportError(f"{len(inference_cells)} comparison cell label(s) for {len(inference)} analysis result(s): they go one to one")
     good, failed = _split(items)
     if not good and not failed:
         raise ReportError("the report has no rows")
@@ -497,14 +518,19 @@ def build_report(
     if sections:
         parts.append("")
         parts.append("Inferential results (D-05 statistics service, quoted verbatim; nothing is recomputed in this report)")
-        for analysis in sections:
+        for position, analysis in enumerate(sections):
             parts.append("")
+            if inference_cells:
+                parts.append(_cell_label(inference_cells[position]))
             parts.append(analysis.text)
     text = "\n".join(parts) + "\n"
     data = {
         "schema_version": REPORT_SCHEMA, "mode": mode, "banner": banner, "descriptive_spec": descriptive_spec,
         "tables": tables, "failed_only_cells": failed_only_cells, "notes": list(notes),
-        "inference": [_inference_section(analysis) for analysis in sections],
+        "inference": [
+            _inference_section(analysis, inference_cells[position] if inference_cells else None)
+            for position, analysis in enumerate(sections)
+        ],
     }
     return DescriptiveReport(text=text, data=_jsonable(data), mode=mode)
 
@@ -520,8 +546,11 @@ def _write_atomic(path: Path, content: str) -> None:
         raise
 
 
-def write_report(report: DescriptiveReport, directory: str | Path) -> list:
-    """Write ``descriptive_report.txt`` and ``descriptive_report.json`` into ``directory`` (atomically) and return the paths.
+def write_report(
+    report: DescriptiveReport, directory: str | Path, *, names: Sequence[str] = (REPORT_TEXT_FILE, REPORT_JSON_FILE)
+) -> list:
+    """Write ``descriptive_report.txt`` and ``descriptive_report.json`` (or the two ``names``: ``PAPER_REPORT_FILES`` for the paper
+    report) into ``directory`` (atomically) and return the paths. Only a paper report may take the paper file names.
 
     A smoke report is checked against the no-ranking wording list again (the whole text) before anything is written."""
     if report.mode == "smoke":
@@ -529,9 +558,13 @@ def write_report(report: DescriptiveReport, directory: str | Path) -> list:
             assert_no_ranking_words(report.text)
         except StudySmokeError as exc:
             raise ReportError(str(exc)) from exc
+    if len(names) != 2:
+        raise ReportError(f"a report is written as a text file and a JSON file, not {len(names)} file(s)")
+    if tuple(names) == tuple(PAPER_REPORT_FILES) and report.mode != "paper":
+        raise ReportError(f"the paper report files take a paper report, not a {report.mode} report")
     target = Path(directory)
     target.mkdir(parents=True, exist_ok=True)
-    text_path, json_path = target / REPORT_TEXT_FILE, target / REPORT_JSON_FILE
+    text_path, json_path = target / names[0], target / names[1]
     payload = json.dumps(report.data, indent=2, sort_keys=True, allow_nan=False) + "\n"
     _write_atomic(text_path, report.text)
     _write_atomic(json_path, payload)
@@ -539,6 +572,6 @@ def write_report(report: DescriptiveReport, directory: str | Path) -> list:
 
 
 __all__ = [
-    "DescriptiveReport", "REPORT_JSON_FILE", "REPORT_SCHEMA", "REPORT_TEXT_FILE", "ReportError", "build_descriptive_table",
+    "DescriptiveReport", "PAPER_REPORT_JSON_FILE", "PAPER_REPORT_TEXT_FILE", "REPORT_JSON_FILE", "REPORT_SCHEMA", "REPORT_TEXT_FILE", "ReportError", "build_descriptive_table",
     "build_report", "write_report",
 ]

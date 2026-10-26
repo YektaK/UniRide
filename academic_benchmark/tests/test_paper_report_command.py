@@ -174,7 +174,7 @@ def test_a_campaign_that_ran_with_an_uncommitted_plan_is_refused_with_exit_2(tmp
 def test_a_plan_committed_after_the_campaign_does_not_change_the_paper_report(tmp_path, default_reference):
     root, out, _run = _paper_campaign(tmp_path)
     assert cr.main([str(out), *_paper_args(root)]) == 0
-    first = (out / "paper_report.json").read_bytes()
+    first = json.loads((out / "paper_report.json").read_text("utf-8"))
     plan_file = root / "studies" / "analysis_plan.json"
     plan = json.loads(plan_file.read_text("utf-8"))
     plan["alpha"] = 0.01
@@ -183,7 +183,10 @@ def test_a_plan_committed_after_the_campaign_does_not_change_the_paper_report(tm
     svc._git(root, "add", "-A")
     svc._git(root, "commit", "-q", "-m", "change the plan after the campaign")
     assert cr.main([str(out), *_paper_args(root)]) == 0  # the plan of the campaign commit is the one that counts
-    assert (out / "paper_report.json").read_bytes() == first
+    second = json.loads((out / "paper_report.json").read_text("utf-8"))
+    # only the verifier's note differs: with HEAD moved on it says the recorded hashes were not compared with the working tree
+    assert first.pop("notes") != second.pop("notes")
+    assert second == first  # same analysis plan (alpha 0.05, minimum 2), same inferential results
 
 
 def test_a_statistics_refusal_is_exit_2_with_the_reason_and_leaves_no_old_paper_report(tmp_path, monkeypatch, capsys):

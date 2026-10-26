@@ -20,11 +20,12 @@ _BY_NAME = {member.value: member for member in ProblemContract}
 
 
 def canonical_problem_contract(value: Any) -> ProblemContract:
-    """``ProblemContract`` of a problem type spelled in any case (``tsp``, ``TSP``, ``Tsp``); unknown values are refused."""
+    """``ProblemContract`` of a problem type spelled in any case (``tsp``, ``TSP``, ``Tsp``); unknown values, including a value with
+    surrounding whitespace (``" tsp "``), are refused."""
     if isinstance(value, ProblemContract):
         return value
     if isinstance(value, str):
-        member = _BY_NAME.get(value.strip().lower())
+        member = _BY_NAME.get(value.lower())  # case mapping only: surrounding whitespace is not trimmed (A20 L10)
         if member is not None:
             return member
     raise ProblemContractError(f"{value!r} is not a known problem contract (expected one of {sorted(_BY_NAME)}, any case)")

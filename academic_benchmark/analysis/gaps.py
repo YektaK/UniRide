@@ -128,10 +128,18 @@ def build_reference_table(sets: Iterable[Any]) -> ExactReferenceTable:
                 results_dir=loaded.results_dir, manifest_sha256=loaded.manifest_sha256, ub_validated=True,
             )
             earlier = values.get(identity)
-            if earlier is not None and (earlier.value != entry.value or not same_problem_contract(earlier.problem_contract, entry.problem_contract)):
-                raise ReferenceCrossCheckError(
-                    f"{identity}: two reference sets disagree ({earlier.results_dir}: {earlier.value}, {entry.results_dir}: {entry.value})"
-                )
+            if earlier is not None:
+                try:
+                    same_contract = same_problem_contract(earlier.problem_contract, entry.problem_contract)
+                except ProblemContractError as exc:
+                    raise ReferenceCrossCheckError(
+                        f"{identity}: reference contract {earlier.problem_contract!r} ({earlier.results_dir}) against "
+                        f"{entry.problem_contract!r} ({entry.results_dir}): {exc}"
+                    ) from exc
+                if earlier.value != entry.value or not same_contract:
+                    raise ReferenceCrossCheckError(
+                        f"{identity}: two reference sets disagree ({earlier.results_dir}: {earlier.value}, {entry.results_dir}: {entry.value})"
+                    )
             values.setdefault(identity, entry)
     for identity in values:
         unproven.pop(identity, None)

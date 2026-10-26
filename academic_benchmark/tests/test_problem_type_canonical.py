@@ -27,7 +27,7 @@ CLEAN = lambda _root: {"revision": "c" * 40, "dirty": False}  # noqa: E731
 
 
 # ------------------------------------------------------------------------------------------------- the helper
-@pytest.mark.parametrize("value", ["tsp", "TSP", "Tsp", " tsp ", ProblemContract.TSP])
+@pytest.mark.parametrize("value", ["tsp", "TSP", "Tsp", ProblemContract.TSP])
 def test_tsp_spellings_map_to_one_contract(value):
     assert canonical_problem_contract(value) is ProblemContract.TSP
 
@@ -37,7 +37,7 @@ def test_atsp_spellings_map_to_one_contract(value):
     assert canonical_problem_contract(value) is ProblemContract.ATSP
 
 
-@pytest.mark.parametrize("value", ["", "cvrp", "uniride_wave", "tsp2", None, 3, b"tsp"])
+@pytest.mark.parametrize("value", ["", "cvrp", "uniride_wave", "tsp2", None, 3, b"tsp", " tsp ", "tsp\n", "\tATSP", "atsp "])  # case mapping only: no trimming (A20 L10)
 def test_unknown_problem_types_are_refused(value):
     with pytest.raises(ProblemContractError):
         canonical_problem_contract(value)
@@ -62,6 +62,75 @@ def test_gap_columns_accept_a_lowercase_row_and_refuse_a_wrong_contract():
         add_gap_columns([{**base, "problem_type": "atsp"}], table, plan=plan)
     with pytest.raises(GapColumnError, match="problem type"):
         add_gap_columns([{**base, "problem_type": "cvrp"}], table, plan=plan)
+
+
+def _with_problem_type(items, spelling):
+    """The same items with the dataset problem type of every manifest set to ``spelling`` (no validation: a test of the comparison)."""
+    out = []
+    for row, manifest in items:
+        dataset = manifest.dataset.model_copy(update={"problem_type": spelling})
+        out.append((row, manifest.model_copy(update={"dataset": dataset})))
+    return out
+
+
+def test_the_statistics_service_accepts_a_lowercase_manifest_problem_type_and_refuses_an_unknown_one():
+    """A20 L10 polish: the manifest-versus-family comparison in ``analyse_family`` is canonical (statistics.py, the in_family check)."""
+    import test_analysis_statistics as fx
+    from academic_benchmark.analysis.statistics import StatisticsRefusal
+
+    plan = fx.activate(_plan())
+    items = fx.per_instance_items(fx.SEPARATED)
+    assert fx.run(_with_problem_type(items, "TSP"), plan, study=fx.STUDY3).inference is not None  # the baseline
+    assert fx.run(_with_problem_type(items, "tsp"), plan, study=fx.STUDY3).inference is not None  # lowercase on one side
+    with pytest.raises(StatisticsRefusal, match="not a known problem contract"):
+        fx.run(_with_problem_type(items, "cvrp"), plan, study=fx.STUDY3)  # a valid manifest type that is no TSP/ATSP contract
+
+
+def _study_datasets():
+    from academic_benchmark.studies.service import load_study_with_plan, resolve_datasets
+
+    loaded = load_study_with_plan("academic_benchmark/studies/bildiri2026/study.json", repository_root=REPOSITORY_ROOT, mode="smoke")
+    return list(resolve_datasets(loaded.study, repository_root=REPOSITORY_ROOT))
+
+
+def _spelled(datasets, spelling):
+    first = datasets[0]
+    manifest = first.manifest.model_copy(update={"problem_type": spelling})
+    return [first.__class__(first.manifest_path, manifest, first.artifact_sha256, first.problem_name, first.artifact_dimension)]
+
+
+def test_the_dataset_cross_check_accepts_a_lowercase_manifest_problem_type_and_refuses_an_unknown_one():
+    """A20 L10 polish: the dataset-manifest-versus-reference comparison in ``cross_check_study_datasets`` is canonical."""
+    from academic_benchmark.analysis.gaps import ReferenceCrossCheckError, cross_check_study_datasets
+
+    table = default_reference_table(REPOSITORY_ROOT)
+    datasets = _study_datasets()
+    assert datasets[0].manifest.problem_type in {"TSP", "ATSP"}
+    declared = datasets[0].manifest.problem_type
+    assert len(cross_check_study_datasets(table, _spelled(datasets, declared.lower()))) == 1  # lowercase on one side
+    with pytest.raises(ReferenceCrossCheckError, match="not a known problem contract"):
+        cross_check_study_datasets(table, _spelled(datasets, "cvrp"))
+
+
+def test_an_unknown_contract_in_a_reference_set_is_a_cross_check_error_not_a_bare_contract_error():
+    """A20 L10 polish: two reference sets for one instance whose contract spelling is unknown refuse as ``ReferenceCrossCheckError``."""
+    import test_analysis_gap_columns as gc
+    from academic_benchmark.analysis.gaps import ReferenceCrossCheckError, build_reference_table
+
+    good = gc.exact_row("eil51", value=426)
+    odd = good.model_copy(update={"problem_contract": "weird"})
+    other = "docs/paper/results/tsplib-exact-reference/other"
+
+    def unchecked(row, results_dir):  # the set validates its rows, so an unknown contract only gets in without validation
+        return gc.ExactReferenceSet.model_construct(
+            results_dir=results_dir, manifest_kind="tsp_reference", manifest_sha256=gc.SHA, manifest={}, rows=[row]
+        )
+
+    first_dir = "docs/paper/results/tsplib-exact-reference/stage1-verification"
+    with pytest.raises(ReferenceCrossCheckError, match="eil51.*not a known problem contract"):
+        build_reference_table([unchecked(good, first_dir), unchecked(odd, other)])
+    with pytest.raises(ReferenceCrossCheckError, match="eil51.*not a known problem contract"):
+        build_reference_table([unchecked(odd, first_dir), unchecked(good, other)])
 
 
 def _plan():

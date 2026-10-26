@@ -93,6 +93,42 @@ def test_a_plan_file_with_another_line_ending_still_counts_as_the_recorded_plan(
     assert hashlib.sha256(raw.replace(b"x", b"y") + b" ").hexdigest() not in hashes
 
 
+def _sha(data: bytes) -> str:
+    import hashlib
+
+    return hashlib.sha256(data).hexdigest()
+
+
+# the committed bytes: one JSON string with a double space inside, three lines, LF endings, a final newline
+_COMMITTED = b'{"title": "two  spaces", "n": [1, 2]}\n{"note": "a\\tb"}\n{"end": true}\n'
+
+
+@pytest.mark.parametrize("name, changed", [
+    ("trailing space", _COMMITTED + b" "),
+    ("leading space", b" " + _COMMITTED),
+    ("final newline removed (strip tolerance)", _COMMITTED.rstrip(b"\n")),
+    ("final newline doubled", _COMMITTED + b"\n"),
+    ("whitespace inside a JSON string changed", _COMMITTED.replace(b"two  spaces", b"two spaces")),
+    ("whitespace inside a JSON string removed", _COMMITTED.replace(b"two  spaces", b"twospaces")),
+    ("all runs of whitespace collapsed", b" ".join(_COMMITTED.split())),
+    ("one line ending changed to CRLF (mixed endings)", _COMMITTED.replace(b"\n", b"\r\n", 1)),
+    ("one line ending left LF among CRLF (mixed endings)", _COMMITTED.replace(b"\n", b"\r\n").replace(b"\r\n", b"\n", 1)),
+    ("a lone CR", _COMMITTED.replace(b"\n", b"\r", 1)),
+    ("every line ending a lone CR", _COMMITTED.replace(b"\n", b"\r")),
+])
+def test_a_changed_plan_file_is_not_the_recorded_plan_whatever_the_whitespace_tolerance(name, changed):
+    """Only the committed bytes, their all-LF form and their all-CRLF form count. A whitespace edit (outside or inside a JSON string),
+    one changed line ending (mixed endings) or a lone CR changes the plan file and must not be accepted: a tolerance that strips or
+    normalises whitespace, or that accepts mixed line endings, fails here."""
+    assert _sha(changed) not in cr._plan_bytes_hashes(_COMMITTED), name
+
+
+def test_exactly_the_committed_bytes_and_their_lf_and_crlf_forms_count():
+    crlf = _COMMITTED.replace(b"\n", b"\r\n")
+    assert set(cr._plan_bytes_hashes(_COMMITTED)) == {_sha(_COMMITTED), _sha(crlf)}  # LF is the committed form here
+    assert set(cr._plan_bytes_hashes(crlf)) == {_sha(_COMMITTED), _sha(crlf)}  # a CRLF blob is accepted in its LF form too
+
+
 # ------------------------------------------------------------------------------------------------ guards without a test of their own
 def test_no_tsp_reference_listed_means_unavailable_not_an_error(tmp_path):
     index = tmp_path / reference_reader.INDEX_RELATIVE_PATH

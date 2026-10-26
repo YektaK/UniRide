@@ -183,7 +183,7 @@ class BenchmarkRunner:
         Returns:
             Total tour distance (float, integer-valued for EUC_2D/GEO/ATT). NaN if failed.
         """
-        from utils.tsplib_parser import tsplib_distance_by_type
+        from uniride_core.algorithms.tsplib_parser import tsplib_distance_by_type
 
         ewt = getattr(problem, "edge_weight_type", "EUC_2D")
         coord_index = self._build_coord_index(problem)

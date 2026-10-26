@@ -35,8 +35,9 @@ from dataclasses import dataclass, asdict
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.clustering import Point, Cluster, haversine_distance
-from utils.clustering_strategies import (
+from uniride_core.algorithms.clustering import Point, Cluster
+from uniride_core.algorithms.distance import haversine_distance
+from uniride_core.algorithms.clustering_strategies import (
     FuzzyCMeansClusteringStrategy,
     EnhancedFuzzyCMeansStrategy,
     HierarchicalFCMStrategy,

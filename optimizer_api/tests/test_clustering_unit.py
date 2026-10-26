@@ -1,6 +1,7 @@
 import pytest
 import math
-from utils.clustering import Point, Cluster, calculate_centroid, kmeans_clustering, VehicleCalculator
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, kmeans_clustering
+from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
 
 @pytest.fixture
 def sample_points():

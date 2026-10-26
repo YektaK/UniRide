@@ -4,8 +4,8 @@ import random
 
 sys.path.append('.')
 
-from utils.split_decoder import SplitDecoder, Direction
-from utils.linear_split_decoder import LinearSplitDecoder, PenaltyConfig
+from uniride_core.algorithms.string_split_decoder import SplitDecoder, Direction
+from uniride_core.algorithms.linear_split_decoder import LinearSplitDecoder, PenaltyConfig
 
 def run_performance_test():
     print("Generating Academic Verification Benchmark: 150 Students")

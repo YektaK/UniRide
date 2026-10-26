@@ -25,7 +25,7 @@ class MockProblem:
 
 import optimizer_api.tests.run_interactive_benchmark_v2_numba as bench_v2
 from optimizer_api.tests.run_interactive_benchmark_v2_numba import run_single_test, LocalSearchType
-from optimizer_api.utils import local_search_numba
+from uniride_core.algorithms import local_search_numba
 
 orig_create = bench_v2.create_np_distance_matrix
 orig_calc = bench_v2.calculate_tour_length

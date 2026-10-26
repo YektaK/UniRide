@@ -10,7 +10,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.split_decoder import (
+from uniride_core.algorithms.string_split_decoder import (
     SplitDecoder, Direction, Trip, decode_giant_tour,
     decode_with_time_windows
 )

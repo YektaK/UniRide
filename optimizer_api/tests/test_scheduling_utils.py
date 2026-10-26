@@ -1,5 +1,5 @@
 from models.schemas import Direction, LocationNode, OptimizationRequest, RouteStep, StudentNode, VehicleRoute
-from utils.scheduling import calculate_scheduled_times, minutes_to_time
+from uniride_core.algorithms.route_scheduling import calculate_scheduled_times, minutes_to_time
 
 
 def _request(direction: Direction) -> OptimizationRequest:

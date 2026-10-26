@@ -322,7 +322,8 @@ def test_vehicle_calculator():
     print("TESTING: Vehicle Calculator (K-Means Clustering)")
     print("="*60)
 
-    from utils.clustering import VehicleCalculator, Point
+    from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
+    from uniride_core.algorithms.clustering import Point
 
     students = []
     for i, s in enumerate(create_test_students(12)):

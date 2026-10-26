@@ -38,7 +38,7 @@ from urllib.error import URLError, HTTPError
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.local_search import (
+from uniride_core.algorithms.local_search import (
     LocalSearchType,
     apply_local_search,
 )

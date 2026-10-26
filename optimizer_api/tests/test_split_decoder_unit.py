@@ -1,5 +1,5 @@
 import pytest
-from utils.split_decoder import SplitDecoder, Direction, Trip
+from uniride_core.algorithms.string_split_decoder import SplitDecoder, Direction, Trip
 
 @pytest.fixture
 def basic_data():

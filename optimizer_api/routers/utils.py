@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query
 from models.schemas import (
     TimeWindow, TripDirection, WeeklyScheduleEntry, StudentNode
 )
-from utils.time_window_extractor import TimeWindowExtractor
+from uniride_core.algorithms.time_window_extractor import TimeWindowExtractor
 
 router = APIRouter(prefix="/api/v1", tags=["Utils"])
 

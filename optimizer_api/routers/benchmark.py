@@ -22,7 +22,7 @@ from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
 from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig, validate_benchmark_params, validate_matrix_params
 from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS, verify_owner_token
 from strategies import OPERATIONAL_ONLY_STRATEGIES, STRATEGY_REGISTRY
-from utils.tsplib_parser import (
+from uniride_core.algorithms.tsplib_parser import (
     get_available_problems as get_tsplib_problems,
     get_problem_by_name,
     load_problem_coordinates,

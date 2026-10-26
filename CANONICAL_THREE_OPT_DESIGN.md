@@ -96,6 +96,23 @@ The 3-opt wrapper in `uniride_core/algorithms/local_search_numba.py` delegates t
 
 The old 3-opt kernel in `academic_benchmark/bildiri2026/core/numba_accel.py` and the old `_three_opt_improve_numba` path are marked non-canonical and removed from public execution. They may be re-enabled only after dedicated JIT parity tests pass in an environment where Numba imports successfully.
 
+## Path neighbourhood for production local search
+
+**Added 2026-10-26 (audit M14, MT6-04; DECISION_LOG A19, owner answer OQ-MT6-3 b). Production only, never used for paper claims.**
+
+The production hybrid local search (`uniride_core/algorithms/local_search.py`) does not optimise a Hamiltonian cycle over a matrix. It improves an open sequence that a caller costs with a black-box objective; in `ga_split` the objective is the Split-decoded chromosome cost. A cycle candidate rotated to the first node is neutral for a cycle and wrong for such a sequence, so the canonical cycle engine above cannot be used there. `uniride_core/algorithms/three_opt.py` therefore owns a second, separately named neighbourhood, **path 3-opt, reversals fully costed**:
+
+- **Cuts.** `-1 <= i < j < k <= n - 1`, `A = route[:i + 1]`, `B = route[i + 1:j + 1]`, `C = route[j + 1:k + 1]`, `D = route[k + 1:]`, with `B` and `C` non-empty. `A` and `D` are fixed; an empty `A` (`i = -1`) lets the first position move, an empty `D` (`k = n - 1`) the last. Cuts are enumerated in lexicographic `(i, j, k)` order (`iter_path_three_opt_cuts`).
+- **Window.** The canonical rule, applied to the same indices: `j - i <= window` and `k - j <= window` (`window=None` admits every cut). The window bounds the cuts, not the arrangements tried for an admitted cut.
+- **Candidates.** The 7 non-identity arrangements of `(B, C)` by order and reversal, in this fixed order: `B'C'`, `B'C`, `BC'`, `CB`, `C'B`, `CB'`, `C'B'` (the legacy production order with the formerly missing `C'B'` appended). A candidate equal as a sequence to the input or to an earlier candidate of the same cut is dropped (a one-node segment makes `B' = B`); duplicates across different cuts are not removed (`generate_path_three_opt_candidates`).
+- **Costing.** Every candidate, reversed segments included, is costed in full by the caller's objective; there is no delta evaluation and no symmetric-matrix assumption. The caller's objective, not a matrix, defines whether a reversal is cost-neutral.
+- **Acceptance.** Strict improvement of the objective (`candidate < incumbent`, no tolerance, equal or NaN costs never replace the incumbent); this is the semantics the production class already had. The default pass is a true best-improvement pass: every candidate is compared against the best of the pass so far, and the best (first in scan order among equal costs) replaces the incumbent once, at the end of the pass. `first_improvement=True` takes the first strictly improving candidate in (cut, arrangement) order. `max_iterations` bounds complete passes. This is stricter than the scale-aware tolerance of the cycle engine on purpose: a black-box objective has no known scale (see N-1 in the MT6 plan for the cycle controllers).
+- **Small routes.** `ThreeOptLocalSearch` returns a route with fewer than 4 nodes unchanged; it never runs 2-opt under the 3-opt name.
+- **Hybrid configuration.** The hybrid keeps `max_iterations = 15` and `window = 12` for this step.
+- **Name.** Code and documents call it "path 3-opt, reversals fully costed". It is not the canonical 3-opt of the sections above, it has no academic registry entry, and no academic result may cite it.
+
+`ThreeOptLocalSearch._three_opt_cases` is deleted; `ThreeOptLocalSearch.improve` delegates to `improve_path_three_opt`. Tests: `uniride_core/tests/test_mt6_path_three_opt.py` (independent brute-force enumerator that does not import the generator) and additions to `uniride_core/tests/test_local_search_core.py`.
+
 ## Error handling
 
 - Reject a non-square matrix or a matrix whose dimension differs from the route.
@@ -124,7 +141,7 @@ Required coverage:
 The minimum regression command is:
 
 ```powershell
-python -m pytest academic_benchmark/tests/test_numba_registry_matrix.py academic_benchmark/tests/test_numba_three_opt.py academic_benchmark/tests/test_core_tsp_registry.py uniride_core/tests/test_local_search_core.py uniride_core/tests/test_tsp_meta_engines.py uniride_core/tests/test_three_opt_candidate_parity.py uniride_core/tests/test_mt6_no_forbidden_three_opt.py academic_benchmark/tests/test_mt6_sota_executors_no_forbidden_kernel.py -q -p no:cacheprovider --tb=short
+python -m pytest academic_benchmark/tests/test_numba_registry_matrix.py academic_benchmark/tests/test_numba_three_opt.py academic_benchmark/tests/test_core_tsp_registry.py uniride_core/tests/test_local_search_core.py uniride_core/tests/test_tsp_meta_engines.py uniride_core/tests/test_three_opt_candidate_parity.py uniride_core/tests/test_mt6_no_forbidden_three_opt.py academic_benchmark/tests/test_mt6_sota_executors_no_forbidden_kernel.py uniride_core/tests/test_mt6_path_three_opt.py -q -p no:cacheprovider --tb=short
 ```
 
 Any new focused canonical-3-opt test modules must be added to that verification run.

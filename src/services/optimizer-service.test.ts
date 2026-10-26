@@ -213,6 +213,29 @@ describe("optimizer-service SOTA fallback labelling (M26)", () => {
     expect(result).toMatchObject({ effective_config_source: "default", effective_seed: 42 });
   });
 
+  it("forwards termination_reason and solver_code_version when the optimizer reports them (A20 L2/L3)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, algorithm_used: "e2bso", termination_reason: "wall_clock_deadline", solver_code_version: "3f2a9c1", routes: [], total_vehicles: 1, total_duration_minutes: 20, execution_time_seconds: 0.5 }),
+    }));
+
+    const result = await optimizeRoutes(students, depot);
+
+    expect(result).toMatchObject({ termination_reason: "wall_clock_deadline", solver_code_version: "3f2a9c1" });
+  });
+
+  it("omits termination_reason and solver_code_version when the optimizer reports none", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, algorithm_used: "ga", routes: [], total_vehicles: 1, total_duration_minutes: 20, execution_time_seconds: 0.5 }),
+    }));
+
+    const result = await optimizeRoutes(students, depot);
+
+    expect(result).not.toHaveProperty("termination_reason");
+    expect(result).not.toHaveProperty("solver_code_version");
+  });
+
   it("omits the effective config keys when the optimizer reports none", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,

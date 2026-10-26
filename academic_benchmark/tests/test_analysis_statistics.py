@@ -130,7 +130,7 @@ PROFILE_SHA = "1" * 64
 
 
 def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=(), digest_of=None, extra_items=(),
-              failed=None, plan_sha=PLAN_SHA):
+              failed=None, plan_sha=PLAN_SHA, plan_id=None):
     """A ``RunIndexV2`` that lists the manifest of every completed item (the campaign index the caller has verified).
 
     ``failed`` are the failed items the index lists (default: every failed item of ``items``); ``plan_sha="absent"`` models a
@@ -161,7 +161,7 @@ def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=
         "environment": environment, "runs": runs, "outputs": [],
         "profile": {"path": f"academic_benchmark/studies/{study_id}/study.json", "sha256": PROFILE_SHA},
         "analysis_plan": {
-            "analysis_plan_id": _BILDIRI.analysis_plan_id,
+            "analysis_plan_id": plan_id or _BILDIRI.analysis_plan_id,
             "path": None if absent else f"academic_benchmark/studies/{study_id}/analysis_plan.json",
             "sha256": None if absent else plan_sha,
         },
@@ -235,6 +235,7 @@ def study_for(items, plan=None):
 
 
 def run(items, plan, family=PER_INSTANCE, *, mode="paper", study=None, **index_options):
+    index_options.setdefault("plan_id", getattr(plan, "analysis_plan_id", None))
     return analyse_family(items, study=study or study_for(items, plan), plan=plan, family_id=family, run_index=index_for(items, mode, **index_options))
 
 
@@ -1159,3 +1160,14 @@ def test_failures_the_index_lists_on_another_instance_or_protocol_are_outside_a_
     other_protocol = failed_item("eil51", "Core-PSO-TSP", 1, protocol_version="uniride-native-tsp-v1",
                                  comparison_regime="algorithm_native_termination", evaluation_budget=None)
     run(items, active, study=STUDY3, failed=[other_instance, other_protocol])  # not this family's: neither refused nor reported
+
+
+# ---------------------------------------------------------------- the index names the analysis plan that is analysed
+def test_a_run_index_that_names_another_analysis_plan_is_refused(active):
+    items = per_instance_items(SEPARATED)
+    with pytest.raises(StatisticsRefusal, match="analysis plan"):
+        run(items, active, study=STUDY3, plan_id="some-other-plan-v1")
+
+
+def test_a_run_index_that_names_the_analysed_plan_is_accepted(active):
+    run(per_instance_items(SEPARATED), active, study=STUDY3, plan_id=active.analysis_plan_id)

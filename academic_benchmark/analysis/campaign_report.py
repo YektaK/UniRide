@@ -24,6 +24,17 @@ The exact reference is optional for a descriptive report, but only in one sense:
 TSP reference) the gap column is ``null`` with its reason and the report and the run text say so. An integrity refusal of the reference
 (``ExactReferenceRefused``: checksum, manifest or validation failure) is never turned into null gaps: it refuses the report.
 
+``python -m academic_benchmark.analysis.campaign_report <campaign dir> --paper`` (``rebuild_paper_report``; DECISION_LOG A20 L12) is the
+paper report. It accepts only a paper campaign (run index ``mode`` paper, verified complete by the verifier, clean, an active profile and
+an active analysis plan read at the campaign commit; a plan whose committed bytes differ from the recorded hash refuses). For every
+comparison family the plan declares it makes one ``analyse_family`` call per comparison cell (each protocol, each fixed-budget level,
+and for a per-instance family each instance, so fixed-budget and native rows are never pooled), passing the run index, its sha256 and
+through it the campaign commit, and writes ``paper_report.txt/json`` (the descriptive tables plus the inferential section, each analysis
+labelled with its comparison cell) next to the campaign. Exit codes as above: 0 written, 1 written for a campaign with failed runs, 2
+refused (not a paper campaign, integrity, identity or plan mismatch, a refusal of the statistics service). Rows that belong to no declared
+family and failed runs of a cell with no completed run are listed in the report notes. The paper run service prints this command at the end
+of a campaign without failed runs and runs no analysis itself.
+
 Descriptive reports are not covered by a checksum (like ``run_report``: the run index quotes nothing of them and they quote the index
 checksum) and nothing ever reads them back as input.
 """

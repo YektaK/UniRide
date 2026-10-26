@@ -166,7 +166,7 @@ def test_the_paper_index_records_profile_plan_counts_and_output_location(paper):
     assert index.failed_runs == []
     assert index.output_location.path == home_relative(out.resolve())  # the home prefix is written as ~ (A20 L8)
     check = index.output_location.outside_repository_check
-    assert check.result == "outside_repository" and str(root.resolve()) in check.checked_against
+    assert check.result == "outside_repository" and home_relative(root.resolve()) in check.checked_against
 
 
 def test_the_recorded_hashes_are_the_ones_the_run_service_hashed(paper):
@@ -548,3 +548,28 @@ def test_the_verifier_expands_the_tilde_and_old_absolute_paths_still_verify(smok
     _fake_home(monkeypatch, out.parent / "elsewhere")  # another home folder: the folder is not where the index says
     assert any("recorded output location" in note for note in verify_campaign_detailed(out).notes)
     _reseal(out, lambda d: d["output_location"].update(path=str(out.resolve())))  # leave the shared fixture as it was
+
+
+def test_checked_against_is_written_without_the_home_prefix(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "dora")
+    elsewhere = tmp_path / "mirror" / "repo"
+    record = outside_location(home / "out", [home / "repo", elsewhere, home])
+    assert record["outside_repository_check"]["checked_against"] == ["~/repo", str(elsewhere), "~"]
+    assert str(home) not in json.dumps(record)  # neither the path nor the checked trees carry the user-home prefix
+
+
+def test_an_index_with_absolute_checked_against_paths_still_verifies_and_so_does_the_tilde_form(smoke, monkeypatch):
+    """Nothing in the verifier compares ``checked_against``; old indexes (absolute) and new ones (``~``) both verify."""
+    root, out, _report = smoke
+    original = _index_json(out)["output_location"]["outside_repository_check"]["checked_against"]
+    try:
+        _reseal(out, lambda d: d["output_location"]["outside_repository_check"].update(checked_against=[str(root.resolve())]))
+        assert verify_campaign_detailed(out).ok
+        _fake_home(monkeypatch, root.parent)
+        _reseal(out, lambda d: d["output_location"]["outside_repository_check"].update(checked_against=[f"~/{root.name}"]))
+        result = verify_campaign_detailed(out)
+        assert result.ok, result.errors
+    finally:
+        _reseal(out, lambda d: d["output_location"]["outside_repository_check"].update(checked_against=original))

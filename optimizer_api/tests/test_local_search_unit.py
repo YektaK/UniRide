@@ -58,11 +58,19 @@ def test_or_opt_improvement(simple_route, dist_func):
     
     assert improved_dist <= initial_dist
 
-def test_three_opt_small_route_fallback(simple_route, dist_func):
-    # 3-opt with route < 4 should fall back to 2-opt
+def test_three_opt_route_shorter_than_four_nodes_is_returned_unchanged():
+    # 3-opt with a route of fewer than 4 nodes returns it unchanged (MT6-04: no 2-opt under the
+    # 3-opt name). The cost is position-weighted (not reversal-symmetric): A-B-C costs 14 and the
+    # reversal C-B-A costs 10, so a 2-opt run on this route would have changed it.
+    def weighted(route):
+        return float(sum((pos + 1) * (ord(node) - 64) for pos, node in enumerate(route)))
+
     ls = ThreeOptLocalSearch()
-    improved_route, improved_dist = ls.improve(simple_route, dist_func)
-    assert improved_dist <= dist_func(simple_route)
+    route = ["A", "B", "C"]
+    assert weighted(route) == 14.0 and weighted(route[::-1]) == 10.0
+    improved_route, improved_dist = ls.improve(route, weighted)
+    assert improved_route == route
+    assert improved_dist == 14.0
 
 def test_tw_aware_reduction():
     # Mocking a scenario where a longer route reduces TW violations

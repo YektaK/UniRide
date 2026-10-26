@@ -200,16 +200,22 @@ class TestThreeOptLocalSearch:
         assert improved_duration <= original_duration
         assert len(improved_route) == len(suboptimal_route)
     
-    def test_fallback_to_2opt_for_small_routes(self, simple_duration_func):
-        """3-opt should fallback to 2-opt for small routes"""
+    def test_routes_shorter_than_four_nodes_are_returned_unchanged(self, simple_duration_func):
+        """3-opt returns a route of fewer than 4 nodes unchanged (MT6-04: no 2-opt under the 3-opt name)"""
         ls = ThreeOptLocalSearch()
-        
-        # 3-node route (too small for 3-opt)
+
+        # 3-node route (too small for 3-opt); a position-weighted cost that a 2-opt reversal
+        # would improve (A-B-C costs 14, C-B-A costs 10), so "unchanged" is a real statement.
+        def weighted(route):
+            return float(sum((pos + 1) * (ord(node) - 64) for pos, node in enumerate(route)))
+
         route = ["A", "B", "C"]
-        improved_route, _ = ls.improve(route, simple_duration_func)
-        
-        assert len(improved_route) == 3
-        assert set(improved_route) == {"A", "B", "C"}
+        improved_route, improved_duration = ls.improve(route, weighted)
+
+        assert improved_route == route
+        assert improved_duration == 14.0
+        # and the shared fixture cost gives the same unchanged route
+        assert ls.improve(route, simple_duration_func)[0] == route
     
     def test_higher_quality_than_2opt(self, suboptimal_route, simple_duration_func):
         """3-opt should generally find equal or better solutions than 2-opt"""

@@ -183,9 +183,9 @@ CASES = [
         "A5.2",
         UNIFICATION,
         [
-            "Run manifests use `uniride-run/v1` (one per run) and contain the reproducibility fields defined below. A campaign index uses `uniride-run-index/v1`. Analysis plans use `uniride-analysis-plan/v1`.",
+            "Run manifests use `uniride-run/v1` (one per run) and contain the reproducibility fields defined below. A campaign index uses `uniride-run-index/v2`, which also records the profile and analysis-plan hashes, the analysis-plan ID, the planned runs, the output location and the failed runs. Analysis plans use `uniride-analysis-plan/v1`.",
         ],
-        ["Run manifests use `uniride-run/v1` and contain"],
+        ["Run manifests use `uniride-run/v1` and contain", "A campaign index uses `uniride-run-index/v1`"],
     ),
     # --- A6: experimental protocol -----------------------------------------------------------
     (
@@ -245,12 +245,12 @@ CASES = [
         UNIFICATION,
         [
             "A detached `<manifest>.sha256` file contains the run manifest's checksum.",
-            "A campaign index (`run_index.json`, `uniride-run-index/v1`) lists every run manifest with its checksum",
+            "A campaign index (`run_index.json`, `uniride-run-index/v2`) lists every run manifest with its checksum and holds the seed protocol version, the profile and analysis-plan hashes, the analysis-plan ID, the planned runs, the output location and the failed runs;",
             "Paper mode of the study run service passes `statistics_library_identifier()` (`scipy==1.18.1+statsmodels==0.15.0`)",
             "(`academic_benchmark/studies/run.py:473`)",
             "Smoke mode and any caller that passes nothing keep the literal `none`.",
         ],
-        ["until a caller in the pinned environment passes"],
+        ["until a caller in the pinned environment passes", "`uniride-run-index/v1`"],
     ),
     (
         # OD-2: study profiles, analysis plans and dataset manifests ship in the wheel.

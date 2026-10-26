@@ -659,6 +659,11 @@ def analyse_family(
         )
     if not isinstance(run_index, RunIndexV2):
         raise StatisticsRefusal(f"run_index must be the verified RunIndexV2 of the campaign, not {type(run_index).__name__}")
+    if run_index.analysis_plan.analysis_plan_id != plan.analysis_plan_id:
+        raise StatisticsRefusal(
+            f"the run index records analysis plan {run_index.analysis_plan.analysis_plan_id!r}, the plan to analyse is "
+            f"{plan.analysis_plan_id!r}: a campaign is analysed under the plan it named"
+        )
     campaign_mode = run_index.mode
     conventions = plan.conventions
     pairs_in = list(items)

@@ -170,6 +170,8 @@ make savings claims ahead of those gates.
 - Publish paired seeds, environment/manifests, warm-up, evaluation count, feasibility, cost, runtime distribution, and statistical methods.
 - Use held-out families and reference baselines; no pilot/smoke run may become a superiority claim.
 
+**Status (2026-10-26, WIP commit `b814b674`):** Gate C is met (15 verified catalog IDs; DECISION_LOG A17). Gate D has built the paper-scale tooling (comparison-cell identity, run manifests and index, run service with smoke and paper modes, statistics, gap columns, descriptive reports, cost estimator, packaging smoke, documentation sync D-11; see DECISION_LOG A18): all Gate D items are merged except D-04b2 (final estimate on the stronger computer), D-13 (close) and D-12 (publication). Both study profiles and analysis plans are `draft`, and no paper-scale run exists. Preconditions of any paper-scale run: the MT6 plan (H10+M25, H11, M14), the run-index completeness follow-up (D-10 gaps G1, G2, G3, G6, G7), D-04b2, and the owner's native-limit decision (OQ-4, open). The old-to-new algorithm ID table is in [CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md) section 8.
+
 ## Priority 7 — Backend geometry contract, then GIS
 
 **Goal:** Build mapping only after backend route geometry is authoritative.

@@ -124,6 +124,32 @@ def test_improve_3opt_equals_canonical_improve_three_opt(symmetric, seed):
         assert cost == pytest.approx(expected.cost)
 
 
+@pytest.mark.parametrize("seed", [1, 3, 4, 5])
+def test_improve_3opt_honours_window_and_max_iterations(seed):
+    """Would notice a layer that ignores its ``window`` or ``max_iterations`` argument.
+
+    On these asymmetric matrices the canonical result at (window 3, 1 iteration)
+    differs from the results at (window 12, 1 iteration), (window 3, 50
+    iterations) and (window 12, 50 iterations), so ignoring either argument
+    changes the route.
+    """
+    n = 14
+    matrix = _matrix(n, seed, symmetric=False)
+    tour = list(range(n))
+    random.Random(seed).shuffle(tour)
+
+    expected = improve_three_opt(tour, matrix, max_iterations=1, window=3)
+    others = [
+        improve_three_opt(tour, matrix, max_iterations=it, window=w)
+        for it, w in ((1, 12), (50, 3), (50, 12))
+    ]
+    assert all(other.route != expected.route for other in others)  # test is sensitive
+
+    route, cost = ls_engine.improve_3opt(tour, matrix, None, 1, 3)
+    assert route == expected.route
+    assert cost == pytest.approx(expected.cost)
+
+
 def test_improve_3opt_actually_improves_a_bad_tour():
     n = 14
     matrix = _matrix(n, 5, symmetric=False)

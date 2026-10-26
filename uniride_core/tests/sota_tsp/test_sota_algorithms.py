@@ -46,8 +46,6 @@ def test_sota_solvers_smoke(solver_cls, config_cls):
     # We pass config overrides to make tests run extremely fast
     kwargs = {
         "max_iterations": 2,
-        "ls_time_limit": 0.1,
-        "time_limit": 10.0,
         "seed": 42
     }
     
@@ -101,8 +99,6 @@ def test_known_optimal_4node(solver_cls, config_cls):
     kwargs = {
         "max_iterations": 100,
         "population_size": 30,
-        "ls_time_limit": 0.5,
-        "time_limit": 30.0,
         "seed": 42
     }
     config = config_cls(**kwargs)

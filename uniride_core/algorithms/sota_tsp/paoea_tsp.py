@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .base_solver import BaseTSPSolver, TSPResult
+from .deadline import WallClockDeadline
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval
 from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
@@ -88,7 +89,6 @@ class PAOEAConfig:
     destroy_ops_pool: Tuple[str, ...] = ("random", "worst", "shaw", "related")
     repair_ops_pool: Tuple[str, ...] = ("greedy", "regret2", "regret3")
     acceptance_types: Tuple[str, ...] = ("sa", "lahc")
-    ls_time_limit: float = 0.5
     three_opt_window: int = 12
     remove_ratio_range: Tuple[float, float] = (0.10, 0.30)
     sa_start_temp_factor: float = 0.4
@@ -97,7 +97,7 @@ class PAOEAConfig:
     diversity_check_interval: int = 50
     entropy_threshold: float = 0.15
     diversity_injection_rate: float = 0.2
-    time_limit: float = 300.0
+    deadline_seconds: Optional[float] = None  # opt-in wall-clock safety deadline (H11); None = iteration limits only
     seed: int = 42
 
 
@@ -183,7 +183,7 @@ class PAOEA_TSP(BaseTSPSolver):
         repaired = repairer.repair(remaining, removed, self._dist_matrix)
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
         repaired, cost, _ = MultiLayerLS.improve(repaired, self._dist_matrix, dm_np,
-                                                  genome.ls_intensity, 100, self.cfg.ls_time_limit,
+                                                  genome.ls_intensity, 100,
                                                   self.cfg.three_opt_window)
         return repaired, cost
 
@@ -237,6 +237,7 @@ class PAOEA_TSP(BaseTSPSolver):
     def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
+        deadline = WallClockDeadline(self.cfg.deadline_seconds)
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
 
         population = self._init_population(rng)
@@ -289,16 +290,14 @@ class PAOEA_TSP(BaseTSPSolver):
                     population, pop_costs = self._inject_diversity(population, pop_costs, gbest, gbest_cost, rng)
 
             history.append(gbest_cost)
-            if time.monotonic() - t_start > self.cfg.time_limit:
+            if t < self.cfg.max_iterations and deadline.expired():
                 break
 
-        remaining = max(0.0, self.cfg.time_limit - (time.monotonic() - t_start))
-        final_ls_budget = min(self.cfg.ls_time_limit, remaining)
-        if final_ls_budget > 0.0:
-            gbest, gbest_cost, _ = MultiLayerLS.improve(
-                gbest, self._dist_matrix, dm_np, "full", 500, final_ls_budget,
-                self.cfg.three_opt_window,
-            )
+        # The final polish always runs, bounded by its iteration limit only (H11).
+        gbest, gbest_cost, _ = MultiLayerLS.improve(
+            gbest, self._dist_matrix, dm_np, "full", 500,
+            self.cfg.three_opt_window,
+        )
 
         elapsed_ms = (time.monotonic() - t_start) * 1000
         return TSPResult(
@@ -310,4 +309,5 @@ class PAOEA_TSP(BaseTSPSolver):
             params={"population_size": self.cfg.population_size, "genomes": self.cfg.genome_population_size},
             history=history,
             seed=self.cfg.seed,
+            extra_stats=deadline.stats(),
         )

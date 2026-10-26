@@ -81,7 +81,7 @@ TUNING_ALLOWLISTS = {
     "gwo_config": frozenset({"exploration_rate", "initial_a", "local_search_interval", "local_search_type", "max_iterations", "max_no_improvement", "population_size", "seed"}),
     "hho_config": frozenset({"initial_energy", "jump_probability", "levy_flight_scale", "local_search_interval", "local_search_type", "max_iterations", "max_no_improvement", "population_size", "seed"}),
     "two_opt_config": frozenset({"first_improvement", "max_iterations", "multi_start", "num_starts", "seed"}),
-    "sota_config": frozenset({"acceptance_types", "crossover_rate", "delta_threshold", "destroy_ops_pool", "diversity_check_interval", "diversity_injection_rate", "diversity_threshold", "entropy_check_interval", "entropy_threshold", "gamma", "genome_injection_rate", "genome_population_size", "h_end", "h_start", "injection_rate", "lahc_history", "learn_period", "ls_intensity_compress", "ls_intensity_constructive", "ls_intensity_destructive", "ls_intensity_moderate", "ls_intensity_normal", "ls_time_limit", "max_iterations", "meta_evolution_interval", "mutation_rate", "n_edges_aggressive", "n_edges_normal", "p_best", "p_gbest", "population_size", "pulse_injection_rate", "remove_ratio", "remove_ratio_range", "repair_ops_pool", "sa_cooling_rate", "sa_end_temp", "sa_start_temp_factor", "seed", "segment_size", "theta_base", "three_opt_window", "time_limit", "tournament_k", "tournament_size"}),
+    "sota_config": frozenset({"acceptance_types", "crossover_rate", "deadline_seconds", "delta_threshold", "destroy_ops_pool", "diversity_check_interval", "diversity_injection_rate", "diversity_threshold", "entropy_check_interval", "entropy_threshold", "gamma", "genome_injection_rate", "genome_population_size", "h_end", "h_start", "injection_rate", "lahc_history", "learn_period", "ls_intensity_compress", "ls_intensity_constructive", "ls_intensity_destructive", "ls_intensity_moderate", "ls_intensity_normal", "ls_time_limit", "max_iterations", "meta_evolution_interval", "mutation_rate", "n_edges_aggressive", "n_edges_normal", "p_best", "p_gbest", "population_size", "pulse_injection_rate", "remove_ratio", "remove_ratio_range", "repair_ops_pool", "sa_cooling_rate", "sa_end_temp", "sa_start_temp_factor", "seed", "segment_size", "theta_base", "three_opt_window", "time_limit", "tournament_k", "tournament_size"}),
 }
 
 BOOL_KEYS = frozenset({"first_improvement", "multi_start"})
@@ -129,9 +129,18 @@ SOTA_DECLARATION_ONLY_KEYS = {
     }),
 }
 
-BUDGET_KEYS = ITERATION_KEYS | ALLOCATION_KEYS | STRUCTURAL_KEYS | {
-    "time_limit", "ls_time_limit"
+# Old SOTA clock keys, accepted for one release (MT6-03 / audit H11): ``time_limit`` is
+# mapped to ``deadline_seconds`` by ``merge_sota_config``; ``ls_time_limit`` is accepted
+# and ignored because local search no longer has a per-layer clock.
+SOTA_LEGACY_CLOCK_KEYS = frozenset({"time_limit", "ls_time_limit"})
+LEGACY_KEY_ENFORCEMENT = {
+    "time_limit": "legacy key, mapped to sota_config.deadline_seconds (wall-clock safety deadline)",
+    "ls_time_limit": "legacy key, ignored: SOTA local search is bounded by iteration limits only",
 }
+
+BUDGET_KEYS = ITERATION_KEYS | ALLOCATION_KEYS | STRUCTURAL_KEYS | {
+    "deadline_seconds"
+} | SOTA_LEGACY_CLOCK_KEYS
 
 
 class PolicyValidationError(ValueError):
@@ -186,10 +195,10 @@ def validate_tuning_dict(
             result[key] = _positive_int(key, item, policy.max_population)
         elif key in STRUCTURAL_KEYS:
             result[key] = _positive_int(key, item, min(policy.max_students, policy.max_population))
-        elif key == "time_limit":
+        elif key in {"time_limit", "deadline_seconds"}:
             number = _finite_real(key, item)
             if not 0 < number <= policy.solver_seconds:
-                raise ValueError(f"time_limit must be in (0, {policy.solver_seconds}]")
+                raise ValueError(f"{key} must be in (0, {policy.solver_seconds}]")
             result[key] = number
         elif key == "ls_time_limit":
             number = _finite_real(key, item)
@@ -256,7 +265,8 @@ def applicable_keys(canonical: str, strategy: object) -> frozenset[str]:
             frozenset(field.name for field in fields(config))
             & TUNING_ALLOWLISTS["sota_config"]
         )
-        return declared - SOTA_DECLARATION_ONLY_KEYS.get(canonical, frozenset())
+        declared = declared - SOTA_DECLARATION_ONLY_KEYS.get(canonical, frozenset())
+        return declared | SOTA_LEGACY_CLOCK_KEYS
     return frozenset()
 
 
@@ -267,7 +277,7 @@ def _ceiling_for(key: str, policy: ComputePolicy) -> float:
         return policy.max_population
     if key in STRUCTURAL_KEYS:
         return min(policy.max_students, policy.max_population)
-    if key == "time_limit":
+    if key in {"time_limit", "deadline_seconds"}:
         return policy.solver_seconds
     if key == "ls_time_limit":
         return policy.local_search_seconds
@@ -425,7 +435,7 @@ def apply_compute_policy(request, resolution, strategy, policy: ComputePolicy):
             if key in caller:
                 value = caller[key]
                 source = PolicyValueSource.CALLER
-            elif key in registered:
+            elif key in registered and registered[key] is not None:
                 value = _capped_registered_budget(key, registered[key], ceiling)
                 source = _source_for_default(key, registered[key], value, policy)
             else:
@@ -434,7 +444,9 @@ def apply_compute_policy(request, resolution, strategy, policy: ComputePolicy):
             limits[key] = AppliedPolicyLimitInfo(
                 value=value,
                 source=source,
-                enforcement=f"request-local {selected_field}.{key}",
+                enforcement=LEGACY_KEY_ENFORCEMENT.get(
+                    key, f"request-local {selected_field}.{key}"
+                ),
             )
 
         relation_view = {

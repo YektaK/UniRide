@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .base_solver import BaseTSPSolver, TSPResult
+from .deadline import WallClockDeadline
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval
 from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
@@ -106,7 +107,6 @@ class R2DMATSPConfig:
     ls_intensity_constructive: str = "moderate"
     ls_intensity_moderate: str = "light"
     ls_intensity_destructive: str = "moderate"
-    ls_time_limit: float = 0.5
     three_opt_window: int = 12
     sa_start_temp_factor: float = 0.4
     sa_end_temp: float = 0.0001
@@ -116,7 +116,7 @@ class R2DMATSPConfig:
     pulse_injection_rate: float = 0.25
     diversity_check_interval: int = 50
     tournament_k: int = 5
-    time_limit: float = 300.0
+    deadline_seconds: Optional[float] = None  # opt-in wall-clock safety deadline (H11); None = iteration limits only
     seed: int = 42
 
 
@@ -322,6 +322,7 @@ class R2DMA_TSP(BaseTSPSolver):
     def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
+        deadline = WallClockDeadline(self.cfg.deadline_seconds)
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
 
         population = self._init_population(rng)
@@ -377,15 +378,15 @@ class R2DMA_TSP(BaseTSPSolver):
 
                 if mode == "constructive":
                     child, child_cost, _ = MultiLayerLS.improve(
-                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_constructive, 200, self.cfg.ls_time_limit,
+                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_constructive, 200,
                         self.cfg.three_opt_window)
                 elif mode == "moderate":
                     child, child_cost, _ = MultiLayerLS.improve(
-                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_moderate, 100, self.cfg.ls_time_limit,
+                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_moderate, 100,
                         self.cfg.three_opt_window)
                 elif mode == "destructive":
                     child, child_cost, _ = MultiLayerLS.improve(
-                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_destructive, 200, self.cfg.ls_time_limit,
+                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_destructive, 200,
                         self.cfg.three_opt_window)
 
                 worse_parent = max(pop_costs[i], pop_costs[best_partner] if best_partner is not None else pop_costs[i])
@@ -429,16 +430,14 @@ class R2DMA_TSP(BaseTSPSolver):
                         pop_costs[idx] = _tour_cost(population[idx], self._dist_matrix)
 
             history.append(gbest_cost)
-            if time.monotonic() - t_start > self.cfg.time_limit:
+            if t < self.cfg.max_iterations and deadline.expired():
                 break
 
-        remaining = max(0.0, self.cfg.time_limit - (time.monotonic() - t_start))
-        final_ls_budget = min(self.cfg.ls_time_limit, remaining)
-        if final_ls_budget > 0.0:
-            gbest, gbest_cost, _ = MultiLayerLS.improve(
-                gbest, self._dist_matrix, dm_np, "full", 500, final_ls_budget,
-                self.cfg.three_opt_window,
-            )
+        # The final polish always runs, bounded by its iteration limit only (H11).
+        gbest, gbest_cost, _ = MultiLayerLS.improve(
+            gbest, self._dist_matrix, dm_np, "full", 500,
+            self.cfg.three_opt_window,
+        )
 
         elapsed_ms = (time.monotonic() - t_start) * 1000
         return TSPResult(
@@ -451,4 +450,5 @@ class R2DMA_TSP(BaseTSPSolver):
                     "moderate": moderate_count, "destructive": destruct_count},
             history=history,
             seed=self.cfg.seed,
+            extra_stats=deadline.stats(),
         )

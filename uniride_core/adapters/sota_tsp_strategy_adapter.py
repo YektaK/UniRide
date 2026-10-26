@@ -48,6 +48,11 @@ class SotaOrderOutcome:
 
     order: List[str]
     fallback_reason: Optional[str] = None
+    #: Why the solver stopped ("iteration_limit" or "wall_clock_deadline", MT6-03/H11);
+    #: None when no solver ran (empty request or fallback).
+    termination_reason: Optional[str] = None
+    #: False only when an optional wall-clock deadline ended the run early.
+    reproducible: bool = True
 
 
 def build_solver_matrix(
@@ -150,7 +155,19 @@ def solve_student_order_with_sota_tsp(
             order=greedy_student_order(student_ids, depot_id, duration_lookup),
             fallback_reason=FALLBACK_REASON_INVALID_TOUR,
         )
-    return SotaOrderOutcome(order=order)
+    stats = getattr(result, "extra_stats", None) or {}
+    reproducible = stats.get("reproducible", True) is not False
+    if not reproducible:
+        logger.warning(
+            "SOTA TSP solver %s stopped at its wall-clock deadline (%s s); result is not reproducible",
+            getattr(solver_cls, "__name__", solver_cls),
+            stats.get("deadline_seconds"),
+        )
+    return SotaOrderOutcome(
+        order=order,
+        termination_reason=stats.get("termination_reason"),
+        reproducible=reproducible,
+    )
 
 
 __all__ = [

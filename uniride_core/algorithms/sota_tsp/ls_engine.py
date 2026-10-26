@@ -6,8 +6,11 @@ Chains (by intensity):
   moderate : 2-opt → Or-opt
   full     : 2-opt → Or-opt → canonical 3-opt (uniride_core.algorithms.three_opt) → Swap
 
-Core multi-layer local search helpers for SOTA algorithms.
-but operates on List[int] tours with Numba-accelerated kernels.
+Core multi-layer local search helpers for SOTA algorithms. Operates on
+List[int] tours. The 2-opt, Or-opt and swap layers use Numba-accelerated kernels
+when available; the 3-opt layer is the canonical windowed 3-opt
+(``uniride_core.algorithms.three_opt``), not a Numba kernel (audit H10).
+Local search is bounded by iteration limits only, never by wall-clock time (H11).
 """
 
 import os
@@ -166,9 +169,14 @@ class MultiLayerLS:
         dm_np=None,
         intensity: str = "full",
         max_iterations: int = 1000,
-        time_limit: float = 5.0,
         three_opt_window: int = 12,
     ) -> Tuple[List[int], float, Dict[str, Any]]:
+        """Chain the layers for ``intensity``; work is bounded by iteration limits only.
+
+        At most ``max_ls_pass_iterations`` passes, each layer capped by
+        ``max_iterations``; there is no wall-clock check (audit H11), so the result
+        is a function of the inputs. Elapsed time is measured for ``stats`` only.
+        """
         current_tour = list(tour)
         current_cost = _tour_cost(current_tour, dm)
         initial_cost = current_cost
@@ -186,8 +194,6 @@ class MultiLayerLS:
         for ls_pass in range(max_ls_pass_iterations):
             any_improved = False
             for layer_name, layer_fn in layers:
-                if time.monotonic() - t0 > time_limit:
-                    break
                 if layer_name == "3-opt-bounded":
                     new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations, three_opt_window)
                 elif layer_name in ("2-opt", "or-opt", "swap"):

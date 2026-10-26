@@ -24,7 +24,6 @@ SOTA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "gamma":               {"type": "float", "doe": [0.15, 0.20, 0.30],  "optuna": (0.10, 0.35)},
         "injection_rate":      {"type": "float", "doe": [0.08, 0.12, 0.18],  "optuna": (0.05, 0.25)},
         "remove_ratio":        {"type": "float", "doe": [0.10, 0.15, 0.20],  "optuna": (0.05, 0.25)},
-        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
     "E2BSO-TSP-CPSO": {
         "population_size":     {"type": "int",   "doe": [24, 36, 48],        "optuna": (20, 60)},
@@ -35,7 +34,6 @@ SOTA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "c1":                  {"type": "float", "doe": [1.0, 1.5, 2.0],     "optuna": (0.5, 2.5)},
         "c2":                  {"type": "float", "doe": [1.0, 1.5, 2.0],     "optuna": (0.5, 2.5)},
         "inertia":             {"type": "float", "doe": [0.5, 0.7, 0.9],     "optuna": (0.3, 0.95)},
-        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
     "R2DMA-TSP": {
         "population_size":     {"type": "int",   "doe": [24, 36, 48],        "optuna": (20, 60)},
@@ -43,7 +41,6 @@ SOTA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "theta_base":          {"type": "float", "doe": [0.15, 0.25, 0.35],  "optuna": (0.10, 0.40)},
         "remove_ratio":        {"type": "float", "doe": [0.10, 0.15, 0.20],  "optuna": (0.05, 0.25)},
         "pulse_injection_rate":{"type": "float", "doe": [0.05, 0.10, 0.15],  "optuna": (0.02, 0.20)},
-        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
     "P-AOEA-TSP": {
         "population_size":     {"type": "int",   "doe": [24, 36, 48],        "optuna": (20, 60)},
@@ -51,27 +48,23 @@ SOTA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "genome_population_size": {"type": "int","doe": [8, 12, 16],         "optuna": (6, 20)},
         "crossover_rate":      {"type": "float", "doe": [0.75, 0.85, 0.95],  "optuna": (0.60, 0.99)},
         "mutation_rate":       {"type": "float", "doe": [0.10, 0.18, 0.26],  "optuna": (0.05, 0.30)},
-        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
     "CGO-TSP": {
         "population_size":     {"type": "int",   "doe": [24, 36, 48],        "optuna": (20, 60)},
         "max_iterations":      {"type": "int",   "doe": [200, 320, 450],     "optuna": (150, 500)},
         "chaos_rate":          {"type": "float", "doe": [3.80, 3.90, 3.99],  "optuna": (3.57, 4.0)},
         "seed_length_ratio":   {"type": "float", "doe": [0.15, 0.25, 0.35],  "optuna": (0.10, 0.40)},
-        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
     "RUN-TSP": {
         "population_size":     {"type": "int",   "doe": [24, 36, 48],        "optuna": (20, 60)},
         "max_iterations":      {"type": "int",   "doe": [200, 320, 450],     "optuna": (150, 500)},
         "beta":                {"type": "float", "doe": [0.3, 0.5, 0.7],     "optuna": (0.1, 0.9)},
         "esq_probability":     {"type": "float", "doe": [0.1, 0.2, 0.3],     "optuna": (0.05, 0.40)},
-        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
     "ALNS-TSP": {
         "population_size":     {"type": "int",   "doe": [24, 36, 48],        "optuna": (20, 60)},
         "max_iterations":      {"type": "int",   "doe": [200, 320, 450],     "optuna": (150, 500)},
         "remove_ratio":        {"type": "float", "doe": [0.10, 0.15, 0.20],  "optuna": (0.05, 0.25)},
-        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
 }
 

@@ -21,7 +21,7 @@ def test_full_intensity_runs_3opt_layer(monkeypatch):
     ]
     tour = [0, 1, 2, 3, 4]
 
-    ls_engine.MultiLayerLS.improve(tour, dm, intensity="full", max_iterations=5, time_limit=1.0)
+    ls_engine.MultiLayerLS.improve(tour, dm, intensity="full", max_iterations=5)
     assert calls["3opt"] > 0
 
 

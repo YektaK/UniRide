@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from .base_solver import BaseTSPSolver, TSPResult
+from .deadline import WallClockDeadline
 from .ls_engine import MultiLayerLS
 
 
@@ -41,9 +42,8 @@ class RUNConfig:
     max_iterations: int = 500
     beta: float = 0.5           # Control factor for exploration/exploitation balance
     esq_probability: float = 0.2 # Probability of applying ESQ mechanism
-    ls_time_limit: float = 0.5
     three_opt_window: int = 12
-    time_limit: float = 300.0
+    deadline_seconds: Optional[float] = None  # opt-in wall-clock safety deadline (H11); None = iteration limits only
     seed: int = 42
 
 
@@ -398,6 +398,7 @@ class RUN_TSP(BaseTSPSolver):
 
     def _solve(self) -> TSPResult:
         t_start = time.perf_counter()
+        deadline = WallClockDeadline(self.cfg.deadline_seconds)
         n = self._n
 
         if n < 3:
@@ -408,6 +409,7 @@ class RUN_TSP(BaseTSPSolver):
                 elapsed_ms=(time.perf_counter() - t_start) * 1000,
                 iterations=0, params={"population_size": self.cfg.population_size},
                 seed=self.cfg.seed,
+                extra_stats=deadline.stats(),
             )
 
         # Initialize population
@@ -420,11 +422,10 @@ class RUN_TSP(BaseTSPSolver):
 
         # Main loop
         max_iter = self.cfg.max_iterations
-        time_limit = self.cfg.time_limit
 
         for iteration in range(max_iter):
-            # Check time limit
-            if time.perf_counter() - t_start > time_limit:
+            # Optional wall-clock safety deadline (H11); never active unless configured.
+            if deadline.expired():
                 break
 
             # Sort population by fitness
@@ -461,7 +462,6 @@ class RUN_TSP(BaseTSPSolver):
                 # Local search refinement (lightweight)
                 candidate, _, _ = MultiLayerLS.improve(
                     candidate, self._dist_matrix, dm_np=None, intensity="light",
-                    time_limit=self.cfg.ls_time_limit,
                     three_opt_window=self.cfg.three_opt_window,
                 )
 
@@ -487,7 +487,6 @@ class RUN_TSP(BaseTSPSolver):
                                               self._rng, intensity=0.15)
                 perturbed, _, _ = MultiLayerLS.improve(
                     perturbed, self._dist_matrix, dm_np=None, intensity="light",
-                    time_limit=self.cfg.ls_time_limit,
                     three_opt_window=self.cfg.three_opt_window,
                 )
                 perturbed_cost = _tour_cost(perturbed, self._dist_matrix)
@@ -510,4 +509,5 @@ class RUN_TSP(BaseTSPSolver):
             },
             history=history,
             seed=self.cfg.seed,
+            extra_stats=deadline.stats(),
         )

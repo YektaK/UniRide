@@ -159,7 +159,7 @@ class MockSolverStrategy:
         assert matrix.shape == (n, n), f"Matrix shape {matrix.shape} != ({n},{n})"
 
         # Run solver
-        config = E2BSOTSPConfig(population_size=10, max_iterations=5, seed=42, ls_time_limit=0.1)
+        config = E2BSOTSPConfig(population_size=10, max_iterations=5, seed=42)
         solver = E2BSO_TSP(config)
         result = solver.solve_with_matrix(matrix.tolist())
 

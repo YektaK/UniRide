@@ -63,7 +63,11 @@ def expected_applicable_keys(canonical: str) -> frozenset[str]:
             frozenset(field.name for field in fields(config_type))
             & TUNING_ALLOWLISTS["sota_config"]
         )
-        return declared - SOTA_DECLARATION_ONLY.get(canonical, frozenset())
+        # MT6-03 (H11): the old clock keys are accepted for one release although the
+        # configs no longer declare them (time_limit -> deadline_seconds,
+        # ls_time_limit accepted and ignored); see test_sota_legacy_clock_keys.py.
+        legacy = frozenset({"time_limit", "ls_time_limit"})
+        return (declared - SOTA_DECLARATION_ONLY.get(canonical, frozenset())) | legacy
     strategy = resolve_strategy(canonical).create()
     field_name = CONFIG_FIELD_BY_CANONICAL[canonical]
     live_defaults = frozenset(strategy.config) & TUNING_ALLOWLISTS[field_name]

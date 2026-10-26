@@ -110,6 +110,16 @@
     "FailedRunV1": {
       "additionalProperties": false,
       "description": "One failed run as ``failed_runs.jsonl`` records it (the failure policy of OQ-9 a: recorded, excluded from inference).",
+      "if": {
+        "properties": {
+          "comparison_regime": {
+            "const": "fixed_evaluation_budget"
+          }
+        },
+        "required": [
+          "comparison_regime"
+        ]
+      },
       "properties": {
         "algorithm_id": {
           "minLength": 1,
@@ -179,6 +189,16 @@
         "exception_category",
         "error"
       ],
+      "then": {
+        "properties": {
+          "evaluation_budget": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "evaluation_budget"
+        ]
+      },
       "title": "FailedRunV1",
       "type": "object"
     },

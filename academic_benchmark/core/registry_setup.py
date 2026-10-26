@@ -280,7 +280,10 @@ def _run_fair_local_search(problem, params, run_idx, algorithm_name, strategy_pa
     if strategy_payload == LocalSearchType.THREE_OPT:
         # A20 L9 follow-up: the core's window rule (integer >= 2), checked before the matrix is built
         # and before any evaluation is counted. ``max_segment_length`` is the legacy alias; the error
-        # names whichever key was actually used. None is refused: the result validator never accepted it.
+        # names whichever key was actually used. None is refused. On a V1 fixed-budget manifest (the default
+        # protocol) window=None used to run an unrestricted 3-opt and could pass validation (fairness.py
+        # validate_result: the window check is inside the V2 block only); both study profiles are V2 with
+        # integer windows, so a V2 result validator would have rejected it only after the whole run.
         from uniride_core.algorithms.three_opt import validate_three_opt_window
 
         window_key = "window" if "window" in params else "max_segment_length"

@@ -94,6 +94,14 @@ class OutputLocationV1(StrictContract):
 class FailedRunV1(StrictContract):
     """One failed run as ``failed_runs.jsonl`` records it (the failure policy of OQ-9 a: recorded, excluded from inference)."""
 
+    # The same rule as the validator below, for consumers of the exported JSON schema: a fixed-budget record needs an integer budget.
+    model_config = StrictContract.model_config | {
+        "json_schema_extra": {
+            "if": {"properties": {"comparison_regime": {"const": "fixed_evaluation_budget"}}, "required": ["comparison_regime"]},
+            "then": {"properties": {"evaluation_budget": {"type": "integer"}}, "required": ["evaluation_budget"]},
+        }
+    }
+
     algorithm_id: str = Field(min_length=1)
     dataset_id: str = Field(min_length=1)
     problem: str = Field(min_length=1)

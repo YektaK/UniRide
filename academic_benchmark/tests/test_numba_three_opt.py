@@ -13,7 +13,14 @@ def test_numba_three_opt_has_no_bildiri_import_ownership():
 
 
 @pytest.mark.skipif(not numba_accel.NUMBA_AVAILABLE, reason="Numba not available")
-def test_nb_three_opt_improves_simple_instance():
+def test_non_canonical_legacy_kernel_nb_three_opt_improves_simple_instance():
+    """Behaviour test of the NON-CANONICAL legacy kernel only (MT6-02, owner OQ-MT6-1 a).
+
+    ``nb_three_opt`` is not the canonical 3-opt neighbourhood and has no public caller; the SOTA
+    polish uses ``uniride_core.algorithms.three_opt`` (see
+    ``uniride_core/tests/test_mt6_no_forbidden_three_opt.py``). This test keeps the kernel's
+    own behaviour pinned while it stays in the code as history.
+    """
     n = 6
     high = 10.0
     low = 1.0

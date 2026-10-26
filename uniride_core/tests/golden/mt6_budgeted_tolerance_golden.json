@@ -1,0 +1,380 @@
+{
+    "tsplib-berlin52|or_opt|best": [
+        "bb89f21768698f5f",
+        24288.0,
+        12000,
+        2,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-berlin52|or_opt|first": [
+        "c1de2bd5969a0f35",
+        15572.0,
+        4000,
+        81,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-berlin52|three_opt|best": [
+        "6f8d4d2b831bd738",
+        25808.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-berlin52|three_opt|first": [
+        "f89533591b28a99f",
+        23149.0,
+        4000,
+        30,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-berlin52|two_opt|best": [
+        "9446ba1f0094dd9b",
+        16254.0,
+        12000,
+        10,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-berlin52|two_opt|first": [
+        "639d3726515bcda5",
+        16342.0,
+        4000,
+        73,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-eil51|or_opt|best": [
+        "8316098aaa9dabfc",
+        1376.0,
+        12000,
+        2,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-eil51|or_opt|first": [
+        "01b59943629c8011",
+        840.0,
+        4000,
+        112,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-eil51|three_opt|best": [
+        "88829f656056c83a",
+        1475.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-eil51|three_opt|first": [
+        "1fb6d47ce62ef434",
+        1164.0,
+        4000,
+        33,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-eil51|two_opt|best": [
+        "426f16bb433e4455",
+        926.0,
+        12000,
+        10,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-eil51|two_opt|first": [
+        "e2e6d79acad0f33a",
+        933.0,
+        4000,
+        58,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-eil76|or_opt|best": [
+        "a7fbff92b329e80a",
+        2285.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-eil76|or_opt|first": [
+        "f5f6f61969f79e1a",
+        1887.0,
+        4000,
+        68,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-eil76|three_opt|best": [
+        "f1b390d4d00bb4a2",
+        2285.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-eil76|three_opt|first": [
+        "d8414b31bac11643",
+        1710.0,
+        4000,
+        49,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-eil76|two_opt|best": [
+        "f062ff941266b535",
+        1985.0,
+        12000,
+        5,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-eil76|two_opt|first": [
+        "c3528a12b4e1a4b2",
+        1485.0,
+        4000,
+        80,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-ft53|or_opt|best": [
+        "df5c2206e5c16c6a",
+        23959.0,
+        12000,
+        2,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-ft53|or_opt|first": [
+        "5eb52dc5d07719fb",
+        16933.0,
+        4000,
+        104,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-ft53|three_opt|best": [
+        "f3ec42e6d411007c",
+        22764.0,
+        12000,
+        3,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-ft53|three_opt|first": [
+        "718c69011095c41d",
+        18809.0,
+        4000,
+        65,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-ft53|two_opt|best": [
+        "3a4d740ad9587995",
+        18336.0,
+        12000,
+        9,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-ft53|two_opt|first": [
+        "b5bc7550af743199",
+        20444.0,
+        4000,
+        36,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-kroa100|or_opt|best": [
+        "acdd302387d65b77",
+        166044.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-kroa100|or_opt|first": [
+        "370e48d32bca02e5",
+        113024.0,
+        4000,
+        171,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-kroa100|three_opt|best": [
+        "72496b1f836822e3",
+        165707.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-kroa100|three_opt|first": [
+        "171473233dbb1635",
+        128170.0,
+        4000,
+        63,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-kroa100|two_opt|best": [
+        "7e7fac4a3622b60b",
+        153933.0,
+        12000,
+        3,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-kroa100|two_opt|first": [
+        "f9558a2584227371",
+        140539.0,
+        4000,
+        39,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-rd100|or_opt|best": [
+        "aa72002acd365cc6",
+        53587.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-rd100|or_opt|first": [
+        "6e00f4b3af38e1af",
+        43647.0,
+        4000,
+        95,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-rd100|three_opt|best": [
+        "2a0b2bdcc1689eb0",
+        53412.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-rd100|three_opt|first": [
+        "9b62783d6584ffdb",
+        44475.0,
+        4000,
+        46,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-rd100|two_opt|best": [
+        "d58946cbe3c47c11",
+        50240.0,
+        12000,
+        3,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-rd100|two_opt|first": [
+        "7b0c1f69dab85bff",
+        26824.0,
+        4000,
+        153,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-st70|or_opt|best": [
+        "0153482ec7ea659a",
+        3296.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-st70|or_opt|first": [
+        "e7e8cea6976d7127",
+        2294.0,
+        4000,
+        90,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-st70|three_opt|best": [
+        "a3d362042bb272df",
+        3292.0,
+        12000,
+        1,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-st70|three_opt|first": [
+        "785a7149f874a721",
+        2813.0,
+        4000,
+        30,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ],
+    "tsplib-st70|two_opt|best": [
+        "b15b2536d15fa74c",
+        2774.0,
+        12000,
+        5,
+        true,
+        "evaluation_budget_exhausted",
+        12000
+    ],
+    "tsplib-st70|two_opt|first": [
+        "63e2afc48e0832d9",
+        1916.0,
+        4000,
+        80,
+        true,
+        "evaluation_budget_exhausted",
+        4000
+    ]
+}

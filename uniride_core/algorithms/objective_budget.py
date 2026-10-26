@@ -8,6 +8,7 @@ from typing import List, Optional, Sequence
 from uniride_core.algorithms.three_opt import (
     closed_tour_cost,
     generate_three_opt_candidates,
+    is_improving,
     is_symmetric_matrix,
     iter_three_opt_cuts,
 )
@@ -197,7 +198,7 @@ def improve_two_opt_budgeted(
                     break
                 candidate = current[:i] + list(reversed(current[i:j + 1])) + current[j + 1:]
                 candidate_cost = budget.evaluate(candidate, matrix)
-                if candidate_cost < selected_cost:
+                if is_improving(candidate_cost, selected_cost):
                     selected_route = candidate
                     selected_cost = candidate_cost
                     if first_improvement:
@@ -279,7 +280,7 @@ def improve_or_opt_budgeted(
                         + remaining[insertion:]
                     )
                     candidate_cost = budget.evaluate(candidate, matrix)
-                    if candidate_cost < selected_cost:
+                    if is_improving(candidate_cost, selected_cost):
                         selected_route = candidate
                         selected_cost = candidate_cost
                         if first_improvement:
@@ -360,7 +361,7 @@ def improve_three_opt_budgeted(
                     stop_scan = True
                     break
                 candidate_cost = budget.evaluate(candidate, matrix)
-                if candidate_cost < selected_cost:
+                if is_improving(candidate_cost, selected_cost):
                     selected_route = candidate
                     selected_cost = candidate_cost
                     if first_improvement:

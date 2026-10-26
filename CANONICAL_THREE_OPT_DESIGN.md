@@ -54,7 +54,7 @@ For a symmetric matrix, enumerate all seven non-identity reconnections associate
 - three 2-opt-equivalent reconnections;
 - four genuine 3-opt reconnections.
 
-Duplicates caused by rotationally equivalent representations are removed without removing a distinct edge set.
+Duplicates caused by rotationally equivalent representations are removed without removing a distinct edge set. Since MT6-01 the duplicates are avoided by construction rather than detected: for an admitted cut triple the seven symmetric reconnections are pairwise distinct, so no per-candidate cycle key is needed; the neighbourhood content is unchanged.
 
 ### Directed ATSP neighborhood
 
@@ -141,7 +141,7 @@ Required coverage:
 The minimum regression command is:
 
 ```powershell
-python -m pytest academic_benchmark/tests/test_numba_registry_matrix.py academic_benchmark/tests/test_numba_three_opt.py academic_benchmark/tests/test_core_tsp_registry.py uniride_core/tests/test_local_search_core.py uniride_core/tests/test_tsp_meta_engines.py uniride_core/tests/test_three_opt_candidate_parity.py uniride_core/tests/test_mt6_no_forbidden_three_opt.py academic_benchmark/tests/test_mt6_sota_executors_no_forbidden_kernel.py uniride_core/tests/test_mt6_path_three_opt.py -q -p no:cacheprovider --tb=short
+python -m pytest academic_benchmark/tests/test_numba_registry_matrix.py academic_benchmark/tests/test_numba_three_opt.py academic_benchmark/tests/test_core_tsp_registry.py uniride_core/tests/test_local_search_core.py uniride_core/tests/test_tsp_meta_engines.py uniride_core/tests/test_three_opt_candidate_parity.py uniride_core/tests/test_mt6_no_forbidden_three_opt.py uniride_core/tests/test_mt6_budgeted_tolerance.py academic_benchmark/tests/test_mt6_sota_executors_no_forbidden_kernel.py uniride_core/tests/test_mt6_path_three_opt.py -q -p no:cacheprovider --tb=short
 ```
 
 Any new focused canonical-3-opt test modules must be added to that verification run.

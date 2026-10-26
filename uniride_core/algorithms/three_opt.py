@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import operator
 from typing import Callable, Iterable, List, Optional, Sequence, Tuple
 
 
@@ -37,6 +38,22 @@ def closed_tour_cost(route: Sequence[int], matrix: Sequence[Sequence[float]]) ->
         float(matrix[node][route[(idx + 1) % len(route)]])
         for idx, node in enumerate(route)
     )
+
+
+DEFAULT_ACCEPTANCE_TOLERANCE = 1e-10
+
+
+def is_improving(
+    candidate_cost: float,
+    incumbent_cost: float,
+    tolerance: float = DEFAULT_ACCEPTANCE_TOLERANCE,
+) -> bool:
+    """Scale-aware acceptance rule shared by every 3-opt/2-opt/Or-opt controller (N-1).
+
+    A candidate improves the incumbent only when it is cheaper by more than
+    ``tolerance * max(1, |incumbent|)``; equal or nearly equal costs never replace it.
+    """
+    return candidate_cost < incumbent_cost - tolerance * max(1.0, abs(incumbent_cost))
 
 
 def is_symmetric_matrix(
@@ -71,8 +88,15 @@ def iter_three_opt_cuts(n: int, window: Optional[int] = None) -> Iterable[Tuple[
     """
     if n < 6:
         return
-    if window is not None and window < 2:
-        raise ValueError("3-opt window must be at least 2")
+    if window is not None:
+        try:
+            window = operator.index(window)
+        except TypeError:
+            raise ValueError(
+                f"3-opt window must be None or an integer, got {window!r}"
+            ) from None
+        if window < 2:
+            raise ValueError("3-opt window must be at least 2")
 
     # Direct generation in the historical lexicographic order (i, then j, then
     # k): only triples that satisfy the separation rules and the window are
@@ -182,7 +206,7 @@ def improve_three_opt(
     first_improvement: bool = False,
     window: Optional[int] = 12,
     directed: Optional[bool] = None,
-    tolerance: float = 1e-10,
+    tolerance: float = DEFAULT_ACCEPTANCE_TOLERANCE,
 ) -> ThreeOptResult:
     """Improve a Hamiltonian cycle using canonical symmetric/directed 3-opt."""
     _validate_problem(route, matrix)
@@ -218,8 +242,7 @@ def improve_three_opt(
             for candidate in candidates:
                 candidate_cost = closed_tour_cost(candidate, matrix)
                 evaluations += 1
-                threshold = tolerance * max(1.0, abs(selected_cost))
-                if candidate_cost < selected_cost - threshold:
+                if is_improving(candidate_cost, selected_cost, tolerance):
                     selected_route = candidate
                     selected_cost = candidate_cost
                     if first_improvement:
@@ -383,6 +406,7 @@ def improve_path_three_opt(
 
 
 __all__ = [
+    "DEFAULT_ACCEPTANCE_TOLERANCE",
     "PathThreeOptResult",
     "ThreeOptResult",
     "closed_tour_cost",
@@ -390,6 +414,7 @@ __all__ = [
     "generate_three_opt_candidates",
     "improve_path_three_opt",
     "improve_three_opt",
+    "is_improving",
     "is_symmetric_matrix",
     "iter_path_three_opt_cuts",
     "iter_three_opt_cuts",

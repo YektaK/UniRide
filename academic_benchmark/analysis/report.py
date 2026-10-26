@@ -2,7 +2,7 @@
 
 ``build_report`` turns the verified rows of one campaign (rows with the D-06 gap columns, each with its run manifest) into
 
-* a **banner**: mode and git state of the campaign (both read from the verified ``RunIndexV1``, not from arguments), the dirty
+* a **banner**: mode and git state of the campaign (both read from the verified ``RunIndexV2``, not from arguments), the dirty
   flag, the study profile status, the analysis plan and its status, the sha256 of ``run_index.json`` and the statistics library;
 * one **descriptive table per comparison cell** (D-01: one pooling group, protocol version, study, dataset, budget level, one
   code commit; only the algorithm varies inside a table). A table lists, for each variable of the analysis plan (cost, gap to the
@@ -42,7 +42,7 @@ from academic_benchmark.analysis.identity import (
 )
 from academic_benchmark.analysis.statistics import FamilyAnalysis, describe_sample
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
-from academic_benchmark.contracts.run_index import RunIndexV1
+from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.obsolete_results import CURRENT_EVIDENCE, evidence_refusal
@@ -245,7 +245,7 @@ def build_descriptive_table(items: Iterable[tuple], plan: AnalysisPlanV1, *, all
 # ------------------------------------------------------------------------------------------------ campaign checks
 def _check_campaign(
     good: Sequence[tuple], *, study: Any, plan: AnalysisPlanV1, run_index: Any, index_sha256: Any
-) -> RunIndexV1:
+) -> RunIndexV2:
     if not isinstance(study, StudyManifestV1):
         raise ReportError(f"study must be the StudyManifestV1 profile, not {type(study).__name__}")
     if study.study_id != plan.study_id:
@@ -254,8 +254,8 @@ def _check_campaign(
         raise ReportError(
             f"the analysis plan {plan.analysis_plan_id!r} is not the one the study profile names (analysis_plan_id {study.analysis_plan_id!r})"
         )
-    if not isinstance(run_index, RunIndexV1):
-        raise ReportError(f"run_index must be the verified RunIndexV1 of the campaign, not {type(run_index).__name__}")
+    if not isinstance(run_index, RunIndexV2):
+        raise ReportError(f"run_index must be the verified RunIndexV2 of the campaign, not {type(run_index).__name__}")
     if not isinstance(index_sha256, str) or len(index_sha256) != 64 or any(c not in "0123456789abcdef" for c in index_sha256):
         raise ReportError("index_sha256 must be the lower-case hex sha256 of run_index.json (the banner quotes it)")
     if run_index.study_id != study.study_id:
@@ -383,7 +383,7 @@ def build_report(
     *,
     study: StudyManifestV1,
     plan: AnalysisPlanV1,
-    run_index: RunIndexV1,
+    run_index: RunIndexV2,
     index_sha256: str,
     inference: Sequence[FamilyAnalysis] = (),
     notes: Sequence[str] = (),
@@ -391,7 +391,7 @@ def build_report(
     """The descriptive report of one verified campaign.
 
     ``items`` are ``(row, manifest)`` pairs (failed runs ``(row, None)``); rows carry the D-06 gap columns. ``run_index`` is the
-    ``RunIndexV1`` of the campaign the caller verified (``manifests.load_verified_campaign``) and ``index_sha256`` the sha256 of its
+    ``RunIndexV2`` of the campaign the caller verified (``manifests.load_verified_campaign``) and ``index_sha256`` the sha256 of its
     ``run_index.json``. The mode (smoke or paper), commit and dirty flag in the banner are the index's. ``inference`` holds the
     ``analyse_family`` results of a paper campaign and is refused for a smoke campaign."""
     plan = _check_plan(plan)
@@ -432,6 +432,10 @@ def build_report(
         "mode": mode, "commit": index.git.commit, "dirty": index.git.dirty, "study_id": study.study_id,
         "profile_status": study.status, "analysis_plan_id": plan.analysis_plan_id, "analysis_plan_status": plan.status,
         "manifest_index_sha256": index_sha256, "statistics_library": index.environment.statistics_library,
+        # D-07 (run-index completeness): the plan file hash and the planned run count come from the verified index
+        "analysis_plan_sha256": index.analysis_plan.sha256, "planned_runs": index.planned.runs,
+        "planned_runs_per_cell": index.planned.runs_per_cell, "completed_runs": len(index.runs),
+        "failed_runs": len(index.failed_runs),
     }
     spec = plan.descriptive
     descriptive_spec = {
@@ -445,6 +449,9 @@ def build_report(
         f"Working tree dirty: {'YES' if banner['dirty'] else 'no'}",
         f"Study profile: {study.study_id} (status {study.status})",
         f"Analysis plan: {plan.analysis_plan_id} (status {plan.status})",
+        "Analysis plan sha256: " + (banner["analysis_plan_sha256"] or "not recorded (the analysis plan file did not resolve)"),
+        f"Planned runs: {banner['planned_runs']} ({banner['planned_runs_per_cell']} per cell); "
+        f"completed {banner['completed_runs']}; failed {banner['failed_runs']}",
         f"Manifest index sha256: {index_sha256}",
         f"Statistics library: {banner['statistics_library']}",
     ]

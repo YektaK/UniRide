@@ -19,7 +19,7 @@ import test_study_smoke_composite as comp
 from academic_benchmark.analysis import environment as analysis_environment
 from academic_benchmark.analysis.environment import AnalysisEnvironmentError, statistics_library_identifier
 from academic_benchmark.analysis.manifests import collect_environment, verify_campaign
-from academic_benchmark.contracts.run_index import RunIndexV1
+from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.studies import build_study_plan
 from academic_benchmark.studies import run as run_module
@@ -262,7 +262,7 @@ def test_paper_rows_are_validated_like_smoke_rows_and_are_not_smoke(paper_campai
 
 def test_paper_index_records_the_mode_the_clean_commit_and_the_statistics_library(paper_campaign):
     root, out, _report = paper_campaign
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
     assert index.mode == "paper" and index.status == "passed"
     assert index.git.commit == head and index.git.dirty is False
@@ -379,7 +379,7 @@ def test_paper_failure_is_recorded_the_campaign_continues_and_the_cell_is_exclud
     assert cells[0]["failed_replicates"] == [1]
     assert "excluded from inference" in report.text
     assert json.loads((out / "run_report.json").read_text("utf-8"))["excluded_cells"] == list(cells)
-    assert RunIndexV1.model_validate_json((out / "run_index.json").read_bytes()).status == "failed"
+    assert RunIndexV2.model_validate_json((out / "run_index.json").read_bytes()).status == "failed"
     assert verify_campaign(out) == []
 
 
@@ -407,7 +407,7 @@ def test_smoke_mode_keeps_working_on_a_draft_profile_and_says_descriptive_only(t
     assert json.loads((out / "smoke_report.json").read_text("utf-8"))["analysis_plan"].startswith("analysis plan")
     assert verify_campaign(out) == []
     assert all(r["smoke"] is True for r in _read(out / "fixed_runs.jsonl"))
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     assert index.mode == "smoke" and index.environment.statistics_library == "none"
 
 
@@ -514,7 +514,7 @@ def test_a_partial_checkpoint_removal_can_never_be_resumed(tmp_path, monkeypatch
 
 def test_report_files_are_written_before_the_checkpoint_goes_and_the_index_does_not_list_them(paper_campaign):
     _root, out, _report = paper_campaign
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     # the report quotes the index checksum, so the index cannot cover it (run_index.py: "never lists ... the report")
     assert not any(item.path.startswith("run_report") for item in index.outputs)
     assert json.loads((out / "run_report.json").read_text("utf-8"))["run_index"]["sha256"] == \

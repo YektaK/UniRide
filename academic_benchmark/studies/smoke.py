@@ -38,7 +38,9 @@ from academic_benchmark.analysis.manifests import (
     INDEX_FILE,
     build_run_manifest,
     collect_environment,
+    failed_run_entries,
     file_sha256,
+    outside_location,
     write_run_campaign,
 )
 from academic_benchmark.composite_protocol import is_composite_algorithm, validate_composite_result
@@ -398,11 +400,14 @@ _COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 
 def _write_run_manifests(
     plan: StudyPlan, output: Path, completed: Sequence[tuple], written: Mapping[str, int], status: str,
-    git: Mapping[str, Any], environment: EnvironmentV1, mode: str = "smoke",
+    git: Mapping[str, Any], environment: EnvironmentV1, mode: str = "smoke", *, planned_runs: int, runs_per_cell: int,
+    failed: Sequence[Mapping[str, Any]], output_location: Mapping[str, Any],
 ) -> Optional[Dict[str, Any]]:
     """Run manifests, campaign index and detached checksums (D-02); ``None`` when the git state is unknown.
 
-    A manifest needs the commit (``GitStateV1``): when git cannot answer, nothing is written and the report says so."""
+    A manifest needs the commit (``GitStateV1``): when git cannot answer, nothing is written and the report says so.
+    The index also records what the plan hashed (profile and analysis plan files), the planned runs, the output location and
+    the failed runs (``uniride-run-index/v2``; both modes fill the same fields, a smoke plan may be draft)."""
     revision, dirty = git.get("revision"), git.get("dirty")
     if not isinstance(revision, str) or not _COMMIT_PATTERN.match(revision) or not isinstance(dirty, bool):
         return None
@@ -427,6 +432,12 @@ def _write_run_manifests(
         output, mode=mode, study_id=study.study_id, seed_protocol_version=study.seed_protocol_version,
         base_seed=study.base_seed, git={"commit": revision, "dirty": dirty}, environment=environment, status=status,
         runs=runs, output_files=list(written),
+        profile={"path": plan.study_path, "sha256": plan.study_sha256},
+        analysis_plan={
+            "analysis_plan_id": study.analysis_plan_id, "path": plan.analysis_plan_path, "sha256": plan.analysis_plan_sha256,
+        },
+        planned={"runs_per_cell": runs_per_cell, "runs": planned_runs}, output_location=output_location,
+        failed_runs=failed_run_entries(failed),
     )
     return {"path": INDEX_FILE, "sha256": file_sha256(output / INDEX_FILE), "manifests": len(index.runs)}
 
@@ -554,7 +565,10 @@ def run_study_smoke(
         written[FAILED_FILE] = len(failed)
     status = "failed" if failed else "passed"
     git = dict(git_provider(root))
-    run_index = _write_run_manifests(plan, output, completed, written, status, git, environment_provider())
+    run_index = _write_run_manifests(
+        plan, output, completed, written, status, git, environment_provider(), planned_runs=len(rows), runs_per_cell=cap,
+        failed=failed, output_location=outside_location(output, [root]),
+    )
     text = _report_text(plan, status, level, cap, written, failed, git, run_index, analysis_plan_label)
     assert_no_ranking_words(text)
     (output / REPORT_TEXT_FILE).write_text(text, encoding="utf-8")

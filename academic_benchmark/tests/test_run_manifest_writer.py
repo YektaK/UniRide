@@ -1,7 +1,7 @@
 """Gate D, D-02: RunManifestV1 writer, detached .sha256 and verifier (plan 2026-10-23, section 3, D-02; DECISION_LOG A18).
 
 Smoke runs of the synthetic ``tiny10`` study (the C-13 fixture: pure and composite IDs, fixed and native rows) write one
-``RunManifestV1`` per run, a campaign index (``uniride-run-index/v1``) and a detached ``<file>.sha256`` for each; the
+``RunManifestV1`` per run, a campaign index (``uniride-run-index/v2``) and a detached ``<file>.sha256`` for each; the
 verifier recomputes every checksum. The fixture repository is a temporary directory, so git state is injected.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ from academic_benchmark.analysis.manifests import (
 )
 from academic_benchmark.contracts import OutputChecksumV1, RunManifestV1
 from academic_benchmark.contracts.export_schemas import check_schemas, render_schemas
-from academic_benchmark.contracts.run_index import RunIndexV1
+from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.studies.smoke import run_study_smoke
 from academic_benchmark.studies.service import fixed_budget_levels_for
 from academic_benchmark.studies.verify_manifests import main as verify_main
@@ -35,6 +35,18 @@ COMMIT = "c" * 40
 CLEAN = lambda _root: {"revision": COMMIT, "dirty": False}  # noqa: E731
 DIRTY = lambda _root: {"revision": COMMIT, "dirty": True}  # noqa: E731
 UNKNOWN = lambda _root: {"revision": None, "dirty": None, "git_error": "unavailable"}  # noqa: E731
+
+
+def _extras(runs: int) -> dict:
+    """The campaign fields that D-10 gaps G1, G2, G3, G6 and G7 add to every index (``uniride-run-index/v2``)."""
+    return dict(
+        profile={"path": "studies/study.json", "sha256": "1" * 64},
+        analysis_plan={"analysis_plan_id": "fixture", "path": None, "sha256": None},
+        planned={"runs_per_cell": 1, "runs": runs},
+        output_location={"path": str(Path("/campaign/out").resolve()),
+                         "outside_repository_check": {"result": "outside_repository", "checked_against": ["/repo"]}},
+        failed_runs=[],
+    )
 
 
 def _read_rows(path: Path) -> list[dict]:
@@ -88,7 +100,7 @@ def test_smoke_run_writes_valid_manifests_with_detached_checksums_and_they_verif
         assert (out / "manifests" / f"{name}.json.sha256").is_file()
     assert (out / "run_index.json").is_file() and (out / "run_index.json.sha256").is_file()
     assert verify_campaign(out) == []
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     assert sorted(e.run_id for e in index.runs) == sorted(found)
     assert index.mode == "smoke" and index.status == "passed"
 
@@ -183,7 +195,7 @@ def test_a_swapped_row_in_the_outputs_is_caught_even_if_all_checksums_are_recomp
 
 def _recompute_all_checksums(directory: Path) -> None:
     """Re-seal a tampered campaign: new output checksums in every manifest, new sidecars, new index entries."""
-    index_model = RunIndexV1.model_validate_json((directory / "run_index.json").read_bytes())
+    index_model = RunIndexV2.model_validate_json((directory / "run_index.json").read_bytes())
     outputs = [
         OutputChecksumV1(path=o.path, checksum={"algorithm": "sha256", "value": manifests.file_sha256(directory / o.path)})
         for o in index_model.outputs
@@ -268,7 +280,7 @@ def test_content_budget_backend_dataset_seeds_and_validation(campaign):
 def test_every_manifest_gives_its_row_a_comparison_key(campaign):
     _plan, _report, out = campaign
     rows = _read_rows(out / "fixed_runs.jsonl") + _read_rows(out / "native_runs.jsonl")
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     digests = {e.run_id: e.comparison_key_digest for e in index.runs}
     for manifest in _manifests(out).values():
         row = next(
@@ -327,8 +339,8 @@ def test_same_seed_runs_differ_only_in_timing_and_have_equal_identity_digests(ca
     assert sorted(first) == sorted(second)
     for name in first:
         assert comparable_manifest_view(first[name]) == comparable_manifest_view(second[name])
-    index_a = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
-    index_b = RunIndexV1.model_validate_json((again / "run_index.json").read_bytes())
+    index_a = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
+    index_b = RunIndexV2.model_validate_json((again / "run_index.json").read_bytes())
     assert {e.run_id: e.comparison_key_digest for e in index_a.runs} == {e.run_id: e.comparison_key_digest for e in index_b.runs}
     # the comparable view drops exactly the timing: the full records do differ somewhere
     raw_a = {n: m.model_dump(mode="json") for n, m in first.items()}
@@ -359,7 +371,7 @@ def test_the_index_holds_no_timing(campaign):
 # ------------------------------------------------------------------ index, git states, report
 def test_the_index_records_the_seed_protocol_base_seed_git_and_environment(campaign):
     plan, report, out = campaign
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     assert index.seed_protocol_version == plan.study.seed_protocol_version == "sha256-seed-v1"
     assert index.base_seed == plan.study.base_seed and index.study_id == plan.study.study_id
     assert index.git.commit == COMMIT and index.git.dirty is False
@@ -372,7 +384,7 @@ def test_a_dirty_tree_is_recorded_in_manifests_and_index_and_still_verifies(tmp_
     _plan, report, out = _run(tmp_path, "dirty", git=DIRTY)
     assert report.status == "passed"
     assert all(m.git.dirty is True for m in _manifests(out).values())
-    assert RunIndexV1.model_validate_json((out / "run_index.json").read_bytes()).git.dirty is True
+    assert RunIndexV2.model_validate_json((out / "run_index.json").read_bytes()).git.dirty is True
     assert verify_campaign(out) == []
     assert "dirty" in report.text.lower()
 
@@ -404,7 +416,7 @@ def test_a_failed_smoke_run_still_writes_a_verifiable_index_marked_failed(tmp_pa
         gateway_executor=failing_gateway,
     )
     assert report.status == "failed"
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     assert index.status == "failed" and len(index.runs) == 1
     assert "failed_runs.jsonl" in {o.path for o in index.outputs}
     assert verify_campaign(out) == []
@@ -455,7 +467,7 @@ def test_duplicate_run_ids_are_refused(tmp_path):
         write_run_campaign(
             target, mode="smoke", study_id=manifest.study_id, seed_protocol_version="sha256-seed-v1",
             base_seed=manifest.seeds.base_seed, git=manifest.git, environment=manifest.environment, status="passed",
-            runs=[(row, manifest), (row, manifest)], output_files=["fixed_runs.jsonl"],
+            runs=[(row, manifest), (row, manifest)], output_files=["fixed_runs.jsonl"], **_extras(2),
         )
     assert not (target / "manifests").exists() or not any((target / "manifests").iterdir())
 
@@ -496,8 +508,8 @@ def test_cli_exit_codes_and_messages(campaign, tmp_path, capsys):
 
 def test_run_index_schema_snapshot_is_registered_and_current():
     assert check_schemas() == []
-    schema = json.loads(render_schemas()["run-index-v1.schema.json"])
-    assert schema["$id"] == "uniride-run-index/v1" and schema["additionalProperties"] is False
+    schema = json.loads(render_schemas()["run-index-v2.schema.json"])
+    assert schema["$id"] == "uniride-run-index/v2" and schema["additionalProperties"] is False
     assert "seed_protocol_version" in schema["properties"]
 
 
@@ -539,7 +551,7 @@ def _merge_two_levels(tmp_path: Path) -> Path:
     base = next(iter(template.values()))
     write_run_campaign(
         merged, mode="smoke", study_id=base.study_id, seed_protocol_version="sha256-seed-v1", base_seed=base.seeds.base_seed,
-        git=base.git, environment=base.environment, status="passed", runs=pairs, output_files=["fixed_runs.jsonl"],
+        git=base.git, environment=base.environment, status="passed", runs=pairs, output_files=["fixed_runs.jsonl"], **_extras(len(pairs)),
     )
     return merged
 
@@ -551,7 +563,7 @@ def test_a_campaign_with_two_budget_levels_verifies(tmp_path):
 
 
 def _reseal_index(directory: Path, *, drop_runs=(), **updates) -> None:
-    index = RunIndexV1.model_validate_json((directory / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((directory / "run_index.json").read_bytes())
     runs = [e for e in index.runs if e.run_id not in set(drop_runs)]
     for run_id in drop_runs:
         (directory / "manifests" / f"{run_id}.json").unlink()
@@ -562,7 +574,7 @@ def _reseal_index(directory: Path, *, drop_runs=(), **updates) -> None:
 def test_a_row_without_a_manifest_fails_even_when_the_index_is_resealed(campaign, tmp_path):
     _plan, _report, out = campaign
     copied = _copy(out, tmp_path)
-    index = RunIndexV1.model_validate_json((copied / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((copied / "run_index.json").read_bytes())
     _reseal_index(copied, drop_runs=[index.runs[0].run_id])
     errors = verify_campaign(copied)
     assert errors and any("no run manifest" in e for e in errors)
@@ -571,7 +583,7 @@ def test_a_row_without_a_manifest_fails_even_when_the_index_is_resealed(campaign
 def test_an_index_with_no_runs_does_not_verify_while_result_files_hold_rows(campaign, tmp_path):
     _plan, _report, out = campaign
     copied = _copy(out, tmp_path)
-    index = RunIndexV1.model_validate_json((copied / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((copied / "run_index.json").read_bytes())
     _reseal_index(copied, drop_runs=[e.run_id for e in index.runs])
     errors = verify_campaign(copied)
     assert errors and any("no run manifest" in e for e in errors)
@@ -614,7 +626,7 @@ def test_the_writer_and_the_verifier_require_the_implemented_seed_protocol(campa
         write_run_campaign(
             target, mode="smoke", study_id=manifest.study_id, seed_protocol_version="other-seed-v9",
             base_seed=manifest.seeds.base_seed, git=manifest.git, environment=manifest.environment, status="passed",
-            runs=[], output_files=[],
+            runs=[], output_files=[], **_extras(1),
         )
     copied = _copy(out, tmp_path)
     _reseal_index(copied, seed_protocol_version="other-seed-v9")
@@ -622,7 +634,7 @@ def test_the_writer_and_the_verifier_require_the_implemented_seed_protocol(campa
 
 
 def test_native_manifests_carry_the_sentinel_level_and_the_contract_says_so(campaign, tmp_path):
-    schema = json.loads(render_schemas()["run-index-v1.schema.json"])
+    schema = json.loads(render_schemas()["run-index-v2.schema.json"])
     assert "sentinel" in schema["description"] and "[0]" in schema["description"]
     _plan, _report, out = campaign
     copied = _copy(out, tmp_path)
@@ -669,5 +681,5 @@ def test_real_bildiri_ft53_manifests_carry_the_datasets_own_levels_and_tsplib_da
         if manifest.budget.policy == "atomic_upper_bound_v1":
             assert manifest.budget.levels == list(ft.FT53_LEVELS)  # the dataset's own list: 50 and 250 scans of ft53
             assert manifest.algorithm.configuration == dict(study_block)
-    index = RunIndexV1.model_validate_json((out / "run_index.json").read_bytes())
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     assert index.seed_protocol_version == "sha256-seed-v1" and index.base_seed == plan.study.base_seed

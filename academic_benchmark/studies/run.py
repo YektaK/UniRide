@@ -49,7 +49,13 @@ from academic_benchmark.analysis.environment import (
     statistics_library_identifier,
 )
 from academic_benchmark.analysis.campaign_report import CampaignReportError, write_smoke_descriptive_report
-from academic_benchmark.analysis.manifests import INDEX_FILE, MANIFEST_DIR, SIDECAR_SUFFIX, collect_environment
+from academic_benchmark.analysis.manifests import (
+    INDEX_FILE,
+    MANIFEST_DIR,
+    SIDECAR_SUFFIX,
+    collect_environment,
+    outside_location,
+)
 from academic_benchmark.committed_bytes import GitQueryFailed, run_git
 from academic_benchmark.contracts.run import EnvironmentV1
 from academic_benchmark.core.execution_gateway import execute_preflighted
@@ -64,7 +70,6 @@ from academic_benchmark.fair_pilot import (
     _registry_executor,
 )
 from academic_benchmark.studies.service import (
-    ANALYSIS_PLAN_FILENAME,
     DEFAULT_BACKEND_POLICY,
     PlanRow,
     ResolvedDataset,
@@ -194,8 +199,6 @@ def _plan_row_key(row: PlanRow) -> list:
 def _fingerprint(
     plan: StudyPlan, study_path: str, root: Path, git: Mapping[str, Any], environment: EnvironmentV1
 ) -> Dict[str, Any]:
-    study_file = (root / study_path).resolve()
-    plan_file = study_file.parent / ANALYSIS_PLAN_FILENAME
     rows = [
         {"row": _plan_row_key(row), "seed_group": row.seed_group, "problem_name": row.problem_name,
          "parameters": _row_params(plan.study, row)}
@@ -205,8 +208,8 @@ def _fingerprint(
         "version": CAMPAIGN_FINGERPRINT_VERSION,
         "study_id": plan.study.study_id,
         "study_path": study_path,
-        "study_sha256": _sha256_bytes(study_file.read_bytes()),
-        "analysis_plan_sha256": _sha256_bytes(plan_file.read_bytes()),
+        "study_sha256": plan.study_sha256,  # the hashes the run index records come from the same reading of the files
+        "analysis_plan_sha256": plan.analysis_plan_sha256,
         "dataset_artifacts": {d.dataset_id: d.artifact_sha256 for d in plan.datasets},
         "plan_digest": _sha256_bytes(_canonical(rows).encode("utf-8")),
         "plan_rows": len(plan.rows),
@@ -373,7 +376,7 @@ def _paper_report_text(
 
 def _finalize_paper(
     plan: StudyPlan, output: Path, rows: Sequence[PlanRow], done: Mapping[int, tuple], git: Mapping[str, Any],
-    environment: EnvironmentV1, plan_label: str,
+    environment: EnvironmentV1, plan_label: str, output_location: Mapping[str, Any],
 ) -> RunReport:
     """Derive result files, manifests, index and report from the finished rows; the checkpoint is removed last."""
     for name in (FIXED_FILE, NATIVE_FILE, FAILED_FILE, RUN_REPORT_TEXT_FILE, RUN_REPORT_JSON_FILE, INDEX_FILE,
@@ -403,7 +406,10 @@ def _finalize_paper(
         _jsonl_atomic(output / FAILED_FILE, failed)
         written[FAILED_FILE] = len(failed)
     status = "failed" if failed else "passed"
-    run_index = _write_run_manifests(plan, output, completed, written, status, git, environment, mode="paper")
+    run_index = _write_run_manifests(
+        plan, output, completed, written, status, git, environment, mode="paper", planned_runs=len(rows),
+        runs_per_cell=plan.study.run_count, failed=failed, output_location=output_location,
+    )
     if run_index is None:  # the git state was checked before the first run
         raise StudyRunError("run manifests could not be written: the git state is unknown")
     excluded = _excluded_cells(failed)
@@ -519,7 +525,8 @@ def _run_paper(
             "index": index, "plan_row": _plan_row_key(row), "outcome": outcome, "record": record,
         }))
         done[index] = (outcome, record)
-    return _finalize_paper(plan, output, rows, done, git, environment, plan_label)
+    trees = [root] + ([main_tree] if main_tree is not None and main_tree != root else [])
+    return _finalize_paper(plan, output, rows, done, git, environment, plan_label, outside_location(output, trees))
 
 
 # ----------------------------------------------------------------------------------------------------- smoke mode

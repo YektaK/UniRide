@@ -3,7 +3,7 @@
 ``docs/designs/PAPER_SCALE_RUN_PLAN_TEMPLATE.md`` lists every field a paper-scale run plan states and, for each, the
 field a reviewer reads after the run. This test checks (1) that every required field heading and checklist item is
 present, (2) that every contract field the template cites (``manifest.*`` = ``RunManifestV1``, ``index.*`` =
-``RunIndexV1``, ``study.*`` = ``StudyManifestV1``, ``plan.*`` = ``AnalysisPlanV1``) exists in that contract, (3) that a
+``RunIndexV2``, ``study.*`` = ``StudyManifestV1``, ``plan.*`` = ``AnalysisPlanV1``) exists in that contract, (3) that a
 field without a manifest counterpart says so explicitly and names a gap listed in the template, and (4) that every row cites
 ``file:line`` evidence (informative, named against a base commit; the line numbers themselves are not checked). It does not check any scientific value.
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel
 
-from academic_benchmark.contracts import RunIndexV1, RunManifestV1, StudyManifestV1
+from academic_benchmark.contracts import RunIndexV2, RunManifestV1, StudyManifestV1
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 
 REPO = Path(__file__).resolve().parents[2]
@@ -61,7 +61,7 @@ REQUIRED_APPROVAL_PHRASES = (
 )
 CONTRACTS: dict[str, type[BaseModel]] = {
     "manifest": RunManifestV1,
-    "index": RunIndexV1,
+    "index": RunIndexV2,
     "study": StudyManifestV1,
     "plan": AnalysisPlanV1,
 }
@@ -223,3 +223,39 @@ def test_gap_table_rows_have_a_recommendation(gap_prefix: str) -> None:
     row = next((r for r in rows if r[0] == gap_prefix), None)
     assert row is not None, f"gap {gap_prefix} missing"
     assert len(row) == 4 and row[2] and row[3], f"gap {gap_prefix} needs what is missing, a way to check it meanwhile and a follow-up"
+
+
+# ------------------------------------------------------------------------------------------------ run-index completeness (G1, G2, G3, G6, G7)
+CLOSED_GAPS = ("G1", "G2", "G3", "G6", "G7")
+
+
+def _gap_rows() -> dict[str, list[str]]:
+    return {row[0]: row for row in _table_rows(_section(_template_text(), "Gaps for the lead"))}
+
+
+@pytest.mark.parametrize("gap", CLOSED_GAPS)
+def test_the_run_index_gaps_are_marked_closed_by_the_v2_index(gap: str) -> None:
+    row = _gap_rows()[gap]
+    assert "CLOSED by `uniride-run-index/v2`" in row[1] and row[3].startswith("closed"), f"{gap} is not marked closed: {row}"
+
+
+@pytest.mark.parametrize("gap", ["G4", "G5", "G8", "G9"])
+def test_gaps_that_stay_open_are_not_marked_closed(gap: str) -> None:
+    assert "CLOSED" not in " ".join(_gap_rows()[gap])
+
+
+def test_every_closed_gap_is_mapped_to_an_index_field_in_the_field_table() -> None:
+    """Each closed gap appears as ``Gn (closed)`` in the gap column of a row whose check cites an ``index.`` field of v2."""
+    mapped: dict[str, list[str]] = {}
+    for row in _field_rows(_template_text()):
+        for gap in GAP_REF.findall(row[3]):
+            if f"{gap}" in row[3] and "(closed)" in row[3]:
+                mapped.setdefault(gap, []).append(row[0])
+                tokens = [t for t in TOKEN.findall(row[2]) if t.startswith("index.")]
+                assert tokens, f"row {row[0]!r} closes {gap} but its check names no index field"
+                assert "NO MANIFEST FIELD" not in row[2], f"row {row[0]!r} still says NO MANIFEST FIELD"
+    assert set(mapped) == set(CLOSED_GAPS), f"closed gaps mapped to fields: {mapped}"
+    cited = {t for row in _field_rows(_template_text()) for t in TOKEN.findall(row[2])}
+    for field in ("index.profile.sha256", "index.analysis_plan.analysis_plan_id", "index.analysis_plan.sha256",
+                  "index.planned.runs_per_cell", "index.planned.runs", "index.output_location.path", "index.failed_runs"):
+        assert field in cited, f"the field table does not cite {field}"

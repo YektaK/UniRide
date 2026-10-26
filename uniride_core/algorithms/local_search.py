@@ -146,9 +146,12 @@ class ThreeOptLocalSearch(BaseLocalSearch):
     """
     Path 3-opt local search for production routes (reversals fully costed).
 
-    The route is an open sequence costed by a caller's black-box
-    ``duration_func`` (for example a Split-decoded chromosome), so the
-    neighbourhood is the core-owned *path* 3-opt in
+    The route is an open sequence between two fixed depot ends, costed by a
+    caller's black-box ``duration_func`` (for example the ``ga_split`` giant-tour
+    cost, depot to depot with the depot outside the sequence: ``educate_individual``
+    in ``ga_split_engine.py``, ``giant_tour_cost`` in ``meta_split_common.py``).
+    Rotating such a sequence changes its cost, so the neighbourhood is the
+    core-owned *path* 3-opt in
     ``uniride_core.algorithms.three_opt`` (audit M14, MT6-04): cuts
     ``-1 <= i < j < k <= n - 1``, the two middle segments B and C are
     re-arranged in the 7 non-identity order x reversal ways (C'B' included),

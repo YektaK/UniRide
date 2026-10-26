@@ -103,14 +103,51 @@ MATRIX_LEGACY = _dict_keys(
 )
 
 
+def _dict_items(path: Path, name: str) -> dict[str, str]:
+    value = _assigned_node(path, name)
+    assert isinstance(value, ast.Dict)
+    return {ast.literal_eval(k): ast.literal_eval(v) for k, v in zip(value.keys, value.values)}
+
+
+REGISTRY_SETUP = REPO_ROOT / "academic_benchmark" / "core" / "registry_setup.py"
+ROUTING_ALIAS_ENGINES = _dict_items(REGISTRY_SETUP, "_ROUTING_ALIAS_ENGINES")
+ROUTING_ALTERNATIVE_BASES = _dict_items(REGISTRY_SETUP, "_ROUTING_ALTERNATIVE_BASES")
 ROUTING_ALIAS_NAMES = {
-    f"{prefix}-{base}"
-    for prefix in ("CVRP", "CVRPTW")
-    for base in _dict_keys(
-        REPO_ROOT / "academic_benchmark" / "core" / "registry_setup.py",
-        "_ROUTING_ALIAS_ENGINES",
-    )
+    f"{prefix}-{base}" for prefix in ("CVRP", "CVRPTW") for base in ROUTING_ALIAS_ENGINES
 }
+GATE_D_STATUS_PHRASE = (
+    "all Gate D items are merged except D-04b2 (final estimate on the stronger computer), "
+    "D-13 (close) and D-12 (publication)"
+)
+
+
+def test_every_cvrp_alias_row_names_the_engine_it_runs() -> None:
+    rows = _table_rows()
+    for base, engine in ROUTING_ALIAS_ENGINES.items():
+        for prefix in ("CVRP", "CVRPTW"):
+            name = f"{prefix}-{base}"
+            assert name in rows, f"{name} missing from the migration table"
+            assert f"`{engine}`" in rows[name], f"row for {name} does not name its engine {engine}"
+
+
+def test_the_routing_variant_column_matches_the_refusal_table() -> None:
+    rows = _table_rows()
+    for canonical_id in CAPABILITY_CATALOG:
+        cell = rows[canonical_id].split("|")[3].strip()
+        base = ROUTING_ALTERNATIVE_BASES.get(canonical_id)
+        if base is None:
+            assert cell == "none", f"{canonical_id}: expected 'none', found {cell!r}"
+        else:
+            assert f"`CVRP-{base}`" in cell and f"`CVRPTW-{base}`" in cell, (
+                f"{canonical_id}: the variant column does not offer CVRP-{base} / CVRPTW-{base}: {cell!r}"
+            )
+            engine = ROUTING_ALIAS_ENGINES[base]
+            assert f"`{engine}`" in cell, f"{canonical_id}: the variant column does not name {engine}"
+
+
+@pytest.mark.parametrize("path", SYNCHRONIZED_DOCUMENTS, ids=lambda p: p.name)
+def test_every_document_states_the_gate_d_status_in_the_same_words(path: Path) -> None:
+    assert GATE_D_STATUS_PHRASE in " ".join(_read(path).split()), path.name
 
 
 def test_the_migration_table_exists_and_cites_decision_log_entries() -> None:
@@ -194,7 +231,7 @@ def test_the_workstate_gate_d_row_states_the_status_and_names_a_commit() -> None
     rows = [line for line in _read(WORKSTATE).splitlines() if line.startswith("| ACAD-01")]
     assert len(rows) == 1, "exactly one ACAD-01 row expected in the workstate"
     row = rows[0]
-    assert "Gate D items merged, close (D-13) pending" in row
+    assert GATE_D_STATUS_PHRASE in row
     commits = re.findall(r"WIP commit `([0-9a-f]{8,40})`", row)
     assert commits, "the Gate D row must name the WIP commit it is based on as WIP commit `<sha>`"
     git = shutil.which("git")

@@ -26,6 +26,7 @@ from typing import Any, Iterable, List, Mapping, Optional
 
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.exact_reference import reader
+from academic_benchmark.analysis.problem_contract import ProblemContractError, same_problem_contract
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.protocol_registry import assert_rankable, assert_single_pooling_group
 
@@ -127,7 +128,7 @@ def build_reference_table(sets: Iterable[Any]) -> ExactReferenceTable:
                 results_dir=loaded.results_dir, manifest_sha256=loaded.manifest_sha256, ub_validated=True,
             )
             earlier = values.get(identity)
-            if earlier is not None and (earlier.value != entry.value or earlier.problem_contract != entry.problem_contract):
+            if earlier is not None and (earlier.value != entry.value or not same_problem_contract(earlier.problem_contract, entry.problem_contract)):
                 raise ReferenceCrossCheckError(
                     f"{identity}: two reference sets disagree ({earlier.results_dir}: {earlier.value}, {entry.results_dir}: {entry.value})"
                 )
@@ -211,10 +212,16 @@ def add_gap_columns(rows: Iterable[Any], table: ExactReferenceTable, *, plan: An
             out.append(_with_reason(row, unit, reason))
             continue
         declared = row.get("problem_type")
-        if declared is not None and declared != entry.problem_contract:
-            raise GapColumnError(
-                f"{identity}: row problem type {declared!r} differs from the exact reference contract {entry.problem_contract!r}"
-            )
+        if declared is not None:
+            # A20 L10: rows store the lowercase spelling, the reference the uppercase contract; compare canonical values
+            try:
+                same = same_problem_contract(declared, entry.problem_contract)
+            except ProblemContractError as exc:
+                raise GapColumnError(f"{identity}: row problem type {declared!r} against the exact reference contract {entry.problem_contract!r}: {exc}") from exc
+            if not same:
+                raise GapColumnError(
+                    f"{identity}: row problem type {declared!r} differs from the exact reference contract {entry.problem_contract!r}"
+                )
         optimum = row.get("optimum")
         if isinstance(optimum, (int, float)) and not isinstance(optimum, bool) and not math.isclose(float(optimum), entry.value, rel_tol=0.0, abs_tol=1e-9):
             raise GapColumnError(
@@ -245,7 +252,13 @@ def cross_check_study_datasets(table: ExactReferenceTable, datasets: Iterable[An
         if entry is None:
             raise ReferenceCrossCheckError(f"{dataset.dataset_id}: {reason}")
         manifest = dataset.manifest
-        if manifest.problem_type != entry.problem_contract:
+        try:
+            same = same_problem_contract(manifest.problem_type, entry.problem_contract)
+        except ProblemContractError as exc:
+            raise ReferenceCrossCheckError(
+                f"{dataset.dataset_id}: manifest problem type {manifest.problem_type!r} against the reference {entry.problem_contract!r}: {exc}"
+            ) from exc
+        if not same:
             raise ReferenceCrossCheckError(
                 f"{dataset.dataset_id}: manifest problem type {manifest.problem_type!r} differs from the reference {entry.problem_contract!r}"
             )

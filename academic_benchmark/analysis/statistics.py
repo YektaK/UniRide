@@ -39,6 +39,7 @@ from typing import Any, Iterable, Mapping, Optional, Sequence
 from academic_benchmark.analysis.environment import require_analysis_environment, statistics_library_identifier
 from academic_benchmark.analysis.identity import ComparisonIdentityError, assert_single_comparison_family, comparison_cell_key
 from academic_benchmark.analysis.manifests import make_run_id
+from academic_benchmark.analysis.problem_contract import ProblemContractError, canonical_problem_contract
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1, ComparisonFamilyV1, DescriptiveV1
 from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.contracts.study import StudyManifestV1
@@ -755,7 +756,11 @@ def analyse_family(
         dataset_id = manifest.dataset.dataset_id
         if dataset_id not in family.dataset_ids:
             raise StatisticsRefusal(f"dataset {dataset_id!r} is outside the declared family {family.family_id!r} {family.dataset_ids}")
-        if manifest.dataset.problem_type not in family.problem_types:
+        try:  # A20 L10: canonical contracts on both sides (manifest and plan carry the uppercase spelling today)
+            in_family = canonical_problem_contract(manifest.dataset.problem_type) in {canonical_problem_contract(p) for p in family.problem_types}
+        except ProblemContractError as exc:
+            raise StatisticsRefusal(f"problem type {manifest.dataset.problem_type!r} of family {family.family_id!r}: {exc}") from exc
+        if not in_family:
             raise StatisticsRefusal(f"problem type {manifest.dataset.problem_type!r} is outside the declared family {family.family_id!r}")
         replicate = row.get("replicate")
         if isinstance(replicate, bool) or not isinstance(replicate, int):

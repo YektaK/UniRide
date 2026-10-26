@@ -117,5 +117,17 @@ def test_smoke_study_writes_the_descriptive_report_with_gap_columns(tmp_path, pr
     assert "descriptive_report.txt" in report.files and "descriptive_report.json" in report.files
     text = (tmp_path / "out" / "descriptive_report.txt").read_text(encoding="utf-8")
     data = json.loads((tmp_path / "out" / "descriptive_report.json").read_text(encoding="utf-8"))
-    assert "eil51" in text and "gap" in text.lower()
-    assert "426" in json.dumps(data)  # the proven eil51 optimum is the reference value of the gap
+    assert "Variable gap: gap to the exact reference" in text
+    datasets = {table["cell"]["dataset_identity"] for table in data["tables"]}
+    assert "eil51" in datasets
+    assert ("ft53" in datasets) == (profile == "bildiri2026")  # the ATSP instance is only in the Bildiri profile
+    for table in data["tables"]:
+        for algorithm in table["algorithms"]:
+            gap = algorithm["variables"]["gap"]
+            assert gap["n"] >= 1 and gap["median"] is not None, (table["cell"], algorithm["algorithm_id"])
+            assert algorithm["gap_missing"]["count"] == 0
+    # the gap is 100 * (cost - proven optimum) / optimum: eil51 optimum 426
+    first = next(t for t in data["tables"] if t["cell"]["dataset_identity"] == "eil51")
+    for algorithm in first["algorithms"]:
+        cost = algorithm["variables"]["cost"]["median"]
+        assert algorithm["variables"]["gap"]["median"] == pytest.approx(100 * (cost - 426) / 426)

@@ -54,7 +54,7 @@ For a symmetric matrix, enumerate all seven non-identity reconnections associate
 - three 2-opt-equivalent reconnections;
 - four genuine 3-opt reconnections.
 
-Duplicates caused by rotationally equivalent representations are removed without removing a distinct edge set.
+Duplicates caused by rotationally equivalent representations are removed without removing a distinct edge set. Since MT6-01 the duplicates are avoided by construction rather than detected: for an admitted cut triple the seven symmetric reconnections are pairwise distinct, so no per-candidate cycle key is needed; the neighbourhood content is unchanged.
 
 ### Directed ATSP neighborhood
 

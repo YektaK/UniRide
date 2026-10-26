@@ -172,3 +172,56 @@ def test_the_rebuild_exits_1_for_a_campaign_whose_run_failed(tmp_path):
         (out / name).unlink(missing_ok=True)
     assert cr.main([str(out), *_args(root)]) == 1
     assert (out / "descriptive_report.txt").is_file()  # written even though the campaign failed
+
+
+# ------------------------------------------------------------------------------------------------ the profile as committed (readiness 2)
+def test_the_rebuild_reads_the_study_profile_as_it_was_at_the_campaign_commit(tmp_path):
+    report, out, root = _campaign(tmp_path)
+    assert report.status == "passed", report.text
+    (root / svc.STUDY).write_text("{ this profile is no longer valid JSON", encoding="utf-8")  # a later commit changes the profile
+    svc._git(root, "add", "-A")
+    svc._git(root, "commit", "-q", "-m", "break the profile after the campaign")
+    for name in REPORT_FILES:
+        (out / name).unlink()
+    assert cr.main([str(out), "--repository-root", str(root)]) == 0  # no --study: the recorded path, read at the campaign commit
+    assert (out / "descriptive_report.txt").is_file()
+
+
+def test_the_rebuild_defaults_both_paths_to_the_ones_the_run_index_recorded(tmp_path):
+    _report, out, root = _campaign(tmp_path)  # the fixture's study lives at studies/study.json, not at academic_benchmark/studies/<id>/
+    index = json.loads((out / "run_index.json").read_text(encoding="utf-8"))
+    assert index["profile"]["path"] == svc.STUDY and index["analysis_plan"]["path"] == "studies/analysis_plan.json"
+    assert cr.main([str(out), "--repository-root", str(root)]) == 0
+
+
+def test_the_rebuild_refuses_a_profile_whose_committed_bytes_differ_from_the_recorded_hash(tmp_path, capsys):
+    """The campaign ran on a working-tree profile that was not committed (git state claimed clean): the recorded hash is of bytes git
+    does not have at the campaign commit, so the rebuild cannot reproduce the profile the campaign used."""
+    root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    path = root / svc.STUDY
+    payload = json.loads(path.read_text("utf-8"))
+    payload["paper_metadata"] = {**(payload.get("paper_metadata") or {}), "venue": "edited after the commit"}
+    path.write_text(json.dumps(payload), encoding="utf-8")  # uncommitted edit; the run records its hash
+    out = tmp_path / "out"
+    svc.run_study(
+        svc.STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(), git_provider=_head, replicates=1,
+        reference_table_provider=tar._raises(FileNotFoundError("none")),
+    )
+    assert cr.main([str(out), "--repository-root", str(root)]) == 2
+    err = capsys.readouterr().err
+    assert "REFUSED" in err and "profile" in err and "sha256" in err
+    assert not any((out / name).exists() for name in REPORT_FILES)
+
+
+def test_a_profile_checked_out_with_crlf_line_endings_still_counts_as_the_recorded_profile(tmp_path):
+    root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    path = root / svc.STUDY
+    path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))  # a CRLF checkout of the committed blob (the run hashes this file)
+    plan = root / "studies" / "analysis_plan.json"
+    plan.write_bytes(plan.read_bytes().replace(b"\n", b"\r\n"))
+    out = tmp_path / "out"
+    svc.run_study(
+        svc.STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(), git_provider=_head, replicates=1,
+        reference_table_provider=tar._raises(FileNotFoundError("none")),
+    )
+    assert cr.main([str(out), "--repository-root", str(root)]) == 0

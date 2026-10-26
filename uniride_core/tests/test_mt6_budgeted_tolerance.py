@@ -10,9 +10,22 @@ Two groups of tests:
   artifacts, never from ``tsplib.db``) is integer valued, and the three controllers give
   the results recorded in ``GOLDEN`` below.  ``GOLDEN`` was captured on the code before
   the tolerance change (commit a08920e1) and stored in
-  ``golden/mt6_budgeted_tolerance_golden.json``, so the tests prove that the change is a
-  no-op on the study instances.  Regenerate by running this file as a script (its output
-  is the JSON) only after a deliberate change of the neighbourhood or the start route.
+  ``golden/mt6_budgeted_tolerance_golden.json``.  Regenerate by running this file as a
+  script (its output is the JSON) only after a deliberate change of the neighbourhood or
+  the start route.
+
+What the golden cases do and do not prove.  All 42 golden cases (7 datasets x 3 controllers
+x 2 modes) end by budget exhaustion (``evaluation_budget_exhausted``), none by convergence,
+so they pin the first few thousand moves, not a converged tour.  The claim that the
+tolerance is a no-op on the integer study instances therefore rests on an argument, which
+the golden cases only confirm on that prefix: on an integer matrix every strict improvement
+is at least 1, and the tolerance ``1e-10 * max(1, |cost|)`` is below 1 for every cost below
+1e10, so the old strict ``<`` and the new tolerance rule accept exactly the same moves.
+``test_study_datasets_are_the_expected_set_and_integer_valued`` checks both premises
+(integrality, and ``n * max entry < 1e10``, an upper bound of every tour cost).
+
+The ``max(1, ...)`` floor of the tolerance is what protects costs below 1; the float
+group below includes a scale-1e-3 matrix (tour cost 0.008) for exactly that reason.
 """
 
 from __future__ import annotations
@@ -71,9 +84,13 @@ def _run(name, matrix, first_improvement, limit=None):
 
 # (scale, improvement below the tolerance, improvement above it).  The tolerance of a
 # cost C is 1e-10 * max(1, |C|); the identity tour on the uniform matrix costs 8 * scale.
+# Scale 1e-3 (cost 0.008) exercises the ``max(1, ...)`` floor: the floored tolerance is 1e-10,
+# a purely relative one would be 8e-13, and the "tiny" improvement 1e-11 lies between them, so
+# dropping the floor makes the tiny move accepted and fails the first test below.
 SCALES = (
     (1.0, 1e-12, 1e-6),
     (1e6, 1e-4, 1.0),
+    (1e-3, 1e-11, 1e-6),
 )
 
 
@@ -184,6 +201,8 @@ def test_study_datasets_are_the_expected_set_and_integer_valued():
         for row in matrix:
             for value in row:
                 assert float(value).is_integer(), (dataset_id, value)
+        # Upper bound of any tour cost: the tolerance stays below 1 (the smallest integer gain).
+        assert len(matrix) * max(max(row) for row in matrix) < 1e10, dataset_id
 
 
 @pytest.mark.parametrize("mode", sorted(MODES))

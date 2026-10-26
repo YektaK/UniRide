@@ -1,0 +1,59 @@
+{
+  "_comment": "Gate D, D-08b mixed fixture. One row per evidence class. 'label' is the class; every other field is data. The sweep test materialises these rows into a temporary SQLite database, temporary result CSVs and in-memory analysis rows. Nothing here is real evidence.",
+  "rows": [
+    {
+      "label": "current_fixed",
+      "run_id": "run-fixed",
+      "problem": "tiny",
+      "algorithm": "CUR-FIXED-GA",
+      "timestamp": "2026-10-20T09:00:00",
+      "objective_cost": 11.0,
+      "metadata": {"comparison_regime": "fixed_evaluation_budget", "protocol_version": "uniride-fair-tsp-v2"}
+    },
+    {
+      "label": "current_native",
+      "run_id": "run-native",
+      "problem": "tiny",
+      "algorithm": "CUR-NATIVE-GWO",
+      "timestamp": "2026-10-20T09:05:00",
+      "objective_cost": 12.0,
+      "metadata": {"comparison_regime": "native_termination", "protocol_version": "uniride-native-tsp-v1"}
+    },
+    {
+      "label": "exact",
+      "run_id": "run-exact",
+      "problem": "tiny",
+      "algorithm": "EXACT-HIGHS",
+      "timestamp": "2026-10-20T09:10:00",
+      "objective_cost": 10.0,
+      "metadata": {"protocol": "exact_reference_v1"}
+    },
+    {
+      "label": "historical_unverified",
+      "run_id": "run-fixed",
+      "problem": "tiny",
+      "algorithm": "HIST-OLD-GA",
+      "timestamp": "2026-06-30T20:05:09",
+      "objective_cost": 5.0,
+      "metadata": {}
+    },
+    {
+      "label": "invalid",
+      "run_id": "run-fixed",
+      "problem": "tiny",
+      "algorithm": "ga_split_hf",
+      "timestamp": "2026-10-20T09:15:00",
+      "objective_cost": 1.0,
+      "metadata": {"obsolete": true}
+    },
+    {
+      "label": "invalid_and_historical",
+      "run_id": "run-fixed",
+      "problem": "tiny",
+      "algorithm": "ga_split_enhanced",
+      "timestamp": "2026-06-30T21:00:00",
+      "objective_cost": 2.0,
+      "metadata": {"obsolete": true}
+    }
+  ]
+}

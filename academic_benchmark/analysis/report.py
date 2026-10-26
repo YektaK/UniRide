@@ -45,6 +45,7 @@ from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.contracts.run_index import RunIndexV1
 from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.fairness import normalize_problem
+from academic_benchmark.obsolete_results import CURRENT_EVIDENCE, evidence_refusal
 from academic_benchmark.studies.smoke import StudySmokeError, assert_no_ranking_words
 
 REPORT_SCHEMA = "uniride-descriptive-report/v1"
@@ -58,7 +59,6 @@ EVALUATIONS_FIELD = "objective_evaluations"
 BUDGET_FIELD = "evaluation_budget"
 FIXED_GROUP = "fixed_budget"
 NATIVE_GROUP = "native"
-CURRENT_EVIDENCE = (None, "current", "CURRENT")
 NO_REASON = "no reason recorded"
 VARIABLE_LABELS = {
     "cost": "tour cost (objective_cost)",
@@ -128,6 +128,9 @@ def _split(items: Iterable[tuple]) -> tuple:
             )
         if row.get("evidence_class") not in CURRENT_EVIDENCE:
             raise ReportError(f"evidence_class {row.get('evidence_class')!r}: historical_unverified and invalid rows are never reported (A13)")
+        reason = evidence_refusal(row)  # INVALID marker (A06), Gate D D-08b
+        if reason:
+            raise ReportError(reason)
         if GAP_COLUMN not in row:
             raise ReportError(f"a row has no {GAP_COLUMN} column: rows must come through analysis.gaps.add_gap_columns (D-06)")
         good.append((row, manifest))

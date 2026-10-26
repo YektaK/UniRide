@@ -1138,7 +1138,7 @@ def test_certify_error_is_bounded_and_independent_of_exception_message(monkeypat
 class _EuclideanLoader:
     """Coordinate-fallback submatrix mirroring the real DataLoader."""
 
-    def get_submatrix(self, request_locations, coordinates=None, geo_coords=False, asymmetric_haversine=False):
+    def get_submatrix(self, request_locations, coordinates=None, geo_coords=False):
         n = len(request_locations)
         coords = coordinates or {}
         matrix = [[0.0] * n for _ in range(n)]

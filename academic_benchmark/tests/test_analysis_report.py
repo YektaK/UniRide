@@ -553,8 +553,16 @@ def test_the_smoke_report_carries_the_index_the_run_wrote(tmp_path):
     assert f"index sha256 {_sha(out / 'run_index.json')}" in run.text
 
 
+def _head(root):
+    import subprocess
+
+    revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, timeout=60).stdout.decode().strip()
+    return {"revision": revision, "dirty": False}
+
+
 def _campaign_dir(tmp_path):
-    run, out, root = _smoke_with(tmp_path, _raises(FileNotFoundError("none")))
+    # a campaign that recorded the real HEAD of the fixture repository: the rebuild reads the analysis plan from git at that commit
+    run, out, root = _smoke_with(tmp_path, _raises(FileNotFoundError("none")), git=_head)
     return run, out, root
 
 

@@ -781,7 +781,7 @@ class ThreeOptLocalSearch(BaseLocalSearch):
 
         result = improve_three_opt(
             route_indices.tolist(),
-            dist_matrix,
+            np.asarray(dist_matrix).tolist(),
             max_iterations=self.max_iterations,
             first_improvement=self.first_improvement,
             window=self.window,
@@ -1182,7 +1182,7 @@ def improve_route_numba(
         return _two_opt_improve_numba(route, dist_matrix, max_iterations, False)
     elif ls_type == "three_opt":
         result = improve_three_opt(
-            route.tolist(), dist_matrix, max_iterations=max_iterations
+            route.tolist(), np.asarray(dist_matrix).tolist(), max_iterations=max_iterations
         )
         return np.asarray(result.route, dtype=np.int64), result.cost
     elif ls_type == "or_opt":
@@ -1195,7 +1195,7 @@ def improve_route_numba(
         best_route, best_length = _or_opt_improve_numba(best_route, dist_matrix, max_iterations // 3, 3)
         result = improve_three_opt(
             best_route.tolist(),
-            dist_matrix,
+            np.asarray(dist_matrix).tolist(),
             max_iterations=max_iterations // 3,
         )
         return np.asarray(result.route, dtype=np.int64), result.cost

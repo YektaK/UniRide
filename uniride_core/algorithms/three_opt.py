@@ -14,7 +14,6 @@ parity with these neighborhoods.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from itertools import combinations, permutations, product
 import math
 from typing import Iterable, List, Optional, Sequence, Tuple
 
@@ -75,12 +74,17 @@ def iter_three_opt_cuts(n: int, window: Optional[int] = None) -> Iterable[Tuple[
     if window is not None and window < 2:
         raise ValueError("3-opt window must be at least 2")
 
-    for i, j, k in combinations(range(n), 3):
-        if j - i < 2 or k - j < 2 or n - k + i < 2:
-            continue
-        if window is not None and (j - i > window or k - j > window):
-            continue
-        yield i, j, k
+    # Direct generation in the historical lexicographic order (i, then j, then
+    # k): only triples that satisfy the separation rules and the window are
+    # visited, instead of scanning all C(n, 3) triples and filtering (M25-a).
+    max_gap = n if window is None else window
+    for i in range(n - 4):
+        j_stop = min(i + max_gap, n - 3)
+        for j in range(i + 2, j_stop + 1):
+            # k < n and the wrap-around segment needs n - k + i >= 2.
+            k_stop = min(j + max_gap, n - 1, n + i - 2)
+            for k in range(j + 2, k_stop + 1):
+                yield i, j, k
 
 
 def _rotate_to_anchor(route: Sequence[int], anchor: int) -> List[int]:
@@ -88,24 +92,27 @@ def _rotate_to_anchor(route: Sequence[int], anchor: int) -> List[int]:
     return list(route[idx:]) + list(route[:idx])
 
 
-def _directed_cycle_key(route: Sequence[int]) -> Tuple[int, ...]:
-    values = tuple(route)
-    return min(values[idx:] + values[:idx] for idx in range(len(values)))
-
-
-def _symmetric_cycle_key(route: Sequence[int]) -> Tuple[int, ...]:
-    values = tuple(route)
-    reverse = tuple(reversed(values))
-    rotations = [values[idx:] + values[:idx] for idx in range(len(values))]
-    rotations.extend(reverse[idx:] + reverse[:idx] for idx in range(len(reverse)))
-    return min(rotations)
-
-
-def _undirected_edges(route: Sequence[int]) -> frozenset[frozenset[int]]:
-    return frozenset(
-        frozenset((node, route[(idx + 1) % len(route)]))
-        for idx, node in enumerate(route)
-    )
+# Symmetric reconnection table (M25-b).  For a cut triple the cycle is three
+# segments S1 = route[i+1:j+1], S2 = route[j+1:k+1], S3 = route[k+1:] +
+# route[:i+1].  Every one of the 48 (segment order, reversal flags)
+# arrangements is, as an undirected cycle, equal to exactly one of 8 classes
+# (the identity plus 7 reconnections) whenever each segment has at least two
+# nodes, which the admitted cuts guarantee.  The historical generator kept the
+# first-encountered arrangement per class in (order, flags) iteration order;
+# for every class that arrangement has the identity segment order, so the 7
+# non-identity classes are the reversal-flag patterns below, with the number of
+# undirected edges they change (2 for the three 2-opt equivalents, 3 for the
+# four genuine 3-opt edge sets).  Exact parity with the historical generator
+# is proven by test_three_opt_candidate_parity.py.
+_SYMMETRIC_RECONNECTIONS: Tuple[Tuple[Tuple[bool, bool, bool], int], ...] = (
+    ((False, False, True), 2),
+    ((False, True, False), 2),
+    ((False, True, True), 3),
+    ((True, False, False), 2),
+    ((True, False, True), 3),
+    ((True, True, False), 3),
+    ((True, True, True), 3),
+)
 
 
 def generate_three_opt_candidates(
@@ -139,36 +146,22 @@ def generate_three_opt_candidates(
     anchor = route_list[0]
 
     if directed:
-        original_key = _directed_cycle_key(route_list)
-        candidates = {}
-        for order in permutations(range(3)):
-            candidate = [node for segment_idx in order for node in segments[segment_idx]]
-            key = _directed_cycle_key(candidate)
-            if key != original_key:
-                candidates.setdefault(key, _rotate_to_anchor(candidate, anchor))
-        return [candidates[key] for key in sorted(candidates)]
+        # The only non-identity orientation-preserving reconnection is
+        # S1 + S3 + S2 (the other cyclic order of the three arcs).
+        candidate = segments[0] + segments[2] + segments[1]
+        return [_rotate_to_anchor(candidate, anchor)]
 
-    original_key = _symmetric_cycle_key(route_list)
-    original_edges = _undirected_edges(route_list)
-    candidates = {}
-    for order in permutations(range(3)):
-        for reversed_flags in product((False, True), repeat=3):
-            candidate: List[int] = []
-            for segment_idx, reverse_segment in zip(order, reversed_flags):
-                segment = segments[segment_idx]
-                candidate.extend(reversed(segment) if reverse_segment else segment)
-            key = _symmetric_cycle_key(candidate)
-            if key != original_key:
-                candidates.setdefault(key, _rotate_to_anchor(candidate, anchor))
-
-    ordered = list(candidates.values())
-    ordered.sort(
-        key=lambda candidate: (
-            len(original_edges - _undirected_edges(candidate)),
-            tuple(candidate),
-        )
-    )
-    return ordered
+    # Same ordering as the historical generator: edges changed first, then the
+    # anchor-rotated node sequence.  Lists compare like the former tuples.
+    keyed = []
+    for flags, edges_changed in _SYMMETRIC_RECONNECTIONS:
+        candidate: List[int] = []
+        for segment, reverse_segment in zip(segments, flags):
+            candidate.extend(reversed(segment) if reverse_segment else segment)
+        rotated = _rotate_to_anchor(candidate, anchor)
+        keyed.append((edges_changed, rotated))
+    keyed.sort()
+    return [rotated for _, rotated in keyed]
 
 
 def _validate_problem(route: Sequence[int], matrix: Sequence[Sequence[float]]) -> None:

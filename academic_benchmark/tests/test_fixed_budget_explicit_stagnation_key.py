@@ -115,6 +115,26 @@ def test_helper_checks_the_global_stage_of_a_composite(algorithm_id, namespace_m
         require_fixed_budget_max_no_improvement(algorithm_id, {"global": {"pack_size": 4}, "polish": {}})
 
 
+@pytest.mark.parametrize("algorithm_id", ["Core-GWO-TSP-Memetic-ALNS", "Core-HHO-TSP-Memetic-ALNS"])
+@pytest.mark.parametrize("polish", [None, {}, {"max_iterations": 5}, {"max_no_improvement": 0}, {"max_no_improvement": True}])
+def test_helper_checks_the_polish_stage_of_an_alns_composite(algorithm_id, polish):
+    # the global stage is complete, so only the ALNS polish block can make this refuse (A17 2026-10-23 follow-up)
+    params = {"global": {"max_no_improvement": 7}}
+    if polish is not None:
+        params["polish"] = polish
+    with pytest.raises(ValueError, match=rf"{algorithm_id} polish stage.*max_no_improvement"):
+        require_fixed_budget_max_no_improvement(algorithm_id, params)
+    params["polish"] = {"max_no_improvement": 3}
+    require_fixed_budget_max_no_improvement(algorithm_id, params)  # both stages write the key: accepted
+
+
+@pytest.mark.parametrize("algorithm_id", ["Core-GWO-TSP-Memetic-3opt", "Core-HHO-TSP-Memetic-3opt"])
+def test_helper_does_not_ask_a_3opt_composite_for_a_polish_stagnation_key(algorithm_id):
+    # the 3-opt polish has no max_no_improvement; only the ALNS polish is checked
+    require_fixed_budget_max_no_improvement(algorithm_id, {"global": {"max_no_improvement": 7}, "polish": {}})
+    require_fixed_budget_max_no_improvement(algorithm_id, {"global": {"max_no_improvement": 7}})
+
+
 def _fair_config(tmp_path: Path, gwo: dict, hho: dict) -> Path:
     config = {
         "protocol_version": "uniride-fair-tsp-v2",

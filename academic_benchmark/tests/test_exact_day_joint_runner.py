@@ -16,6 +16,7 @@ import json
 import shutil
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -757,6 +758,66 @@ def test_a_bad_probe_retries_value_is_a_manifest_problem():
         problems = rj.strict_manifest_problems({"run_history": {"probe_retries": bad}})
         assert any("probe_retries" in p for p in problems), bad
     assert rj.strict_manifest_problems({"run_history": {"probe_retries": 2}}) == []
+
+
+class _FakeProbeSession:
+    """A session that only carries a probe-retry count; no solver, no licence."""
+
+    def __init__(self, probe_retries):
+        self.probe_retries = probe_retries
+        self.closed = False
+
+    def open(self):
+        return None
+
+    def close(self):
+        self.closed = True
+
+
+def _real_deps_with_fake_sessions(monkeypatch, cfg, gurobi_probes, wave_probes=0):
+    """``real_deps(cfg)`` with the Gurobi and AMPL sessions replaced by fakes; returns (deps, sessions)."""
+    sessions = []
+
+    def fake_open_session(settings):
+        sessions.append(_FakeProbeSession(gurobi_probes))
+        return sessions[-1]
+
+    class FakeAmplSession(_FakeProbeSession):
+        def __init__(self, settings):
+            super().__init__(wave_probes)
+            sessions.append(self)
+
+    monkeypatch.setattr(rj.gdb, "open_session", fake_open_session)
+    monkeypatch.setattr(rj.gdb, "run_day_stages_gurobi", lambda instance, session, **kw: "stages")
+    monkeypatch.setattr(rj.ab, "AmplSession", FakeAmplSession)
+    monkeypatch.setattr(rj.ab, "solve_wave", lambda *a, **k: "wave")
+    return rj.real_deps(cfg), sessions
+
+
+def test_real_deps_counts_the_gurobi_session_probe_retries_and_keeps_them_after_close(monkeypatch):
+    deps, sessions = _real_deps_with_fake_sessions(monkeypatch, rj.Config(wave_values="trivial"), gurobi_probes=2)
+    assert deps.probe_retries() == 0  # no session opened yet
+    assert deps.gurobi_run(object(), settings=SimpleNamespace(option_string=lambda: "", time_limit=1.0)) == "stages"
+    deps.close()
+    assert sessions[0].closed and deps.probe_retries() == 2  # read after close, as the manifest writer does
+
+
+def test_real_deps_adds_the_wave_session_probe_retries_to_the_gurobi_ones(monkeypatch):
+    deps, sessions = _real_deps_with_fake_sessions(monkeypatch, rj.Config(), gurobi_probes=2, wave_probes=3)
+    deps.gurobi_run(object(), settings=SimpleNamespace(option_string=lambda: "", time_limit=1.0))
+    assert deps.wave_solver(None, None, "large", "highs", 1) == "wave"
+    assert deps.wave_solver(None, None, "large", "gurobi", 1) == "wave"  # two wave sessions of 3 each
+    assert len(sessions) == 3 and deps.probe_retries() == 2 + 3 + 3
+
+
+def test_the_probe_count_of_real_deps_reaches_the_manifest(tmp_path, monkeypatch):
+    real, _ = _real_deps_with_fake_sessions(monkeypatch, rj.Config(wave_values="trivial"), gurobi_probes=2)
+    real.gurobi_run(object(), settings=SimpleNamespace(option_string=lambda: "", time_limit=1.0))
+    deps = make_deps()  # fake solvers for the day work; only the session accounting comes from real_deps
+    deps.close, deps.probe_retries = real.close, real.probe_retries
+    rc, out = run(tmp_path, "--fleets", rj.HOMOGENEOUS, *SUBSET, deps=deps)
+    manifest = json.loads((out / rj.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert rc == 0 and manifest["run_history"]["probe_retries"] == 2
 
 
 def test_the_wave_solver_sums_the_probe_retries_of_its_sessions():

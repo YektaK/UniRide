@@ -104,12 +104,27 @@ def test_every_catalog_id_is_a_normative_row_or_a_listed_design_addition():
     assert set(_design_rows()) <= set(_catalog())
 
 
+def _decision_log_section(log: str, heading: str) -> str:
+    """The text of the ``### <heading>`` section: it ends at the next ``## `` or ``### `` heading."""
+    section = log[log.index("### " + heading):]
+    ends = [i for i in (section.find("\n## ", 1), section.find("\n### ", 1)) if i != -1]
+    return section[:min(ends)] if ends else section
+
+
+def test_the_decision_log_section_window_stops_at_the_next_level_two_or_three_heading():
+    log = ("## Top\n### A17 - plan\nbody mentions Core-GA-TSP-Memetic-2opt\n"
+           "## Daily workflow\nunrelated text with Other-ID\n### A18 - next\nmore Other-ID\n")
+    assert _decision_log_section(log, "A17 - plan") == "### A17 - plan\nbody mentions Core-GA-TSP-Memetic-2opt"
+    # a level-three heading ends the window too, and the last section runs to the end of the text
+    assert "Other-ID" not in _decision_log_section(log.replace("## Daily workflow", "### X"), "A17 - plan")
+    assert _decision_log_section(log, "A18 - next") == "### A18 - next\nmore Other-ID\n"
+    # a "## " heading inside the window must not leak the next section's text into it
+    assert "Other-ID" not in _decision_log_section("### A17 - plan\nid\n## Next\nOther-ID\n", "A17 - plan")
+
+
 @pytest.mark.parametrize("canonical_id,heading", sorted(DESIGN_ADDITIONS.items()))
 def test_each_design_addition_is_recorded_in_the_decision_log(canonical_id, heading):
-    log = DECISION_LOG.read_text(encoding="utf-8")
-    section = log[log.index("### " + heading):]
-    next_heading = section.find("\n### ", 1)
-    section = section if next_heading == -1 else section[:next_heading]
+    section = _decision_log_section(DECISION_LOG.read_text(encoding="utf-8"), heading)
     assert canonical_id in section, f"{canonical_id} is not recorded under '{heading}'"
 
 

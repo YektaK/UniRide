@@ -382,6 +382,30 @@ def test_probe_verdict_follows_the_termination_reason_and_prints_it(bildiri):
     assert "stop: evaluation_budget_exhausted" in render_report(bildiri, spec, cells, slack, estimate(cells, slack), stub_provenance())
 
 
+def test_probe_without_a_termination_reason_binds_exactly_when_it_consumed_less_than_the_level(bildiri):
+    # the reason-less fallback of _limit_binds (D-04b1 open polish): consumed < level binds, consumed == level does not
+    _, _, short = _probe_calibration(bildiri, None, 1237490)
+    assert short.probes and all(p.termination_reason is None and p.limit_binds_before_budget for p in short.probes)
+    _, _, full = _probe_calibration(bildiri, None, 1237500)
+    assert full.probes and all(p.termination_reason is None and not p.limit_binds_before_budget for p in full.probes)
+
+
+def test_limit_binds_uses_the_reason_when_there_is_one_and_the_consumed_count_only_without_it():
+    from academic_benchmark.studies.estimate import BUDGET_REASON, _limit_binds
+
+    assert _limit_binds(None, 99, 100) is True and _limit_binds(None, 100, 100) is False
+    assert _limit_binds(BUDGET_REASON, 1, 100) is False  # a reason wins over the count
+    assert _limit_binds("max_no_improvement", 100, 100) is True
+
+
+def test_more_polish_than_objective_evaluations_is_not_separable_even_when_the_time_would_stay_positive():
+    # objective_count = 1000 - 1200 < 0: the subtraction would ADD 0.2 s to the polish time and look like a valid derivation
+    rows = _split_rows(_point("Core-GWO-TSP-Pure", 1.0, 1000), _point("Core-GWO-TSP-Memetic-2opt", 0.5, 1000, polish=1200))
+    row = rows["Core-GWO-TSP-Memetic-2opt"]
+    assert row.polish_seconds_per_evaluation is None and row.objective_seconds_per_evaluation is None
+    assert row.source.startswith("not separable") and "derived" not in row.source
+
+
 # ------------------------------------------------------------------------------- D-04b1 DUZELT r1: preload and guard
 def test_real_solver_builds_every_problem_before_the_first_timed_call(bildiri, monkeypatch):
     from academic_benchmark.studies import estimate as estimate_module

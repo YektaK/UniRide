@@ -849,6 +849,21 @@ def test_the_comparison_uses_the_solvers_bound_not_the_snapped_one(monkeypatch):
     assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT)
 
 
+@pytest.mark.parametrize("excess,note", [
+    (5e-7, False),    # DECISION_LOG 2026-10-22 open polish: bound = raw + 5e-7 is inside the float margin
+    (1.5e-6, False),  # just below the margin _BOUND_TOL + 1e-9 * |raw| = 1e-6 + 5.4e-7 = 1.54e-6
+    (1.6e-6, True),   # just above the margin: no longer the solver's own number
+])
+def test_the_float_margin_of_the_solvers_own_number_has_its_boundary_at_bound_tol_plus_relative_noise(monkeypatch, excess, note):
+    values = [4 + 1e-7, 3 + 5.8333333e-8, 0.0]
+    raw = 540.0000123
+    solved = _solve_model_stage(monkeypatch, _model_for((81, 72, 66), (4, 3, 0)), raw, values, bound=raw + excess)
+    r = solved.result
+    assert r.objective == 540 and r.bound_ceil == 540
+    assert str(r.solver_message).startswith(BOUND_ABOVE_INCUMBENT) is note, (excess, r.solver_message)
+    assert _claim_kept(r).proof_claim_allowed is (not note)
+
+
 # ---------------------------------------------------------------- E14 (2026-10-22): licence-type failures are retried
 @pytest.fixture(autouse=True)
 def _no_real_pause(monkeypatch):

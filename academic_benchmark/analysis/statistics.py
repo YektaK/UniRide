@@ -589,34 +589,46 @@ def _check_index_algorithms(run_index: RunIndexV2, study: StudyManifestV1) -> No
             )
 
 
+NOT_A_LEVEL = -1  # level position of a raw budget that is not in the profile's level list of the instance
+
+
+def _level_index_of(study: StudyManifestV1, dataset_id: str, budget: Any) -> Optional[int]:
+    """Position of the raw ``budget`` in the profile's level list of ``dataset_id`` (the position is what the run id's
+    ``fixed-l<position>`` token and the comparison key's ``budget_level_index`` carry, and it is the same on every instance of a
+    family while the raw budget is not). ``None`` for no budget (a native run); ``NOT_A_LEVEL`` for a budget that is no level."""
+    if budget is None:
+        return None
+    if study.fixed_budget_levels is not None:
+        levels = list(study.fixed_budget_levels)
+    elif study.scaled_fixed_budget_levels is not None:
+        levels = list(study.scaled_fixed_budget_levels.levels_by_dataset.get(dataset_id, ()))
+    else:
+        levels = []
+    return levels.index(budget) if budget in levels else NOT_A_LEVEL
+
+
 def _check_failed_against_index(
     run_index: RunIndexV2, failed: Sequence[Mapping[str, Any]], *, family: Any, protocol_version: Any,
-    analysed_instances: set, budgets: Mapping[str, set],
+    analysed_instances: set, study: StudyManifestV1, analysed_level: Optional[int],
 ) -> None:
     """OQ-9 a stays (listed failures are excluded and reported), but the failures are verified, not trusted: every failed row
     must be a failure the verified run index lists, and every failure the index lists within this family's scope (its protocol,
-    its instances, the analysed budget levels) must be among the rows. Each listed run counts once (D-05 follow-up, D-10 G7)."""
+    its declared instances, the analysed budget level) must be among the rows. Each listed run counts once (D-05 follow-up, D-10 G7).
+    The analysed level is one for the whole family (``analysed_level``, the level index of the completed rows' comparison key), so an
+    instance whose every run failed is demanded like any other: its failures are matched at that level index through the profile's
+    level list of the instance, not through whatever level its (possibly absent) completed rows have."""
     rows = Counter(
         (row["algorithm_id"], normalize_problem(row["problem"]), row.get("evaluation_budget"), row.get("replicate")) for row in failed
     )
     listed: Counter = Counter()
-    # the analysed level of an instance = the budgets of its completed rows, else of the failed rows given for it. An instance with
-    # no row at the analysed level has no level the check can name, so none of its listed failures is demanded (the family reports
-    # the instance as having no rows); failures listed at another level are never demanded as rows
-    levels: dict = {identity: set(known) for identity, known in budgets.items()}
-    for row in failed:
-        identity = normalize_problem(row["problem"])
-        if not levels.get(identity):
-            levels.setdefault(identity, set()).add(row.get("evaluation_budget"))
     for record in run_index.failed_runs:
         identity = normalize_problem(record.problem)
         if record.protocol_version != protocol_version or f"tsplib-{identity}" not in family.dataset_ids:
             continue
         if family.scope == "per_instance" and identity not in analysed_instances:
             continue
-        known = levels.get(identity)
-        if not known or record.evaluation_budget not in known:
-            continue
+        if _level_index_of(study, f"tsplib-{identity}", record.evaluation_budget) != analysed_level:
+            continue  # another level than the family's: outside this analysis, neither demanded nor reported
         listed[(record.algorithm_id, identity, record.evaluation_budget, record.replicate)] += 1
     for key in sorted((rows - listed).elements(), key=str):
         raise StatisticsRefusal(
@@ -746,9 +758,8 @@ def analyse_family(
             raise StatisticsRefusal(f"duplicate replicate {replicate} for {row['algorithm_id']!r} on {row['problem']!r}")
         cell[replicate] = _gap_of(row, unit)
 
-    budgets: dict = {}
-    for row, _ in good:
-        budgets.setdefault(normalize_problem(row["problem"]), set()).add(row.get("evaluation_budget"))
+    # one analysed level for the family, from the comparison key every completed row of every instance shares (None: native protocol)
+    analysed_level = identity_family.shared["budget_level_index"]
     expected_algorithms = _expected_algorithms(study, identity_family.pooling_group)
     protocol_version = identity_family.shared["protocol_version"]
     analysed_instances = {normalize_problem(row["problem"]) for row, _ in good}
@@ -775,12 +786,15 @@ def analyse_family(
                 f"a failed run of {algorithm!r} is on {problem!r}, not on the analysed instance {sorted(analysed_instances)}; "
                 "a per-instance family is analysed one instance at a time"
             )
-        known = budgets.get(identity)
-        if known and row.get("evaluation_budget") not in known:
-            raise StatisticsRefusal(f"a failed run of {algorithm!r} on {problem!r} belongs to another budget level than the analysed rows")
+        if _level_index_of(study, f"tsplib-{identity}", row.get("evaluation_budget")) != analysed_level:
+            raise StatisticsRefusal(
+                f"a failed run of {algorithm!r} on {problem!r} belongs to another budget level than the analysed one "
+                f"(level index {analysed_level}); the level is the family's, whether or not the instance has completed rows"
+            )
         failed_counts[(identity, algorithm)] = failed_counts.get((identity, algorithm), 0) + 1
     _check_failed_against_index(
-        run_index, failed, family=family, protocol_version=protocol_version, analysed_instances=analysed_instances, budgets=budgets
+        run_index, failed, family=family, protocol_version=protocol_version, analysed_instances=analysed_instances,
+        study=study, analysed_level=analysed_level,
     )
     exclusions = [
         {"algorithm_id": algorithm, "dataset_identity": dataset, "failed_runs": count,

@@ -167,6 +167,23 @@ def load_study(
         _check_mode(mode)
     path = _resolve_inside(Path(repository_root), study_path, "study path")
     payload = _read_json(path, "study manifest")
+    study = _validated_study(payload, study_path)
+    if mode is not None:
+        resolve_analysis_plan(study, study_path, repository_root=repository_root, mode=mode)
+    return study
+
+
+def load_study_bytes(study_bytes: bytes, study_path: str) -> StudyManifestV1:
+    """Validate study JSON bytes the caller already holds (for example the profile as committed at a campaign's commit) with the same
+    checks as ``load_study``; ``study_path`` is the repository-relative name used in messages."""
+    try:
+        payload = json.loads(study_bytes.decode("utf-8"))
+    except ValueError as exc:
+        raise StudyServiceError(f"study manifest is not readable JSON: {study_path} ({exc})") from exc
+    return _validated_study(payload, study_path)
+
+
+def _validated_study(payload: object, study_path: str) -> StudyManifestV1:
     try:
         study = StudyManifestV1.model_validate(payload)
     except ValidationError as exc:
@@ -200,8 +217,6 @@ def load_study(
             raise StudyServiceError(f"algorithm id {algorithm_id!r} is not canonical: {exc}") from exc
         if resolution.canonical_id != algorithm_id or resolution.alias_used:
             raise StudyServiceError(f"algorithm id {algorithm_id!r} is an alias")
-    if mode is not None:
-        resolve_analysis_plan(study, study_path, repository_root=repository_root, mode=mode)
     return study
 
 

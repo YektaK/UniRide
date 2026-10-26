@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ import test_study_smoke_composite as comp
 from academic_benchmark.analysis.manifests import (
     ManifestError,
     file_sha256,
+    home_relative,
     load_verified_campaign,
     verify_campaign_detailed,
     write_json_with_sidecar,
@@ -122,6 +124,8 @@ def test_a_v1_index_is_not_a_valid_v2_index(paper):
     (lambda d: d["analysis_plan"].update(sha256=None), "a paper index needs the plan file hash"),
     (lambda d: d["analysis_plan"].update(path=None), "a paper index needs the plan file path"),
     (lambda d: d["output_location"].update(path="relative/out"), "the output folder is recorded as an absolute path"),
+    (lambda d: d["output_location"].update(path="~other/out"), "only the own home folder is written as a tilde"),
+    (lambda d: d["output_location"].update(path="~\\out"), "the tilde form is ~ or ~/<rest>"),
     (lambda d: d["output_location"]["outside_repository_check"].update(result="inside_repository"), "only a passed check can be recorded"),
     (lambda d: d["output_location"]["outside_repository_check"].update(checked_against=[]), "the check names what it checked against"),
     (lambda d: d["planned"].update(runs=0), "a campaign plans at least one run"),
@@ -160,9 +164,9 @@ def test_the_paper_index_records_profile_plan_counts_and_output_location(paper):
     assert index.analysis_plan.sha256 == _sha(root / "studies" / "analysis_plan.json")
     assert index.planned.runs == 12 and index.planned.runs_per_cell == 2 and len(index.runs) == 12
     assert index.failed_runs == []
-    assert index.output_location.path == str(out.resolve())
+    assert index.output_location.path == home_relative(out.resolve())  # the home prefix is written as ~ (A20 L8)
     check = index.output_location.outside_repository_check
-    assert check.result == "outside_repository" and str(root.resolve()) in check.checked_against
+    assert check.result == "outside_repository" and home_relative(root.resolve()) in check.checked_against
 
 
 def test_the_recorded_hashes_are_the_ones_the_run_service_hashed(paper):
@@ -325,7 +329,7 @@ def test_a_smoke_index_fills_the_same_fields_and_verifies(smoke):
     assert index.profile.path == "studies/study.json" and index.profile.sha256 == _sha(root / "studies" / "study.json")
     assert index.analysis_plan.analysis_plan_id == "fixture-plan-v1" and index.analysis_plan.sha256 == _sha(root / "studies" / "analysis_plan.json")
     assert index.planned.runs == len(index.runs) == len(comp.COMPOSITES) * 2 and index.planned.runs_per_cell == 1
-    assert index.output_location.path == str(out.resolve())
+    assert index.output_location.path == home_relative(out.resolve())  # the home prefix is written as ~ (A20 L8)
     assert index.output_location.outside_repository_check.result == "outside_repository"
     assert verify_campaign_detailed(out).ok
 
@@ -433,3 +437,139 @@ def test_the_plan_hash_is_recorded_when_the_plan_resolves_even_as_a_draft(smoke)
     index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     assert index.analysis_plan.path == "studies/analysis_plan.json"
     assert index.analysis_plan.sha256 == _sha(root / "studies" / "analysis_plan.json")
+
+
+# ------------------------------------------------------------------------------------------------ failed-run record contract (readiness 2, part 5)
+def _failed_record(**changes) -> dict:
+    record = {
+        "algorithm_id": "a", "dataset_id": "tsplib-eil51", "problem": "eil51", "protocol_version": "uniride-fair-tsp-v2",
+        "comparison_regime": "fixed_evaluation_budget", "evaluation_budget": 63750, "replicate": 0, "stage": "run",
+        "exception_category": "RuntimeError", "error": "synthetic failure",
+    }
+    record.update(changes)
+    return record
+
+
+def test_a_fixed_budget_failed_record_without_an_evaluation_budget_is_refused_not_turned_into_null():
+    from academic_benchmark.analysis.manifests import failed_run_entries
+
+    assert failed_run_entries([_failed_record()])[0].evaluation_budget == 63750
+    missing = _failed_record()
+    del missing["evaluation_budget"]
+    with pytest.raises(ManifestError, match="evaluation_budget"):
+        failed_run_entries([missing])
+    with pytest.raises(ManifestError, match="evaluation_budget"):
+        failed_run_entries([_failed_record(evaluation_budget=None)])
+
+
+def test_a_native_failed_record_has_no_budget_and_is_accepted():
+    from academic_benchmark.analysis.manifests import failed_run_entries
+
+    native = _failed_record(protocol_version="uniride-native-tsp-v1", comparison_regime="algorithm_native_termination", evaluation_budget=None)
+    assert failed_run_entries([native])[0].evaluation_budget is None
+    without_key = dict(native)
+    del without_key["evaluation_budget"]
+    assert failed_run_entries([without_key])[0].evaluation_budget is None  # a native run has no budget to record
+
+
+def test_the_index_contract_itself_refuses_a_fixed_failed_record_without_a_budget(paper):
+    _root, out, _report = paper
+    data = _index_json(out)
+    data["status"], data["failed_runs"] = "failed", [_failed_record(evaluation_budget=None)]
+    with pytest.raises(ValidationError, match="evaluation_budget"):
+        RunIndexV2.model_validate(data)
+
+
+def test_a_negative_replicate_is_refused_by_the_contract_and_the_schema():
+    from academic_benchmark.contracts.run_index import FailedRunV1
+
+    with pytest.raises(ValidationError):
+        FailedRunV1.model_validate(_failed_record(replicate=-1))
+    assert FailedRunV1.model_validate(_failed_record(replicate=0)).replicate == 0
+    schema = json.loads((Path(__file__).resolve().parents[1] / "schemas" / "run-index-v2.schema.json").read_text(encoding="utf-8"))
+    assert schema["$defs"]["FailedRunV1"]["properties"]["replicate"]["minimum"] == 0
+
+
+# ------------------------------------------------------------------------------------------------ L8: no user name in output_location.path
+def _fake_home(monkeypatch, home: Path) -> Path:
+    home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    assert Path.home() == home
+    return home
+
+
+def test_the_output_location_is_written_with_the_home_prefix_replaced_by_a_tilde(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "alice")
+    inside = home / "campaigns" / "paper-1"
+    assert outside_location(inside, [tmp_path / "repo"])["path"] == "~/campaigns/paper-1"
+    assert outside_location(home, [tmp_path / "repo"])["path"] == "~"
+    elsewhere = tmp_path / "data" / "out"
+    assert outside_location(elsewhere, [tmp_path / "repo"])["path"] == str(elsewhere.resolve())  # not under the home folder: unchanged
+    from academic_benchmark.contracts.run_index import OutputLocationV1
+
+    record = outside_location(inside, [tmp_path / "repo"])
+    assert OutputLocationV1.model_validate(record).path == "~/campaigns/paper-1"  # the contract accepts the tilde form
+
+
+def test_only_a_leading_home_prefix_is_replaced(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "bob")
+    lookalike = tmp_path / "bobby" / "out"  # shares the text prefix, is not under the home folder
+    assert outside_location(lookalike, [tmp_path / "repo"])["path"] == str(lookalike.resolve())
+    nested = tmp_path / "x" / "bob" / "out"  # the home folder's name as a later component only
+    assert outside_location(nested, [tmp_path / "repo"])["path"] == str(nested.resolve())
+    assert outside_location(home / "bob" / "bob", [tmp_path / "repo"])["path"] == "~/bob/bob"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="path case is insignificant on Windows only")
+def test_the_home_prefix_is_matched_case_insensitively_on_windows(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "Carol")
+    shouted = Path(str(home).upper()) / "Out"
+    assert outside_location(shouted, [tmp_path / "repo"])["path"] == "~/Out"
+
+
+def test_the_verifier_expands_the_tilde_and_old_absolute_paths_still_verify(smoke, monkeypatch):
+    _root, out, _report = smoke
+    _fake_home(monkeypatch, out.parent)
+    _reseal(out, lambda d: d["output_location"].update(path=f"~/{out.name}"))
+    result = verify_campaign_detailed(out)
+    assert result.ok, result.errors
+    assert not any("recorded output location" in note for note in result.notes)  # ~ expands to this folder: not moved
+    _reseal(out, lambda d: d["output_location"].update(path=str(out.resolve())))  # an index written before L8
+    result = verify_campaign_detailed(out)
+    assert result.ok and not any("recorded output location" in note for note in result.notes)
+    _reseal(out, lambda d: d["output_location"].update(path=f"~/{out.name}"))
+    _fake_home(monkeypatch, out.parent / "elsewhere")  # another home folder: the folder is not where the index says
+    assert any("recorded output location" in note for note in verify_campaign_detailed(out).notes)
+    _reseal(out, lambda d: d["output_location"].update(path=str(out.resolve())))  # leave the shared fixture as it was
+
+
+def test_checked_against_is_written_without_the_home_prefix(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "dora")
+    elsewhere = tmp_path / "mirror" / "repo"
+    record = outside_location(home / "out", [home / "repo", elsewhere, home])
+    assert record["outside_repository_check"]["checked_against"] == ["~/repo", str(elsewhere), "~"]
+    assert str(home) not in json.dumps(record)  # neither the path nor the checked trees carry the user-home prefix
+
+
+def test_an_index_with_absolute_checked_against_paths_still_verifies_and_so_does_the_tilde_form(smoke, monkeypatch):
+    """Nothing in the verifier compares ``checked_against``; old indexes (absolute) and new ones (``~``) both verify."""
+    root, out, _report = smoke
+    original = _index_json(out)["output_location"]["outside_repository_check"]["checked_against"]
+    try:
+        _reseal(out, lambda d: d["output_location"]["outside_repository_check"].update(checked_against=[str(root.resolve())]))
+        assert verify_campaign_detailed(out).ok
+        _fake_home(monkeypatch, root.parent)
+        _reseal(out, lambda d: d["output_location"]["outside_repository_check"].update(checked_against=[f"~/{root.name}"]))
+        result = verify_campaign_detailed(out)
+        assert result.ok, result.errors
+    finally:
+        _reseal(out, lambda d: d["output_location"]["outside_repository_check"].update(checked_against=original))

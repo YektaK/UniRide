@@ -74,7 +74,9 @@ class OutsideRepositoryCheckV1(StrictContract):
 
 
 class OutputLocationV1(StrictContract):
-    """The campaign folder as an absolute path (paths elsewhere in the index are relative to it)."""
+    """The campaign folder as an absolute path (paths elsewhere in the index are relative to it). The user-home prefix is written as
+    ``~`` (``~`` or ``~/<rest>``, A20 L8) so that the index does not carry the user name; indexes written before that keep their
+    absolute path and stay valid."""
 
     path: str = Field(min_length=1)
     outside_repository_check: OutsideRepositoryCheckV1
@@ -82,8 +84,10 @@ class OutputLocationV1(StrictContract):
     @field_validator("path")
     @classmethod
     def path_is_absolute(cls, value: str) -> str:
+        if value == "~" or value.startswith("~/"):
+            return value
         if not (PureWindowsPath(value).is_absolute() or PurePosixPath(value).is_absolute()):
-            raise ValueError("the output folder is recorded as an absolute path")
+            raise ValueError("the output folder is recorded as an absolute path (or as ~/<path> under the user-home folder)")
         return value
 
 
@@ -96,10 +100,17 @@ class FailedRunV1(StrictContract):
     protocol_version: str = Field(min_length=1)
     comparison_regime: str = Field(min_length=1)
     evaluation_budget: Optional[int]
-    replicate: int
+    replicate: int = Field(ge=0)
     stage: str = Field(min_length=1)
     exception_category: str = Field(min_length=1)
     error: str
+
+    @model_validator(mode="after")
+    def fixed_budget_record_has_its_budget(self) -> "FailedRunV1":
+        """A failed run of the fixed-budget regime names the budget it was given; null is for native runs only (no silent null)."""
+        if self.comparison_regime == "fixed_evaluation_budget" and self.evaluation_budget is None:
+            raise ValueError("a failed run of the fixed_evaluation_budget regime needs its evaluation_budget (null is for native runs)")
+        return self
 
 
 class RunIndexV2(StrictContract):

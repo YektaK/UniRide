@@ -9,8 +9,16 @@ report (``analysis.report``) and writes ``descriptive_report.txt/json`` next to 
 the report again from an existing campaign folder (for example after a crash between the run index and the report). Exit codes as in
 ``studies.run``: 0 written, 1 written for a campaign whose run status is "failed", 2 refused (campaign folder inside the repository, a
 folder that does not verify, an exact reference that fails its integrity checks or its cross-check with the published optima, a refused
-report, an analysis plan that cannot be read from git at the campaign's commit). The rebuild reads the analysis plan as committed at the
-commit the campaign recorded (``git show <commit>:<plan>``), not the working-tree file, and compares its hash with the run index.
+report, a study profile or analysis plan that cannot be read from git at the campaign's commit, a profile whose committed bytes do not
+match the recorded hash). The rebuild reads the study profile and the analysis plan as committed at the commit the campaign recorded
+(``git show <commit>:<file>``), not the working-tree files, from the paths the run index recorded (``--study`` overrides the profile path;
+the plan then lies next to it), and compares their hashes with the run index.
+
+Hash comparison differs between the two entry points. The smoke run's own report (``write_smoke_descriptive_report``) compares exact
+bytes: it holds the very file the run service hashed. Only the rebuild, which has git's stored bytes, accepts the LF and the CRLF
+variant of those bytes as the recorded file (a checkout with ``core.autocrlf`` hashes other line endings than the stored blob; A20 L6):
+the bytes as stored, all-LF and all-CRLF, nothing else (no whitespace tolerance, no mixed endings). The plan hash differing is a warning
+for a smoke campaign and a refusal for a paper campaign; the profile hash differing refuses in both modes.
 
 The exact reference is optional for a descriptive report, but only in one sense: when ``results_index.json`` is absent (or lists no
 TSP reference) the gap column is ``null`` with its reason and the report and the run text say so. An integrity refusal of the reference
@@ -166,7 +174,7 @@ def write_smoke_descriptive_report(
 
 
 def _plan_bytes_hashes(plan_bytes: bytes) -> tuple:
-    """The sha256 values that count as "this plan file" for bytes read from git: the bytes as they are, with LF line endings and with
+    """The sha256 values that count as "this plan (or profile) file" for bytes read from git: the bytes as they are, with LF line endings and with
     CRLF line endings. The run service hashed the working-tree file, and a checkout with ``core.autocrlf`` holds the same committed
     blob with other line endings (the known G1 caveat); nothing else is tolerated."""
     lf = plan_bytes.replace(b"\r\n", b"\n")
@@ -181,7 +189,7 @@ def _rebuild(
     """``(lines, run status)`` of a rebuilt report."""
     from academic_benchmark.fair_pilot import _is_within  # local imports: the run service imports this module
     from academic_benchmark.studies.run import _main_working_tree
-    from academic_benchmark.studies.service import ANALYSIS_PLAN_FILENAME, load_study, resolve_analysis_plan_bytes
+    from academic_benchmark.studies.service import ANALYSIS_PLAN_FILENAME, load_study_bytes, resolve_analysis_plan_bytes
 
     output = Path(campaign_dir).expanduser().resolve()
     if not output.is_dir():
@@ -195,18 +203,33 @@ def _rebuild(
         campaign = load_verified_campaign(output, repository_root=root)
     except ManifestError as exc:
         raise CampaignReportError(str(exc)) from exc
-    relative = study_path or f"academic_benchmark/studies/{campaign.index.study_id}/study.json"
-    study = load_study(relative, repository_root=root)
-    # the plan as it was when the campaign ran (git at the campaign's commit), not the working-tree file, which may have moved on
-    commit = campaign.index.git.commit
-    plan_name = (PurePosixPath(relative).parent / ANALYSIS_PLAN_FILENAME).as_posix()
-    try:
-        plan_bytes = run_git(["show", f"{commit}:{plan_name}"], root)
-    except GitQueryFailed as exc:
+    # both files as they were when the campaign ran (git at the campaign's commit), not the working-tree files, which may have moved on;
+    # the paths default to the ones the run index recorded (the plan lies next to the profile when the index recorded none)
+    index = campaign.index
+    commit = index.git.commit
+    relative = study_path or index.profile.path
+    plan_name = (
+        index.analysis_plan.path if study_path is None and index.analysis_plan.path is not None
+        else (PurePosixPath(relative).parent / ANALYSIS_PLAN_FILENAME).as_posix()
+    )
+
+    def committed(name: str, what: str) -> bytes:
+        try:
+            return run_git(["show", f"{commit}:{name}"], root)
+        except GitQueryFailed as exc:
+            raise CampaignReportError(
+                f"the {what} {name} at the campaign commit {commit[:12]} cannot be read from git in {root} ({exc}); "
+                f"the rebuild reads the {what} as it was when the campaign ran, so there is nothing to build the report from"
+            ) from exc
+
+    plan_bytes = committed(plan_name, "analysis plan")
+    profile_bytes = committed(relative, "study profile")
+    if index.profile.sha256 not in _plan_bytes_hashes(profile_bytes):  # the same line-ending rule as the plan (A20 L6)
         raise CampaignReportError(
-            f"the analysis plan {plan_name} at the campaign commit {commit[:12]} cannot be read from git in {root} ({exc}); "
-            "the rebuild reads the plan as it was when the campaign ran, so there is nothing to build the report from"
-        ) from exc
+            f"the study profile {relative} at the campaign commit {commit[:12]} has sha256 {_plan_bytes_hashes(profile_bytes)[0]}, the run "
+            f"index records {index.profile.sha256}: the campaign did not run with the committed profile, so it cannot be rebuilt from it"
+        )
+    study = load_study_bytes(profile_bytes, relative)
     resolution = resolve_analysis_plan_bytes(study, plan_name, plan_bytes, repository_root=root, mode="smoke")
     if resolution.plan is None:
         raise CampaignReportError(

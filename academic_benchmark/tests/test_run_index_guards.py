@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 import test_run_index_v2 as tri
 import test_study_run_service as svc
-from academic_benchmark.analysis.manifests import ManifestError, write_run_campaign
+from academic_benchmark.analysis.manifests import ManifestError, home_relative, write_run_campaign
 from academic_benchmark.contracts.run_index import RunIndexV2
 
 paper = tri.paper
@@ -82,14 +82,14 @@ def test_the_check_lists_the_main_working_tree_when_it_differs_from_the_root(tmp
     main = tmp_path / "main-checkout"
     main.mkdir()
     root, checked = _checked_against(tmp_path, monkeypatch, lambda _root: main)
-    assert checked == [str(root), str(main)]
+    assert checked == [home_relative(root), home_relative(main)]  # the home prefix is written as ~ (A20 L8)
 
 
 def test_the_check_lists_the_root_once_when_it_is_the_main_working_tree(tmp_path, monkeypatch):
     root, checked = _checked_against(tmp_path, monkeypatch, lambda repo: repo)
-    assert checked == [str(root)]
+    assert checked == [home_relative(root)]
 
 
 def test_the_check_lists_only_the_root_when_git_cannot_name_the_main_tree(tmp_path, monkeypatch):
     root, checked = _checked_against(tmp_path, monkeypatch, lambda _repo: None)
-    assert checked == [str(root)]
+    assert checked == [home_relative(root)]

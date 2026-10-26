@@ -93,6 +93,42 @@ def test_a_plan_file_with_another_line_ending_still_counts_as_the_recorded_plan(
     assert hashlib.sha256(raw.replace(b"x", b"y") + b" ").hexdigest() not in hashes
 
 
+def _sha(data: bytes) -> str:
+    import hashlib
+
+    return hashlib.sha256(data).hexdigest()
+
+
+# the committed bytes: one JSON string with a double space inside, three lines, LF endings, a final newline
+_COMMITTED = b'{"title": "two  spaces", "n": [1, 2]}\n{"note": "a\\tb"}\n{"end": true}\n'
+
+
+@pytest.mark.parametrize("name, changed", [
+    ("trailing space", _COMMITTED + b" "),
+    ("leading space", b" " + _COMMITTED),
+    ("final newline removed (strip tolerance)", _COMMITTED.rstrip(b"\n")),
+    ("final newline doubled", _COMMITTED + b"\n"),
+    ("whitespace inside a JSON string changed", _COMMITTED.replace(b"two  spaces", b"two spaces")),
+    ("whitespace inside a JSON string removed", _COMMITTED.replace(b"two  spaces", b"twospaces")),
+    ("all runs of whitespace collapsed", b" ".join(_COMMITTED.split())),
+    ("one line ending changed to CRLF (mixed endings)", _COMMITTED.replace(b"\n", b"\r\n", 1)),
+    ("one line ending left LF among CRLF (mixed endings)", _COMMITTED.replace(b"\n", b"\r\n").replace(b"\r\n", b"\n", 1)),
+    ("a lone CR", _COMMITTED.replace(b"\n", b"\r", 1)),
+    ("every line ending a lone CR", _COMMITTED.replace(b"\n", b"\r")),
+])
+def test_a_changed_plan_file_is_not_the_recorded_plan_whatever_the_whitespace_tolerance(name, changed):
+    """Only the committed bytes, their all-LF form and their all-CRLF form count. A whitespace edit (outside or inside a JSON string),
+    one changed line ending (mixed endings) or a lone CR changes the plan file and must not be accepted: a tolerance that strips or
+    normalises whitespace, or that accepts mixed line endings, fails here."""
+    assert _sha(changed) not in cr._plan_bytes_hashes(_COMMITTED), name
+
+
+def test_exactly_the_committed_bytes_and_their_lf_and_crlf_forms_count():
+    crlf = _COMMITTED.replace(b"\n", b"\r\n")
+    assert set(cr._plan_bytes_hashes(_COMMITTED)) == {_sha(_COMMITTED), _sha(crlf)}  # LF is the committed form here
+    assert set(cr._plan_bytes_hashes(crlf)) == {_sha(_COMMITTED), _sha(crlf)}  # a CRLF blob is accepted in its LF form too
+
+
 # ------------------------------------------------------------------------------------------------ guards without a test of their own
 def test_no_tsp_reference_listed_means_unavailable_not_an_error(tmp_path):
     index = tmp_path / reference_reader.INDEX_RELATIVE_PATH
@@ -136,3 +172,56 @@ def test_the_rebuild_exits_1_for_a_campaign_whose_run_failed(tmp_path):
         (out / name).unlink(missing_ok=True)
     assert cr.main([str(out), *_args(root)]) == 1
     assert (out / "descriptive_report.txt").is_file()  # written even though the campaign failed
+
+
+# ------------------------------------------------------------------------------------------------ the profile as committed (readiness 2)
+def test_the_rebuild_reads_the_study_profile_as_it_was_at_the_campaign_commit(tmp_path):
+    report, out, root = _campaign(tmp_path)
+    assert report.status == "passed", report.text
+    (root / svc.STUDY).write_text("{ this profile is no longer valid JSON", encoding="utf-8")  # a later commit changes the profile
+    svc._git(root, "add", "-A")
+    svc._git(root, "commit", "-q", "-m", "break the profile after the campaign")
+    for name in REPORT_FILES:
+        (out / name).unlink()
+    assert cr.main([str(out), "--repository-root", str(root)]) == 0  # no --study: the recorded path, read at the campaign commit
+    assert (out / "descriptive_report.txt").is_file()
+
+
+def test_the_rebuild_defaults_both_paths_to_the_ones_the_run_index_recorded(tmp_path):
+    _report, out, root = _campaign(tmp_path)  # the fixture's study lives at studies/study.json, not at academic_benchmark/studies/<id>/
+    index = json.loads((out / "run_index.json").read_text(encoding="utf-8"))
+    assert index["profile"]["path"] == svc.STUDY and index["analysis_plan"]["path"] == "studies/analysis_plan.json"
+    assert cr.main([str(out), "--repository-root", str(root)]) == 0
+
+
+def test_the_rebuild_refuses_a_profile_whose_committed_bytes_differ_from_the_recorded_hash(tmp_path, capsys):
+    """The campaign ran on a working-tree profile that was not committed (git state claimed clean): the recorded hash is of bytes git
+    does not have at the campaign commit, so the rebuild cannot reproduce the profile the campaign used."""
+    root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    path = root / svc.STUDY
+    payload = json.loads(path.read_text("utf-8"))
+    payload["paper_metadata"] = {**(payload.get("paper_metadata") or {}), "venue": "edited after the commit"}
+    path.write_text(json.dumps(payload), encoding="utf-8")  # uncommitted edit; the run records its hash
+    out = tmp_path / "out"
+    svc.run_study(
+        svc.STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(), git_provider=_head, replicates=1,
+        reference_table_provider=tar._raises(FileNotFoundError("none")),
+    )
+    assert cr.main([str(out), "--repository-root", str(root)]) == 2
+    err = capsys.readouterr().err
+    assert "REFUSED" in err and "profile" in err and "sha256" in err
+    assert not any((out / name).exists() for name in REPORT_FILES)
+
+
+def test_a_profile_checked_out_with_crlf_line_endings_still_counts_as_the_recorded_profile(tmp_path):
+    root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    path = root / svc.STUDY
+    path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))  # a CRLF checkout of the committed blob (the run hashes this file)
+    plan = root / "studies" / "analysis_plan.json"
+    plan.write_bytes(plan.read_bytes().replace(b"\n", b"\r\n"))
+    out = tmp_path / "out"
+    svc.run_study(
+        svc.STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(), git_provider=_head, replicates=1,
+        reference_table_provider=tar._raises(FileNotFoundError("none")),
+    )
+    assert cr.main([str(out), "--repository-root", str(root)]) == 0

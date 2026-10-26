@@ -1,13 +1,14 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-24 (WIP `25333088` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
+Son güncelleme: 2026-10-26 (WIP `02554692` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
 
 ## Çalışan işler
 
 | İş | Dal | Durum |
 |---|---|---|
 | Sabit bütçede `max_no_improvement` zorunlu + YAEM tohumu 2027 | — | BİRLEŞTİ `e24a5cd1` (Opus ONAY). |
-| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-04b1 (araç + ölçüm), D-05, D-06, D-07, D-08a, D-08b, D-09, D-10, D-14. BİRLEŞTİ ayrıca: tasarım redline (`ae118736`), D-11 (`69bd7168`). Çalışıyor: OQ-4 için ikinci native ölçüm (kroA100). Sıradaki: D-13, D-12 (sahip izniyle); D-04b2 güçlü bilgisayarda. |
+| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-04b1 (araç + ölçüm), D-05, D-06, D-07, D-08a, D-08b, D-09, D-10, D-14. BİRLEŞTİ ayrıca: tasarım redline (`ae118736`), D-11 (`69bd7168`). Çalışıyor: run index tamlığı (`feat/run-index-completeness`, uniride-run-index/v2; Opus denetimi sırada). OQ-4 ölçümü MT6-01 sonrasına ertelendi (sahip OQ-MT6-4). |
+| MT6 (tek kanonik 3-opt, deterministik SOTA durdurma) | — | Plan BİRLEŞTİ `e3be3873`; sahip OQ-MT6-1..7 hepsi öneri (A19). Sıra: MT6-01 hız (sonuç değişmez) → MT6-02 (H10) → MT6-03 (H11); MT6-04 (M14, Dudullu tekrar oynatma sahibe) MT6-01'den sonra; MT6-05; MT6-06 şef ölçümü; MT6-07 kapanış. Sıradaki: D-13, D-12 (sahip izniyle); D-04b2 güçlü bilgisayarda. |
 
 ## Bu turda biten
 

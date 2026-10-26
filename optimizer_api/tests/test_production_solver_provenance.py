@@ -27,6 +27,8 @@ from uniride_core.algorithms.sota_tsp import E2BSOTSPConfig, PAOEAConfig, R2DMAT
 
 import test_sota_adapter_truth as truth
 
+pytestmark = pytest.mark.usefixtures("stub_arc_capture")
+
 STRATEGIES = [
     (ebso_strategy, ebso_strategy.E2BSoStrategy, "E2BSO_TSP", "e2bso"),
     (rdma_strategy, rdma_strategy.R2DMAStrategy, "R2DMA_TSP", "r2dma"),
@@ -58,7 +60,8 @@ def test_default_deadline_reaches_the_effective_request_config(cls, name):
     resolution = resolve_strategy(name)
     effective, metadata = apply_compute_policy(request, resolution, resolution.create(), HARD_CEILINGS)
     assert effective.sota_config["deadline_seconds"] == 60
-    assert metadata.limits["deadline_seconds"].source is schemas.PolicyValueSource.STRATEGY_DEFAULT
+    # the policy module may load models.schemas under its package name: compare by value
+    assert metadata.limits["deadline_seconds"].source.value == "strategy_default"
 
 
 def test_core_and_academic_defaults_stay_unbounded():

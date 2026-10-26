@@ -584,6 +584,13 @@ class OptimizationResponse(BaseModel):
     # ``algorithm_used`` is "greedy_fallback" and ``algorithm_requested``
     # keeps the request. Absent from the JSON when unset.
     fallback_reason: Optional[str] = None
+    # A20 L3: set to "wall_clock_deadline" only when a SOTA solver stopped at its
+    # wall-clock deadline (so the result is not a pure function of seed + config).
+    # Absent from the JSON otherwise, so normal responses stay byte-identical.
+    termination_reason: Optional[str] = None
+    # A20 L2: build identifier from the UNIRIDE_BUILD_COMMIT environment variable,
+    # set by the router; absent from the JSON when the variable is unset/invalid.
+    solver_code_version: Optional[str] = None
 
     @model_serializer(mode="wrap")
     def _omit_unset_optional_fields(self, handler):
@@ -594,6 +601,8 @@ class OptimizationResponse(BaseModel):
                 "effective_config_source",
                 "effective_seed",
                 "fallback_reason",
+                "termination_reason",
+                "solver_code_version",
             ):
                 if data.get(key) is None:
                     data.pop(key, None)

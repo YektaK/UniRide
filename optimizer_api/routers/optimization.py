@@ -9,9 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException
 try:
     from optimizer_api.auth import require_tenant_authorization
     from optimizer_api.rate_limit import require_rate_limit
+    from optimizer_api.runtime_config import solver_code_version
 except ModuleNotFoundError:  # direct-module compatibility
     from auth import require_tenant_authorization
     from rate_limit import require_rate_limit
+    from runtime_config import solver_code_version
 
 try:
     from optimizer_api.compute_policy import (
@@ -282,6 +284,8 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
         if result.fallback_reason is None:
             result.algorithm_used = resolution.canonical
         result.algorithm_requested = resolution.requested
+        # A20 L2: build stamp from UNIRIDE_BUILD_COMMIT (None, hence omitted, when unset)
+        result.solver_code_version = solver_code_version()
         result.applied_policy = AppliedComputePolicyInfo.model_validate(
             applied_policy.model_dump()
         )

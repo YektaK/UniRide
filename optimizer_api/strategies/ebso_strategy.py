@@ -23,7 +23,7 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from strategies.promoted_config_loader import get_promoted_params
-from strategies.sota_config_utils import merge_sota_config
+from strategies.sota_config_utils import PRODUCTION_DEADLINE_SECONDS, merge_sota_config
 from strategies.sota_response_builder import build_single_route_response, build_sota_request_context
 from uniride_core.algorithms.sota_tsp import E2BSO_TSP, E2BSOTSPConfig
 from uniride_core.adapters.sota_tsp_strategy_adapter import solve_student_order_with_sota_tsp
@@ -44,7 +44,7 @@ class E2BSoStrategy(BaseRoutingStrategy):
     """
 
     def __init__(self, config: Optional[E2BSOTSPConfig] = None):
-        default_config = config or E2BSOTSPConfig(population_size=24, max_iterations=200)
+        default_config = config or E2BSOTSPConfig(population_size=24, max_iterations=200, deadline_seconds=PRODUCTION_DEADLINE_SECONDS)
         promoted = {} if config is not None else get_promoted_params(("e2bso", "entropy_bso", "e2b"))
         self._config = merge_sota_config(default_config, promoted)
 
@@ -110,5 +110,6 @@ class E2BSoStrategy(BaseRoutingStrategy):
             distance_lookup=distance_lookup,
             execution_time_seconds=time.time() - start_time,
             fallback_reason=outcome.fallback_reason,
+            termination_reason=outcome.termination_reason,
         )
 

@@ -7,6 +7,11 @@ from typing import Any, Dict, Optional, Tuple, TypeVar
 
 T = TypeVar("T")
 
+#: Production default wall-clock deadline of the SOTA strategies ``ebso``/``rdma``/``aoea``
+#: (DECISION_LOG A20 L3). Equals the compute-policy ceiling ``solver_seconds``. Academic paths
+#: and the ``uniride_core`` config defaults keep ``deadline_seconds=None`` (iteration limits only).
+PRODUCTION_DEADLINE_SECONDS = 60
+
 #: Old request key mapped to ``deadline_seconds`` for one release (MT6-03 / audit H11).
 LEGACY_DEADLINE_KEY = "time_limit"
 #: Old per-layer local-search clock. Accepted and ignored: local search no longer has a clock.
@@ -58,4 +63,10 @@ def merge_sota_config(base_config: T, overrides: Optional[Dict[str, Any]]) -> T:
     return replace(base_config, **clean) if clean else base_config
 
 
-__all__ = ["LEGACY_DEADLINE_KEY", "LEGACY_IGNORED_KEY", "merge_sota_config", "split_legacy_sota_keys"]
+__all__ = [
+    "LEGACY_DEADLINE_KEY",
+    "LEGACY_IGNORED_KEY",
+    "PRODUCTION_DEADLINE_SECONDS",
+    "merge_sota_config",
+    "split_legacy_sota_keys",
+]

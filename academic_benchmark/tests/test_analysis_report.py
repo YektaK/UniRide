@@ -360,6 +360,19 @@ def test_the_inferential_section_of_a_paper_report_is_the_d05_output_quoted_verb
     json.dumps(report.data)  # the whole report is JSON-serialisable
 
 
+def test_a_paper_report_has_its_own_schema_name_and_title_and_a_smoke_report_keeps_the_descriptive_ones(active):
+    """A20 L13: each artefact type is identified by its own versioned schema; the descriptive schema is unchanged."""
+    items, analysis = _paper_inference(active)
+    paper = _report(items, plan=active, mode="paper", inference=[analysis])
+    assert paper.data["schema_version"] == "uniride-paper-report/v1"
+    assert paper.text.splitlines()[0] == "UniRide paper report"
+    smoke = _report(items, plan=active, mode="smoke")
+    assert smoke.data["schema_version"] == "uniride-descriptive-report/v1"
+    assert smoke.text.splitlines()[0] == "UniRide descriptive report (smoke mode)"
+    assert report_module.REPORT_SCHEMA == "uniride-descriptive-report/v1"
+    assert report_module.PAPER_REPORT_SCHEMA == "uniride-paper-report/v1"
+
+
 def test_a_paper_inference_of_another_plan_or_a_smoke_campaign_is_refused(active, draft):
     items, analysis = _paper_inference(active)
     smoke_analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,

@@ -50,17 +50,13 @@ def test_gap_columns_accept_a_lowercase_row_and_refuse_a_wrong_contract():
     table = default_reference_table(REPOSITORY_ROOT)
     plan = _plan()
     base = {
-        "problem": "eil51", "record_kind": "result", "validation_status": "passed", "objective_cost": 430.0,
-        "protocol": "fixed_budget", "execution_protocol": "fixed_budget",
+        "record_kind": "primary", "protocol_version": "uniride-fair-tsp-v2", "comparison_regime": "fixed_evaluation_budget",
+        "problem": "eil51", "algorithm_id": "Core-GA-TSP", "replicate": 0, "seed": 7, "evaluation_budget": 63750,
+        "objective_cost": 430.0, "validation_status": "passed",
     }
     # the row format keeps the lowercase spelling; the reference says TSP
     for spelling in ("tsp", "TSP"):
-        try:
-            out = add_gap_columns([{**base, "problem_type": spelling}], table, plan=plan)
-        except GapColumnError as exc:  # pragma: no cover - only if the minimal row misses a pooling field
-            if "problem type" in str(exc):
-                raise
-            pytest.skip(f"minimal row not accepted by the guards: {exc}")
+        out = add_gap_columns([{**base, "problem_type": spelling}], table, plan=plan)
         assert out[0]["exact_reference_value"] == 426
     with pytest.raises(GapColumnError, match="problem type"):
         add_gap_columns([{**base, "problem_type": "atsp"}], table, plan=plan)
@@ -80,7 +76,6 @@ def _profile_slice(root: Path, profile: str) -> str:
     source = REPOSITORY_ROOT / "academic_benchmark" / "studies" / profile
     target = root / "academic_benchmark" / "studies" / profile
     target.mkdir(parents=True)
-    shutil.copy(source / "analysis_plan.json", target / "analysis_plan.json")
     payload = json.loads((source / "study.json").read_text(encoding="utf-8"))
     refs = [TSP_DATASET]
     levels = {"tsplib-eil51": payload["scaled_fixed_budget_levels"]["levels_by_dataset"]["tsplib-eil51"]}
@@ -92,6 +87,12 @@ def _profile_slice(root: Path, profile: str) -> str:
         for name in (ref, manifest["artifact_path"]):
             (root / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(REPOSITORY_ROOT / name, root / name)
+    # the analysis plan is restricted to the slice (its families must name datasets of the study)
+    plan = json.loads((source / "analysis_plan.json").read_text(encoding="utf-8"))
+    plan["families"] = [f for f in plan["families"] if f["scope"] == "per_instance"]
+    for family in plan["families"]:
+        family["dataset_ids"] = [d for d in family["dataset_ids"] if d in levels]
+    (target / "analysis_plan.json").write_text(json.dumps(plan), encoding="utf-8")
     algorithms = ["Core-OrOpt-TSP", "Core-TwoOpt-TSP"]
     payload["algorithm_ids"] = algorithms
     payload["algorithm_parameters"] = {a: payload["algorithm_parameters"][a] for a in algorithms}

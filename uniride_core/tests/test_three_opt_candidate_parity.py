@@ -226,6 +226,30 @@ def test_cut_enumeration_rejects_small_window_like_before():
     assert list(iter_three_opt_cuts(5, 1)) == []  # n < 6 returns before window check
 
 
+@pytest.mark.parametrize("window", (12.0, 12.5, "12", 2.0))
+def test_cut_enumeration_rejects_non_integer_window_with_value_error(window):
+    # MT6-01 polish: the range-based enumeration would raise a bare TypeError for 12.0;
+    # the window is validated explicitly instead (the historical code, which only
+    # compared the window, tolerated floats; the study profiles pass integers).
+    with pytest.raises(ValueError, match="integer"):
+        list(iter_three_opt_cuts(10, window))
+    with pytest.raises(ValueError, match="integer"):
+        improve_three_opt(list(range(10)), _random_matrix(10, 1, symmetric=True, integer=True), window=window)
+    with pytest.raises(ValueError, match="integer"):
+        improve_three_opt_budgeted(
+            list(range(10)), _random_matrix(10, 1, symmetric=True, integer=True),
+            ObjectiveEvaluationBudget(None), max_iterations=1, window=window,
+        )
+
+
+def test_cut_enumeration_accepts_integer_like_windows():
+    import numpy as np
+
+    expected = list(iter_three_opt_cuts(10, 12))
+    assert list(iter_three_opt_cuts(10, np.int64(12))) == expected
+    assert list(iter_three_opt_cuts(10, None)) == list(iter_three_opt_cuts(10))
+
+
 # ---------------------------------------------------------------------------
 # Parity: candidate sequence (also proves M25-d: no admitted cut loses a candidate)
 # ---------------------------------------------------------------------------
@@ -341,24 +365,24 @@ def _start_route(n, seed):
     return route
 
 
-def _run_plain(matrix, first_improvement, window):
+def _run_plain(matrix, first_improvement, window, max_iterations=2):
     res = improve_three_opt(
         _start_route(len(matrix), 99),
         matrix,
-        max_iterations=2,
+        max_iterations=max_iterations,
         first_improvement=first_improvement,
         window=window,
     )
     return (res.route, res.cost, res.iterations, res.evaluations, res.mode)
 
 
-def _run_budgeted(matrix, first_improvement, window, limit):
+def _run_budgeted(matrix, first_improvement, window, limit, max_iterations=2):
     budget = ObjectiveEvaluationBudget(limit)
     res = improve_three_opt_budgeted(
         _start_route(len(matrix), 99),
         matrix,
         budget,
-        max_iterations=2,
+        max_iterations=max_iterations,
         first_improvement=first_improvement,
         window=window,
     )
@@ -397,6 +421,32 @@ def test_budgeted_three_opt_full_run_parity(monkeypatch, case, first_improvement
     assert _run_budgeted(matrix, first_improvement, 12, limit) == new
     if limit is not None and not first_improvement:  # best improvement scans 25+ candidates: budget binds
         assert new[4] is True and new[6] == "evaluation_budget_exhausted" and new[7] == limit
+
+
+# Convergence parity (MT6-01 polish): no iteration cap, window=None, small n.  The tests
+# above cap max_iterations at 2 and skip best-improvement with window=None; here the
+# search runs to its local optimum (the frozen generator is fast enough for n <= 12).
+CONVERGENCE_CASES = {
+    f"{kind}{n}": (lambda n=n, symmetric=symmetric, integer=integer: _random_matrix(
+        n, seed=7000 + n, symmetric=symmetric, integer=integer))
+    for n in (7, 9, 12)
+    for kind, symmetric, integer in (("sym", True, True), ("symf", True, False), ("asym", False, True))
+}
+
+
+@pytest.mark.parametrize("case", sorted(CONVERGENCE_CASES))
+@pytest.mark.parametrize("first_improvement", (False, True))
+def test_three_opt_converges_to_the_same_local_optimum_window_none(monkeypatch, case, first_improvement):
+    matrix = CONVERGENCE_CASES[case]()
+    plain = _run_plain(matrix, first_improvement, None, max_iterations=500)
+    budgeted = _run_budgeted(matrix, first_improvement, None, None, max_iterations=500)
+    _patch_frozen_generator(monkeypatch)
+    assert _run_plain(matrix, first_improvement, None, max_iterations=500) == plain
+    assert _run_budgeted(matrix, first_improvement, None, None, max_iterations=500) == budgeted
+    # converged: the last pass found nothing, so the run ended before the 500 cap
+    assert plain[2] < 500 and budgeted[2] < 500
+    assert budgeted[6] == "no_improving_move"
+    assert plain[3] > 0
 
 
 # ---------------------------------------------------------------------------

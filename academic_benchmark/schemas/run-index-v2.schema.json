@@ -1,0 +1,444 @@
+{
+  "$defs": {
+    "AnalysisPlanRefV1": {
+      "additionalProperties": false,
+      "description": "The analysis plan the campaign names. ``path`` and ``sha256`` are ``None`` only when no plan file resolved, which a\nsmoke campaign allows (descriptive output only); a paper campaign always has both.",
+      "properties": {
+        "analysis_plan_id": {
+          "minLength": 1,
+          "title": "Analysis Plan Id",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "format": "uniride-repository-relative-path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Path"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sha256"
+        }
+      },
+      "required": [
+        "analysis_plan_id",
+        "path",
+        "sha256"
+      ],
+      "title": "AnalysisPlanRefV1",
+      "type": "object"
+    },
+    "ChecksumV1": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ChecksumV1",
+      "type": "object"
+    },
+    "EnvironmentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {
+          "title": "Cpu",
+          "type": "string"
+        },
+        "llvmlite": {
+          "title": "Llvmlite",
+          "type": "string"
+        },
+        "numba": {
+          "title": "Numba",
+          "type": "string"
+        },
+        "numpy": {
+          "title": "Numpy",
+          "type": "string"
+        },
+        "operating_system": {
+          "title": "Operating System",
+          "type": "string"
+        },
+        "python": {
+          "title": "Python",
+          "type": "string"
+        },
+        "statistics_library": {
+          "title": "Statistics Library",
+          "type": "string"
+        }
+      },
+      "required": [
+        "python",
+        "operating_system",
+        "cpu",
+        "numpy",
+        "numba",
+        "llvmlite",
+        "statistics_library"
+      ],
+      "title": "EnvironmentV1",
+      "type": "object"
+    },
+    "FailedRunV1": {
+      "additionalProperties": false,
+      "description": "One failed run as ``failed_runs.jsonl`` records it (the failure policy of OQ-9 a: recorded, excluded from inference).",
+      "properties": {
+        "algorithm_id": {
+          "minLength": 1,
+          "title": "Algorithm Id",
+          "type": "string"
+        },
+        "comparison_regime": {
+          "minLength": 1,
+          "title": "Comparison Regime",
+          "type": "string"
+        },
+        "dataset_id": {
+          "minLength": 1,
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "evaluation_budget": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Evaluation Budget"
+        },
+        "exception_category": {
+          "minLength": 1,
+          "title": "Exception Category",
+          "type": "string"
+        },
+        "problem": {
+          "minLength": 1,
+          "title": "Problem",
+          "type": "string"
+        },
+        "protocol_version": {
+          "minLength": 1,
+          "title": "Protocol Version",
+          "type": "string"
+        },
+        "replicate": {
+          "title": "Replicate",
+          "type": "integer"
+        },
+        "stage": {
+          "minLength": 1,
+          "title": "Stage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm_id",
+        "dataset_id",
+        "problem",
+        "protocol_version",
+        "comparison_regime",
+        "evaluation_budget",
+        "replicate",
+        "stage",
+        "exception_category",
+        "error"
+      ],
+      "title": "FailedRunV1",
+      "type": "object"
+    },
+    "GitStateV1": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "commit",
+        "dirty"
+      ],
+      "title": "GitStateV1",
+      "type": "object"
+    },
+    "OutputChecksumV1": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum": {
+          "$ref": "#/$defs/ChecksumV1"
+        },
+        "path": {
+          "format": "uniride-repository-relative-path",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "checksum"
+      ],
+      "title": "OutputChecksumV1",
+      "type": "object"
+    },
+    "OutputLocationV1": {
+      "additionalProperties": false,
+      "description": "The campaign folder as an absolute path (paths elsewhere in the index are relative to it).",
+      "properties": {
+        "outside_repository_check": {
+          "$ref": "#/$defs/OutsideRepositoryCheckV1"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "outside_repository_check"
+      ],
+      "title": "OutputLocationV1",
+      "type": "object"
+    },
+    "OutsideRepositoryCheckV1": {
+      "additionalProperties": false,
+      "description": "The outside-the-repository check made at start. A run inside the repository is refused before anything is written, so\nthe only result an index can hold is ``outside_repository``; ``checked_against`` names the trees it was checked against.",
+      "properties": {
+        "checked_against": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Checked Against",
+          "type": "array"
+        },
+        "result": {
+          "const": "outside_repository",
+          "title": "Result",
+          "type": "string"
+        }
+      },
+      "required": [
+        "result",
+        "checked_against"
+      ],
+      "title": "OutsideRepositoryCheckV1",
+      "type": "object"
+    },
+    "PlannedRunsV1": {
+      "additionalProperties": false,
+      "description": "Runs this campaign planned: per cell (dataset, algorithm, budget level) and in total. A paper campaign plans the whole\nprofile (``runs_per_cell`` = ``study.run_count``); a smoke campaign plans its slice.",
+      "properties": {
+        "runs": {
+          "exclusiveMinimum": 0,
+          "title": "Runs",
+          "type": "integer"
+        },
+        "runs_per_cell": {
+          "exclusiveMinimum": 0,
+          "title": "Runs Per Cell",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "runs_per_cell",
+        "runs"
+      ],
+      "title": "PlannedRunsV1",
+      "type": "object"
+    },
+    "ProfileRefV1": {
+      "additionalProperties": false,
+      "description": "The study profile file the run service hashed (working-tree bytes, ``sha256`` of ``read_bytes()``).",
+      "properties": {
+        "path": {
+          "format": "uniride-repository-relative-path",
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "ProfileRefV1",
+      "type": "object"
+    },
+    "RunIndexEntryV1": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison_key_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Comparison Key Digest",
+          "type": "string"
+        },
+        "manifest_checksum": {
+          "$ref": "#/$defs/ChecksumV1"
+        },
+        "manifest_path": {
+          "format": "uniride-repository-relative-path",
+          "title": "Manifest Path",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "title": "Run Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "manifest_path",
+        "manifest_checksum",
+        "comparison_key_digest"
+      ],
+      "title": "RunIndexEntryV1",
+      "type": "object"
+    }
+  },
+  "$id": "uniride-run-index/v2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Campaign index: lists every run manifest of one campaign with its checksum, plus the campaign-wide fields.\n\nThe manifests of native (algorithm_native_termination) runs carry ``budget.levels`` = [0] as a sentinel: the run\ncontract requires one level entry and a native run has no budget level. No consumer may read that 0 as a budget level;\nthe budget policy ``native_uncapped`` says there is none.",
+  "properties": {
+    "analysis_plan": {
+      "$ref": "#/$defs/AnalysisPlanRefV1"
+    },
+    "base_seed": {
+      "title": "Base Seed",
+      "type": "integer"
+    },
+    "environment": {
+      "$ref": "#/$defs/EnvironmentV1"
+    },
+    "failed_runs": {
+      "items": {
+        "$ref": "#/$defs/FailedRunV1"
+      },
+      "title": "Failed Runs",
+      "type": "array"
+    },
+    "git": {
+      "$ref": "#/$defs/GitStateV1"
+    },
+    "mode": {
+      "enum": [
+        "smoke",
+        "paper"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "output_location": {
+      "$ref": "#/$defs/OutputLocationV1"
+    },
+    "outputs": {
+      "items": {
+        "$ref": "#/$defs/OutputChecksumV1"
+      },
+      "title": "Outputs",
+      "type": "array"
+    },
+    "planned": {
+      "$ref": "#/$defs/PlannedRunsV1"
+    },
+    "profile": {
+      "$ref": "#/$defs/ProfileRefV1"
+    },
+    "runs": {
+      "items": {
+        "$ref": "#/$defs/RunIndexEntryV1"
+      },
+      "title": "Runs",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "uniride-run-index/v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seed_protocol_version": {
+      "minLength": 1,
+      "title": "Seed Protocol Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "study_id": {
+      "minLength": 1,
+      "title": "Study Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "study_id",
+    "mode",
+    "status",
+    "seed_protocol_version",
+    "base_seed",
+    "git",
+    "environment",
+    "runs",
+    "outputs",
+    "profile",
+    "analysis_plan",
+    "planned",
+    "output_location",
+    "failed_runs"
+  ],
+  "title": "RunIndexV2",
+  "type": "object"
+}

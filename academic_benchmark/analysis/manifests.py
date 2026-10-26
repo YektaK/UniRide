@@ -6,7 +6,7 @@ manifest's own checksum, so the manifest never hashes itself; writes are atomic 
 complete.
 
 Granularity (plan D-02, lead recommendation): one ``RunManifestV1`` per run (algorithm x dataset x budget level x
-replicate) plus one campaign index (``uniride-run-index/v1``) that lists every manifest with its checksum and carries what the
+replicate) plus one campaign index (``uniride-run-index/v2``) that lists every manifest with its checksum and carries what the
 whole campaign shares (mode, git, environment, base seed, seed protocol version). Layout under the campaign directory::
 
     run_index.json, run_index.json.sha256
@@ -42,7 +42,16 @@ from academic_benchmark.analysis.identity import SEED_PROTOCOL_VERSION, Comparis
 from academic_benchmark.contracts import DatasetManifestV1, OutputChecksumV1, RunManifestV1
 from academic_benchmark.contracts.common import ChecksumV1
 from academic_benchmark.contracts.run import EnvironmentV1, GitStateV1
-from academic_benchmark.contracts.run_index import RunIndexEntryV1, RunIndexV1
+from academic_benchmark.committed_bytes import GitQueryFailed, run_git
+from academic_benchmark.contracts.run_index import (
+    AnalysisPlanRefV1,
+    FailedRunV1,
+    OutputLocationV1,
+    PlannedRunsV1,
+    ProfileRefV1,
+    RunIndexEntryV1,
+    RunIndexV2,
+)
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.protocol_registry import classify_row
 
@@ -56,6 +65,12 @@ RESULT_FILES = ("fixed_runs.jsonl", "native_runs.jsonl")
 DESCRIPTIVE_REPORT_FILES = ("descriptive_report.txt", "descriptive_report.json")
 REPORT_FILES = ("smoke_report.txt", "smoke_report.json", "run_report.txt", "run_report.json", *DESCRIPTIVE_REPORT_FILES)
 FAILED_FILE = "failed_runs.jsonl"
+# the schema version the verifier refuses with a message of its own (v1 holds no profile/plan hash, planned counts, output location or failed list)
+REFUSED_INDEX_SCHEMA = "uniride-run-index/v1"
+INDEX_SCHEMA = "uniride-run-index/v2"
+# the committed analysis plan sits next to its study profile (``studies.service.ANALYSIS_PLAN_FILENAME``; a test pins the equality)
+ANALYSIS_PLAN_FILE_NAME = "analysis_plan.json"
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 # no statistics library exists before D-04a pins one (EnvironmentV1 requires a string); the literal is recorded as is
 STATISTICS_LIBRARY_NONE = "none"
 # native_uncapped runs have no budget level, but ``BudgetRecordV1.levels`` needs one entry: 0 is that sentinel
@@ -313,6 +328,58 @@ def _check_shared(manifests: Sequence[RunManifestV1], *, study_id: str, base_see
     return errors
 
 
+def failed_run_entries(records: Iterable[Mapping[str, Any]]) -> list[FailedRunV1]:
+    """The index records of ``failed_runs.jsonl`` rows (the fields ``FailedRunV1`` names, as the file has them)."""
+    entries = []
+    for number, record in enumerate(records, start=1):
+        try:
+            entries.append(FailedRunV1.model_validate({name: record.get(name) for name in FailedRunV1.model_fields}))
+        except ValidationError as exc:
+            raise ManifestError(f"{FAILED_FILE}: record {number} has no valid failed-run fields ({exc.error_count()} error(s))") from exc
+    return entries
+
+
+def outside_location(output: Path, checked_against: Sequence[Path]) -> dict[str, Any]:
+    """The ``output_location`` record of a campaign that passed the outside-the-repository check against ``checked_against``
+    (G6): the output folder as an absolute path and the trees it was checked against."""
+    return {
+        "path": str(Path(output).resolve()),
+        "outside_repository_check": {"result": "outside_repository", "checked_against": [str(Path(p)) for p in checked_against]},
+    }
+
+
+def _failed_file_entries(path: Path) -> list[FailedRunV1]:
+    if not path.is_file():
+        return []
+    try:
+        records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except ValueError as exc:
+        raise ManifestError(f"{FAILED_FILE}: not a JSON-lines file") from exc
+    if any(not isinstance(record, dict) for record in records):
+        raise ManifestError(f"{FAILED_FILE}: every line must be a JSON object")
+    return failed_run_entries(records)
+
+
+def _campaign_field_errors(
+    *, mode: str, status: str, completed: int, planned: PlannedRunsV1, failed: Sequence[FailedRunV1], output_names: Sequence[str]
+) -> list[str]:
+    """Rules between the v2 campaign fields that the writer enforces and the verifier re-checks."""
+    errors = []
+    done = completed + len(failed)
+    if done > planned.runs:
+        errors.append(f"the campaign lists {completed} run(s) and {len(failed)} failed run(s) but planned {planned.runs}")
+    elif mode == "paper" and done != planned.runs:
+        errors.append(
+            f"a paper campaign plans the whole profile: it planned {planned.runs} run(s) but lists {completed} run(s) "
+            f"and {len(failed)} failed run(s)"
+        )
+    if (status == "failed") != bool(failed):
+        errors.append(f"status {status!r} disagrees with the failed-run list ({len(failed)} failed run(s))")
+    if bool(failed) != (FAILED_FILE in output_names):
+        errors.append(f"{FAILED_FILE} must be an output exactly when the index lists failed runs")
+    return errors
+
+
 def write_run_campaign(
     output_dir: Path,
     *,
@@ -325,11 +392,20 @@ def write_run_campaign(
     status: str,
     runs: Sequence[tuple[Mapping[str, Any], RunManifestV1]],
     output_files: Sequence[str],
-) -> RunIndexV1:
+    profile: ProfileRefV1 | Mapping[str, Any],
+    analysis_plan: AnalysisPlanRefV1 | Mapping[str, Any],
+    planned: PlannedRunsV1 | Mapping[str, Any],
+    output_location: OutputLocationV1 | Mapping[str, Any],
+    failed_runs: Sequence[FailedRunV1 | Mapping[str, Any]],
+) -> RunIndexV2:
     """Write every run manifest, then the campaign index, each with its ``.sha256``; return the index.
 
-    ``runs`` are ``(row, manifest)`` pairs; ``output_files`` are the result files (relative names, already written). Nothing is
-    written when the pairs are inconsistent with the campaign values or share a run id."""
+    ``runs`` are ``(row, manifest)`` pairs; ``output_files`` are the result files (relative names, already written).
+    ``profile``, ``analysis_plan``, ``planned``, ``output_location`` and ``failed_runs`` are the campaign fields of
+    ``uniride-run-index/v2`` (D-10 gaps G1, G2, G3, G6, G7). Nothing is written when the pairs are inconsistent with the
+    campaign values or share a run id, when a paper campaign did not plan exactly the runs it lists (completed plus failed), when
+    a campaign lists more runs than it planned, when ``status`` disagrees with the failed list or when the failed list differs
+    from ``failed_runs.jsonl``."""
     if seed_protocol_version != SEED_PROTOCOL_VERSION:
         raise ManifestError(
             f"seed_protocol_version {seed_protocol_version!r} is not the implemented {SEED_PROTOCOL_VERSION!r}: "
@@ -346,6 +422,20 @@ def write_run_campaign(
     )
     if errors:
         raise ManifestError("; ".join(errors))
+    try:
+        campaign = {
+            "profile": ProfileRefV1.model_validate(profile), "analysis_plan": AnalysisPlanRefV1.model_validate(analysis_plan),
+            "planned": PlannedRunsV1.model_validate(planned), "output_location": OutputLocationV1.model_validate(output_location),
+            "failed_runs": [FailedRunV1.model_validate(item) for item in failed_runs],
+        }
+    except ValidationError as exc:
+        raise ManifestError(f"the campaign fields of the run index are not valid: {exc.error_count()} error(s): {exc}") from exc
+    errors = _campaign_field_errors(
+        mode=mode, status=status, completed=len(runs), planned=campaign["planned"], failed=campaign["failed_runs"],
+        output_names=list(output_files),
+    )
+    if errors:
+        raise ManifestError("; ".join(errors))
     outputs = []
     for name in output_files:
         if not (output_dir / name).is_file():
@@ -354,6 +444,10 @@ def write_run_campaign(
     bad = _outputs_exclude_manifests(outputs)
     if bad:
         raise ManifestError(f"the campaign outputs must not name manifest, checksum or index files: {bad}")
+    if (output_dir / FAILED_FILE).is_file() or campaign["failed_runs"]:
+        written = _failed_file_entries(output_dir / FAILED_FILE)
+        if written != campaign["failed_runs"]:
+            raise ManifestError(f"the failed runs of the index differ from {FAILED_FILE}")
     entries = []
     for row, manifest in runs:
         try:
@@ -365,10 +459,10 @@ def write_run_campaign(
         entries.append(RunIndexEntryV1(
             run_id=manifest.run_id, manifest_path=relative, manifest_checksum=checksum, comparison_key_digest=digest,
         ))
-    index = RunIndexV1(
-        schema_version="uniride-run-index/v1", study_id=study_id, mode=mode, status=status,
+    index = RunIndexV2(
+        schema_version=INDEX_SCHEMA, study_id=study_id, mode=mode, status=status,
         seed_protocol_version=seed_protocol_version, base_seed=base_seed, git=git_state, environment=env,
-        runs=entries, outputs=outputs,
+        runs=entries, outputs=outputs, **campaign,
     )
     write_json_with_sidecar(output_dir / INDEX_FILE, index)
     return index
@@ -379,6 +473,8 @@ class VerificationResult:
     def __init__(self, directory: Path) -> None:
         self.directory = Path(directory)
         self.errors: list[str] = []
+        # facts that are not failures but that a reader must see, e.g. a check that could not be made (never silent)
+        self.notes: list[str] = []
         self.checked = 0
 
     @property
@@ -486,8 +582,49 @@ def _load_rows(root: Path, path: str, cache: dict[str, list[dict[str, Any]]], er
     return cache[path]
 
 
-def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
-    """Recompute every checksum of a campaign directory and cross-check manifests, index and result rows."""
+def _check_recorded_hashes(index: RunIndexV2, repository_root: Path, errors: list[str], notes: list[str]) -> None:
+    """Compare the profile and analysis-plan sha256 of the index with the files it names (working-tree bytes, as the run service
+    hashed them), when the repository at ``repository_root`` is at the commit the campaign ran at; otherwise say it was not checked."""
+    skipped = "profile and analysis plan hashes not checked"
+    try:
+        head = run_git(["rev-parse", "HEAD"], repository_root).decode("utf-8", "replace").strip()
+    except GitQueryFailed as exc:
+        notes.append(f"{skipped}: git cannot answer in {repository_root} ({exc.kind})")
+        return
+    commit = index.git.commit
+    if head != commit:
+        notes.append(
+            f"{skipped}: the repository at {repository_root} is at commit {head[:12]}, the campaign ran at commit "
+            f"{commit[:12]}; check out the campaign commit (or pass --repository-root) to compare them"
+        )
+        return
+    matched, before = [], len(errors)
+    for label, ref in (("profile", index.profile), ("analysis plan", index.analysis_plan)):
+        if ref.path is None or ref.sha256 is None:
+            notes.append(f"{label}: no file recorded, so no hash to compare")
+            continue
+        target = repository_root / ref.path
+        if not target.is_file():
+            errors.append(f"{INDEX_FILE}: the {label} file {ref.path} does not exist at commit {commit[:12]}")
+            continue
+        actual = file_sha256(target)
+        if actual != ref.sha256:
+            errors.append(
+                f"{INDEX_FILE}: the {label} sha256 differs from the file {ref.path} at commit {commit[:12]} "
+                f"(recorded {ref.sha256}, file {actual}; a changed file, or another core.autocrlf than the run's)"
+            )
+        else:
+            matched.append(label)
+    if len(errors) == before and matched:
+        notes.append(f"{' and '.join(matched)} sha256 match the file(s) at commit {commit[:12]}")
+
+
+def verify_campaign_detailed(directory: Path | str, *, repository_root: Path | str | None = None) -> VerificationResult:
+    """Recompute every checksum of a campaign directory and cross-check manifests, index and result rows.
+
+    ``repository_root`` (default: the repository this code lives in) is where the profile and analysis plan the index names are
+    compared with the recorded hashes; the comparison needs the repository to be at the campaign's commit, and a check that
+    cannot be made is reported in ``notes``, never skipped silently."""
     root = Path(directory)
     result = VerificationResult(root)
     errors = result.errors
@@ -498,9 +635,20 @@ def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
     if data is None:
         return result
     try:
-        index = RunIndexV1.model_validate_json(data)
+        declared = json.loads(data).get("schema_version")
+    except (ValueError, AttributeError):
+        declared = None
+    if declared == REFUSED_INDEX_SCHEMA:
+        errors.append(
+            f"{INDEX_FILE}: schema {REFUSED_INDEX_SCHEMA} is refused: it records no profile or analysis-plan hash, planned run "
+            f"count, output location or failed-run list. Only {INDEX_SCHEMA} is verified; re-run the campaign "
+            "(no paper evidence exists under v1)"
+        )
+        return result
+    try:
+        index = RunIndexV2.model_validate_json(data)
     except ValidationError as exc:
-        errors.append(f"{INDEX_FILE}: not a valid {RunIndexV1.__name__}: {exc.error_count()} error(s)")
+        errors.append(f"{INDEX_FILE}: not a valid {RunIndexV2.__name__}: {exc.error_count()} error(s)")
         return result
     if index.seed_protocol_version != SEED_PROTOCOL_VERSION:
         errors.append(
@@ -509,6 +657,7 @@ def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
     for item in index.outputs:
         _check_output(root, item, INDEX_FILE, errors)
     row_cache: dict[str, list[dict[str, Any]]] = {}
+    _check_campaign_fields(index, root, result, row_cache, Path(repository_root) if repository_root is not None else _REPOSITORY_ROOT)
     bound: dict[tuple[str, int], list[str]] = {}
     listed: set[str] = set()
     for entry in index.runs:
@@ -578,12 +727,49 @@ def verify_campaign_detailed(directory: Path | str) -> VerificationResult:
     return result
 
 
+def _check_campaign_fields(
+    index: RunIndexV2, root: Path, result: VerificationResult, row_cache: dict[str, list[dict[str, Any]]], repository_root: Path
+) -> None:
+    """The v2 campaign fields: planned counts, failed list against ``failed_runs.jsonl``, plan path, output location, hashes."""
+    errors = result.errors
+    errors.extend(
+        f"{INDEX_FILE}: {message}" for message in _campaign_field_errors(
+            mode=index.mode, status=index.status, completed=len(index.runs), planned=index.planned, failed=index.failed_runs,
+            output_names=[item.path for item in index.outputs],
+        )
+    )
+    failed_path = root / FAILED_FILE
+    if failed_path.is_file():
+        rows = _load_rows(root, FAILED_FILE, row_cache, errors)
+        try:
+            written = failed_run_entries(rows)
+        except ManifestError as exc:
+            errors.append(str(exc))
+        else:
+            if written != index.failed_runs:
+                errors.append(
+                    f"{INDEX_FILE}: the failed runs of the index ({len(index.failed_runs)}) differ from {FAILED_FILE} "
+                    f"({len(written)} record(s)): the failures must be listed in the index exactly as the file has them"
+                )
+    elif index.failed_runs:
+        errors.append(f"{INDEX_FILE}: lists {len(index.failed_runs)} failed run(s) but {FAILED_FILE} is missing")
+    if index.analysis_plan.path is not None:
+        expected = (PurePosixPath(index.profile.path).parent / ANALYSIS_PLAN_FILE_NAME).as_posix()
+        if index.analysis_plan.path != expected:
+            errors.append(f"{INDEX_FILE}: the analysis plan path {index.analysis_plan.path} is not {expected} (next to the profile)")
+    if Path(index.output_location.path).resolve() != root.resolve():
+        result.notes.append(
+            f"the campaign folder {root} is not the recorded output location {index.output_location.path} (moved or copied)"
+        )
+    _check_recorded_hashes(index, repository_root, errors, result.notes)
+
+
 @dataclass(frozen=True)
 class VerifiedCampaign:
     """A campaign directory that verified: its index, the sha256 of ``run_index.json``, every completed row paired with its
     run manifest (``items``, in result-file order) and the failed-run records (``failed``)."""
 
-    index: RunIndexV1
+    index: RunIndexV2
     index_sha256: str
     items: list
     failed: list
@@ -599,7 +785,7 @@ def load_verified_campaign(directory: Path | str) -> VerifiedCampaign:
     if not result.ok:
         raise ManifestError(f"{root}: the campaign does not verify ({len(result.errors)} problem(s)): " + "; ".join(result.errors[:5]))
     index_bytes = (root / INDEX_FILE).read_bytes()
-    index = RunIndexV1.model_validate_json(index_bytes)
+    index = RunIndexV2.model_validate_json(index_bytes)
     row_cache: dict[str, list[dict[str, Any]]] = {}
     items: list = []
     errors: list[str] = []
@@ -630,7 +816,7 @@ def verify_campaign(directory: Path | str) -> list[str]:
 
 __all__ = [
     "DESCRIPTIVE_REPORT_FILES", "FAILED_FILE", "VerifiedCampaign", "load_verified_campaign", "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
-    "VerificationResult", "build_run_manifest", "canonical_json_bytes", "collect_environment", "comparable_manifest_view",
-    "file_sha256", "make_run_id", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
+    "ANALYSIS_PLAN_FILE_NAME", "INDEX_SCHEMA", "REFUSED_INDEX_SCHEMA", "VerificationResult", "build_run_manifest", "failed_run_entries", "canonical_json_bytes", "collect_environment", "comparable_manifest_view",
+    "file_sha256", "make_run_id", "outside_location", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
     "write_run_campaign",
 ]

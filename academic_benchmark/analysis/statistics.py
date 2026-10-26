@@ -32,6 +32,7 @@ from __future__ import annotations
 import itertools
 import re
 import math
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
@@ -39,7 +40,7 @@ from academic_benchmark.analysis.environment import require_analysis_environment
 from academic_benchmark.analysis.identity import ComparisonIdentityError, assert_single_comparison_family, comparison_cell_key
 from academic_benchmark.analysis.manifests import make_run_id
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1, ComparisonFamilyV1, DescriptiveV1
-from academic_benchmark.contracts.run_index import RunIndexV1
+from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.obsolete_results import CURRENT_EVIDENCE, evidence_refusal
@@ -568,7 +569,7 @@ def _expected_algorithms(study: StudyManifestV1, pooling_group: str) -> list:
     return list(study.algorithm_ids)
 
 
-def _check_index_algorithms(run_index: RunIndexV1, study: StudyManifestV1) -> None:
+def _check_index_algorithms(run_index: RunIndexV2, study: StudyManifestV1) -> None:
     """Every run of the verified index must belong to the study profile's algorithms (run ids are
     ``<study>.<dataset>.<fixed-l<level>|native>.<algorithm>.r<replicate>``, ``manifests.make_run_id``)."""
     native = study.secondary_protocol.algorithm_ids if study.secondary_protocol is not None else None
@@ -582,6 +583,39 @@ def _check_index_algorithms(run_index: RunIndexV1, study: StudyManifestV1) -> No
             raise StatisticsRefusal(
                 f"the run index lists a run ({entry.run_id!r}) that is not of the study profile's algorithms {sorted(study.algorithm_ids)}"
             )
+
+
+def _check_failed_against_index(
+    run_index: RunIndexV2, failed: Sequence[Mapping[str, Any]], *, family: Any, protocol_version: Any,
+    analysed_instances: set, budgets: Mapping[str, set],
+) -> None:
+    """OQ-9 a stays (listed failures are excluded and reported), but the failures are verified, not trusted: every failed row
+    must be a failure the verified run index lists, and every failure the index lists within this family's scope (its protocol,
+    its instances, the analysed budget levels) must be among the rows. Each listed run counts once (D-05 follow-up, D-10 G7)."""
+    rows = Counter(
+        (row["algorithm_id"], normalize_problem(row["problem"]), row.get("evaluation_budget"), row.get("replicate")) for row in failed
+    )
+    listed: Counter = Counter()
+    for record in run_index.failed_runs:
+        identity = normalize_problem(record.problem)
+        if record.protocol_version != protocol_version or f"tsplib-{identity}" not in family.dataset_ids:
+            continue
+        if family.scope == "per_instance" and identity not in analysed_instances:
+            continue
+        known = budgets.get(identity)
+        if known and record.evaluation_budget not in known:
+            continue
+        listed[(record.algorithm_id, identity, record.evaluation_budget, record.replicate)] += 1
+    for key in sorted((rows - listed).elements(), key=str):
+        raise StatisticsRefusal(
+            f"a failed run of {key[0]!r} on {key[1]!r} (replicate {key[3]}) is not listed in the run index: failed runs must be "
+            "the ones the verified campaign recorded"
+        )
+    for key in sorted((listed - rows).elements(), key=str):
+        raise StatisticsRefusal(
+            f"the run index lists a failed run of {key[0]!r} on {key[1]!r} (replicate {key[3]}) that is missing from the rows: "
+            "a recorded failure cannot be dropped from the analysis input"
+        )
 
 
 def _check_conventions(plan: AnalysisPlanV1) -> None:
@@ -605,10 +639,10 @@ def _check_conventions(plan: AnalysisPlanV1) -> None:
 
 
 def analyse_family(
-    items: Iterable[tuple], *, study: StudyManifestV1, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV1
+    items: Iterable[tuple], *, study: StudyManifestV1, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV2
 ) -> FamilyAnalysis:
     """Analyse one declared comparison family. ``items`` are ``(row, manifest)`` pairs: rows with the D-06 gap column and their
-    ``RunManifestV1``; failed runs are ``(row, None)``. ``run_index`` is the ``RunIndexV1`` of the campaign that the caller has verified
+    ``RunManifestV1``; failed runs are ``(row, None)``. ``run_index`` is the ``RunIndexV2`` of the campaign that the caller has verified
     (``manifests.verify_campaign``): its ``mode`` is the campaign mode ("smoke" or "paper"), and every manifest must be listed in it
     with the comparison key digest of its row. Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must
     not be analysed; otherwise returns descriptive cells plus either the inference or the named reasons why it was not performed."""
@@ -623,8 +657,8 @@ def analyse_family(
         raise StatisticsRefusal(
             f"the analysis plan {plan.analysis_plan_id!r} is not the one the study profile names (analysis_plan_id {study.analysis_plan_id!r})"
         )
-    if not isinstance(run_index, RunIndexV1):
-        raise StatisticsRefusal(f"run_index must be the verified RunIndexV1 of the campaign, not {type(run_index).__name__}")
+    if not isinstance(run_index, RunIndexV2):
+        raise StatisticsRefusal(f"run_index must be the verified RunIndexV2 of the campaign, not {type(run_index).__name__}")
     campaign_mode = run_index.mode
     conventions = plan.conventions
     pairs_in = list(items)
@@ -725,6 +759,9 @@ def analyse_family(
         if known and row.get("evaluation_budget") not in known:
             raise StatisticsRefusal(f"a failed run of {algorithm!r} on {problem!r} belongs to another budget level than the analysed rows")
         failed_counts[(identity, algorithm)] = failed_counts.get((identity, algorithm), 0) + 1
+    _check_failed_against_index(
+        run_index, failed, family=family, protocol_version=protocol_version, analysed_instances=analysed_instances, budgets=budgets
+    )
     exclusions = [
         {"algorithm_id": algorithm, "dataset_identity": dataset, "failed_runs": count,
          "reason": "failed run(s): the cell is excluded from inference and reported (plan failure policy)"}

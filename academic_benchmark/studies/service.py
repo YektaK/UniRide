@@ -123,6 +123,12 @@ class StudyPlan:
     datasets: tuple[ResolvedDataset, ...]
     claims: tuple[ClaimCheck, ...]
     rows: tuple[PlanRow, ...]
+    # the files the plan was read from, as the run index records them (G1): sha256 of the working-tree bytes (``read_bytes()``);
+    # the analysis plan fields are ``None`` when no plan file sits next to the profile
+    study_path: str
+    study_sha256: str
+    analysis_plan_path: str | None
+    analysis_plan_sha256: str | None
 
 
 def _resolve_inside(repository_root: Path, relative: str, what: str) -> Path:
@@ -642,4 +648,13 @@ def build_study_plan(
     check_budget_levels(study, datasets)
     claims = preflight_study(study, datasets, backend_policy=backend_policy)
     rows = expand_plan(study, datasets)
-    return StudyPlan(study, backend_policy, datasets, claims, rows)
+    study_file = _resolve_inside(Path(repository_root), study_path, "study path")
+    plan_relative = (PurePosixPath(validate_repository_relative_path(study_path)).parent / ANALYSIS_PLAN_FILENAME).as_posix()
+    plan_file = study_file.parent / ANALYSIS_PLAN_FILENAME
+    return StudyPlan(
+        study, backend_policy, datasets, claims, rows,
+        study_path=validate_repository_relative_path(study_path),
+        study_sha256=hashlib.sha256(study_file.read_bytes()).hexdigest(),
+        analysis_plan_path=plan_relative if plan_file.is_file() else None,
+        analysis_plan_sha256=hashlib.sha256(plan_file.read_bytes()).hexdigest() if plan_file.is_file() else None,
+    )

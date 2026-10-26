@@ -143,14 +143,14 @@ def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=
         runs.append({"run_id": manifest.run_id, "manifest_path": f"manifests/{manifest.run_id}.json",
                      "manifest_checksum": {"algorithm": "sha256", "value": "b" * 64},
                      "comparison_key_digest": "0" * 64 if digest_of == "wrong" else digest})
-    listed = [row for row, manifest in items if manifest is None] if failed is None else [row for row, _ in failed]
+    listed = [row for row, manifest in items if manifest is None and row.get("record_kind") == "failed_run"] if failed is None else [row for row, _ in failed]
     failed_runs = [{
         "algorithm_id": row["algorithm_id"], "dataset_id": row.get("dataset_id") or f"tsplib-{normalize_problem(row['problem'])}",
         "problem": row["problem"], "protocol_version": row["protocol_version"], "comparison_regime": row["comparison_regime"],
         "evaluation_budget": row.get("evaluation_budget"), "replicate": row["replicate"],
         "stage": "run", "exception_category": "RuntimeError", "error": "synthetic failure",
     } for row in listed]
-    replicates = [row["replicate"] for row, _ in [*items, *extra_items]] or [0]
+    replicates = [row.get("replicate", 0) for row, _ in [*items, *extra_items]] or [0]
     environment = {"python": "3.13", "operating_system": "test", "cpu": "test", "numpy": "2.4.6", "numba": "0.66.0",
                    "llvmlite": "0.48.0", "statistics_library": "none"}
     absent = plan_sha == "absent"
@@ -165,7 +165,7 @@ def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=
             "path": None if absent else f"academic_benchmark/studies/{study_id}/analysis_plan.json",
             "sha256": None if absent else plan_sha,
         },
-        "planned": {"runs_per_cell": max(replicates) + 1, "runs": len(runs) + len(failed_runs)},
+        "planned": {"runs_per_cell": max(replicates) + 1, "runs": max(1, len(runs) + len(failed_runs))},
         "output_location": {"path": "/campaign/out", "outside_repository_check": {"result": "outside_repository", "checked_against": ["/repo"]}},
         "failed_runs": failed_runs,
     })

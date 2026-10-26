@@ -49,7 +49,7 @@ from academic_benchmark.analysis.statistics import (
 from academic_benchmark.analysis.identity import comparison_cell_key
 from academic_benchmark.analysis.manifests import make_run_id
 from academic_benchmark.contracts import RunManifestV1
-from academic_benchmark.contracts.run_index import RunIndexV1
+from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.studies.service import load_study_with_plan
@@ -125,8 +125,16 @@ def failed_item(problem, algorithm, replicate, **overrides):
     return row, None
 
 
-def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=(), digest_of=None, extra_items=()):
-    """A ``RunIndexV1`` that lists the manifest of every completed item (the campaign index the caller has verified)."""
+PLAN_SHA = "2" * 64
+PROFILE_SHA = "1" * 64
+
+
+def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=(), digest_of=None, extra_items=(),
+              failed=None, plan_sha=PLAN_SHA):
+    """A ``RunIndexV2`` that lists the manifest of every completed item (the campaign index the caller has verified).
+
+    ``failed`` are the failed items the index lists (default: every failed item of ``items``); ``plan_sha="absent"`` models a
+    smoke campaign whose analysis plan file did not resolve."""
     runs = []
     for row, manifest in [*items, *extra_items]:
         if manifest is None or manifest.run_id in drop or any(r["run_id"] == manifest.run_id for r in runs):
@@ -135,12 +143,31 @@ def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=
         runs.append({"run_id": manifest.run_id, "manifest_path": f"manifests/{manifest.run_id}.json",
                      "manifest_checksum": {"algorithm": "sha256", "value": "b" * 64},
                      "comparison_key_digest": "0" * 64 if digest_of == "wrong" else digest})
+    listed = [row for row, manifest in items if manifest is None] if failed is None else [row for row, _ in failed]
+    failed_runs = [{
+        "algorithm_id": row["algorithm_id"], "dataset_id": row.get("dataset_id") or f"tsplib-{normalize_problem(row['problem'])}",
+        "problem": row["problem"], "protocol_version": row["protocol_version"], "comparison_regime": row["comparison_regime"],
+        "evaluation_budget": row.get("evaluation_budget"), "replicate": row["replicate"],
+        "stage": "run", "exception_category": "RuntimeError", "error": "synthetic failure",
+    } for row in listed]
+    replicates = [row["replicate"] for row, _ in [*items, *extra_items]] or [0]
     environment = {"python": "3.13", "operating_system": "test", "cpu": "test", "numpy": "2.4.6", "numba": "0.66.0",
                    "llvmlite": "0.48.0", "statistics_library": "none"}
-    return RunIndexV1.model_validate({
-        "schema_version": "uniride-run-index/v1", "study_id": study_id, "mode": mode, "status": "passed",
+    absent = plan_sha == "absent"
+    return RunIndexV2.model_validate({
+        "schema_version": "uniride-run-index/v2", "study_id": study_id, "mode": mode,
+        "status": "failed" if failed_runs else "passed",
         "seed_protocol_version": "sha256-seed-v1", "base_seed": 2026, "git": {"commit": COMMIT, "dirty": dirty},
         "environment": environment, "runs": runs, "outputs": [],
+        "profile": {"path": f"academic_benchmark/studies/{study_id}/study.json", "sha256": PROFILE_SHA},
+        "analysis_plan": {
+            "analysis_plan_id": _BILDIRI.analysis_plan_id,
+            "path": None if absent else f"academic_benchmark/studies/{study_id}/analysis_plan.json",
+            "sha256": None if absent else plan_sha,
+        },
+        "planned": {"runs_per_cell": max(replicates) + 1, "runs": len(runs) + len(failed_runs)},
+        "output_location": {"path": "/campaign/out", "outside_repository_check": {"result": "outside_repository", "checked_against": ["/repo"]}},
+        "failed_runs": failed_runs,
     })
 
 
@@ -748,7 +775,7 @@ def test_the_campaign_mode_comes_from_the_verified_run_index(active):
     assert len(smoke.cells) == 3
     assert run(items, active, mode="paper").campaign_mode == "paper"
     # a caller can no longer name the mode: a bare string is not an index, and the old keyword does not exist
-    with pytest.raises(StatisticsRefusal, match="RunIndexV1"):
+    with pytest.raises(StatisticsRefusal, match="RunIndexV2"):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index="paper")
     with pytest.raises(TypeError):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, campaign_mode="paper")
@@ -1096,3 +1123,39 @@ def test_the_index_may_hold_native_only_algorithms_of_the_study(active):
     alien = [native_item("eil51", "Core-ALIEN-TSP", r, 1.0) for r in range(3)]
     with pytest.raises(StatisticsRefusal, match="run index"):
         run(items, active, study=fixed_study, extra_items=alien)
+
+
+# ---------------------------------------------------------------- D-05 follow-up: failed rows are checked against the index list
+def test_a_failed_row_that_the_run_index_does_not_list_is_refused(active):
+    items = per_instance_items(SEPARATED) + [failed_item("eil51", "Core-PSO-TSP", 7)]
+    with pytest.raises(StatisticsRefusal, match="not listed in the run index"):
+        run(items, active, study=STUDY3, failed=[])
+
+
+def test_an_index_listed_failure_that_is_missing_from_the_rows_is_refused(active):
+    items = per_instance_items(SEPARATED)
+    with pytest.raises(StatisticsRefusal, match="missing from the rows"):
+        run(items, active, study=STUDY3, failed=[failed_item("eil51", "Core-PSO-TSP", 7)])
+
+
+def test_listed_failures_that_match_the_rows_are_excluded_and_reported_as_before(active):
+    items = per_instance_items(SEPARATED) + [failed_item("eil51", "Core-PSO-TSP", 7)]
+    analysis = run(items, active, study=STUDY3)
+    assert any(e["algorithm_id"] == "Core-PSO-TSP" and e["failed_runs"] == 1 for e in analysis.exclusions)
+
+
+def test_the_failure_check_counts_each_listed_run_once(active):
+    """Two failed rows with the same identity are two index records; one record cannot cover both."""
+    twice = [failed_item("eil51", "Core-PSO-TSP", 7), failed_item("eil51", "Core-PSO-TSP", 7)]
+    items = per_instance_items(SEPARATED) + twice
+    run(items, active, study=STUDY3)  # two listed, two rows
+    with pytest.raises(StatisticsRefusal, match="not listed in the run index"):
+        run(items, active, study=STUDY3, failed=twice[:1])
+
+
+def test_failures_the_index_lists_on_another_instance_or_protocol_are_outside_a_per_instance_analysis(active):
+    items = per_instance_items(SEPARATED)  # eil51 only
+    other_instance = failed_item("st70", "Core-PSO-TSP", 0)
+    other_protocol = failed_item("eil51", "Core-PSO-TSP", 1, protocol_version="uniride-native-tsp-v1",
+                                 comparison_regime="algorithm_native_termination", evaluation_budget=None)
+    run(items, active, study=STUDY3, failed=[other_instance, other_protocol])  # not this family's: neither refused nor reported

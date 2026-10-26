@@ -679,3 +679,28 @@ def test_a_refused_rebuild_leaves_no_old_report_next_to_the_campaign(tmp_path):
     (out / "fixed_runs.jsonl").write_bytes((out / "fixed_runs.jsonl").read_bytes() + b" ")
     assert cr.main([str(out), "--study", svc.STUDY, "--repository-root", str(root)]) == 2
     assert not (out / "descriptive_report.txt").exists() and not (out / "descriptive_report.json").exists()
+
+
+# ------------------------------------------------------------------------------------------------ D-07: banner shows plan hash and planned runs
+def test_the_banner_shows_the_analysis_plan_hash_and_the_planned_run_count(draft):
+    items = _items()  # 3 algorithms x 3 replicates
+    report = _report(items, plan=draft)
+    banner = report.data["banner"]
+    assert banner["analysis_plan_sha256"] == fx.PLAN_SHA
+    assert banner["planned_runs"] == 9 and banner["planned_runs_per_cell"] == 3
+    assert banner["completed_runs"] == 9 and banner["failed_runs"] == 0
+    assert f"Analysis plan sha256: {fx.PLAN_SHA}" in report.text
+    assert "Planned runs: 9 (3 per cell); completed 9; failed 0" in report.text
+
+
+def test_the_banner_says_so_when_the_plan_file_hash_was_not_recorded(draft):
+    report = _report(_items(), plan=draft, plan_sha="absent")
+    assert report.data["banner"]["analysis_plan_sha256"] is None
+    assert "Analysis plan sha256: not recorded (the analysis plan file did not resolve)" in report.text
+
+
+def test_the_banner_counts_failed_runs_from_the_index(draft):
+    items = _items() + [fx.failed_item("eil51", "Core-PSO-TSP", 9)]
+    report = _report(items, plan=draft)
+    assert report.data["banner"]["failed_runs"] == 1
+    assert "Planned runs: 10 (10 per cell); completed 9; failed 1" in report.text

@@ -207,7 +207,7 @@ def test_schema_snapshot_is_current_and_the_three_existing_snapshots_are_in_the_
     rendered = render_schemas()
     assert list(rendered) == ["study-v1.schema.json", "dataset-v1.schema.json", "run-v1.schema.json",
                               "exact-reference-row-v1.schema.json", "analysis-plan-v1.schema.json",
-                              "run-index-v1.schema.json"]
+                              "run-index-v2.schema.json"]
     schema = json.loads(rendered["exact-reference-row-v1.schema.json"])
     assert schema["$id"] == "uniride-exact-reference-row/v1" and schema["additionalProperties"] is False
     assert not [k for k in schema["properties"] if k.startswith("gap")]

@@ -3,7 +3,7 @@
 ``docs/designs/PAPER_SCALE_RUN_PLAN_TEMPLATE.md`` lists every field a paper-scale run plan states and, for each, the
 field a reviewer reads after the run. This test checks (1) that every required field heading and checklist item is
 present, (2) that every contract field the template cites (``manifest.*`` = ``RunManifestV1``, ``index.*`` =
-``RunIndexV1``, ``study.*`` = ``StudyManifestV1``, ``plan.*`` = ``AnalysisPlanV1``) exists in that contract, (3) that a
+``RunIndexV2``, ``study.*`` = ``StudyManifestV1``, ``plan.*`` = ``AnalysisPlanV1``) exists in that contract, (3) that a
 field without a manifest counterpart says so explicitly and names a gap listed in the template, and (4) that every row cites
 ``file:line`` evidence (informative, named against a base commit; the line numbers themselves are not checked). It does not check any scientific value.
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel
 
-from academic_benchmark.contracts import RunIndexV1, RunManifestV1, StudyManifestV1
+from academic_benchmark.contracts import RunIndexV2, RunManifestV1, StudyManifestV1
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 
 REPO = Path(__file__).resolve().parents[2]
@@ -61,7 +61,7 @@ REQUIRED_APPROVAL_PHRASES = (
 )
 CONTRACTS: dict[str, type[BaseModel]] = {
     "manifest": RunManifestV1,
-    "index": RunIndexV1,
+    "index": RunIndexV2,
     "study": StudyManifestV1,
     "plan": AnalysisPlanV1,
 }

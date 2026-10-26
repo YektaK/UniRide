@@ -80,6 +80,10 @@ def _dataset(dataset_id, dimension=51):
 
 
 def _levels(problem):
+    """The study profile's own level list of the instance (what the run service records); a made-up pair for other names."""
+    scaled = _BILDIRI.scaled_fixed_budget_levels.levels_by_dataset.get(f"tsplib-{normalize_problem(problem)}")
+    if scaled is not None:
+        return tuple(scaled)
     base = 1000 + 17 * len(problem)
     return (base, base * 5)
 
@@ -1171,3 +1175,38 @@ def test_a_run_index_that_names_another_analysis_plan_is_refused(active):
 
 def test_a_run_index_that_names_the_analysed_plan_is_accepted(active):
     run(per_instance_items(SEPARATED), active, study=STUDY3, plan_id=active.analysis_plan_id)
+
+
+# ---------------------------------------------------------------- fully failed instance of an across-instances family (readiness 2, part 1)
+def _all_failed(problem, level=0, replicates=3):
+    return [failed_item(problem, algorithm, r, evaluation_budget=_levels(problem)[level]) for algorithm in ALGORITHMS for r in range(replicates)]
+
+
+def test_a_fully_failed_instance_whose_failures_are_listed_but_not_passed_is_refused(active):
+    """Every run of st70 at the analysed level failed and the index lists the failures; the rows omit them. The analysed level is
+    the family's (level index 0, shared by the completed instances), so st70's listed failures are demanded as rows."""
+    completed = cross_items(problems=[p for p in CROSS_INSTANCES if p != "st70"])
+    with pytest.raises(StatisticsRefusal, match="missing from the rows"):
+        run(completed, active, ACROSS, mode="smoke", failed=_all_failed("st70"))
+
+
+def test_a_fully_failed_instance_is_counted_in_the_descriptive_result(draft):
+    items = cross_items(problems=[p for p in CROSS_INSTANCES if p != "st70"]) + _all_failed("st70")
+    result = run(items, draft, ACROSS, mode="smoke")
+    st70 = [e for e in result.exclusions if e["dataset_identity"] == "st70"]
+    assert sorted((e["algorithm_id"], e["failed_runs"]) for e in st70) == [(a, 3) for a in sorted(ALGORITHMS)]
+    assert not any(e["algorithm_id"] is None and e["dataset_identity"] == "st70" for e in result.exclusions)
+
+
+def test_failures_at_another_level_are_refused_for_an_instance_with_no_completed_rows(draft):
+    """The analysed level is the family's level index, not whatever the failed rows of an empty instance say."""
+    items = cross_items(problems=[p for p in CROSS_INSTANCES if p != "st70"]) + _all_failed("st70", level=1)
+    with pytest.raises(StatisticsRefusal, match="another budget level"):
+        run(items, draft, ACROSS, mode="smoke")
+
+
+def test_listed_failures_at_another_level_are_not_demanded_on_a_fully_failed_instance(draft):
+    """st70's failures were at level 1, the family is analysed at level 0: they are outside this family, neither refused nor reported."""
+    completed = cross_items(problems=[p for p in CROSS_INSTANCES if p != "st70"])
+    result = run(completed, draft, ACROSS, mode="smoke", failed=_all_failed("st70", level=1))
+    assert any(e["dataset_identity"] == "st70" and e["algorithm_id"] is None for e in result.exclusions)

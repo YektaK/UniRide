@@ -367,10 +367,11 @@ def expand_home(text: str) -> Path:
 
 def outside_location(output: Path, checked_against: Sequence[Path]) -> dict[str, Any]:
     """The ``output_location`` record of a campaign that passed the outside-the-repository check against ``checked_against``
-    (G6): the output folder (the user-home prefix written as ``~``, A20 L8) and the trees it was checked against."""
+    (G6): the output folder and the trees it was checked against, each with the user-home prefix written as ``~`` (A20 L8). The
+    verifier compares neither ``checked_against`` entry with anything, so only ``output_location.path`` is expanded (``expand_home``)."""
     return {
         "path": home_relative(Path(output).resolve()),
-        "outside_repository_check": {"result": "outside_repository", "checked_against": [str(Path(p)) for p in checked_against]},
+        "outside_repository_check": {"result": "outside_repository", "checked_against": [home_relative(Path(p)) for p in checked_against]},
     }
 
 

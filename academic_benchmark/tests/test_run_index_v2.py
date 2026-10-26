@@ -433,3 +433,54 @@ def test_the_plan_hash_is_recorded_when_the_plan_resolves_even_as_a_draft(smoke)
     index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
     assert index.analysis_plan.path == "studies/analysis_plan.json"
     assert index.analysis_plan.sha256 == _sha(root / "studies" / "analysis_plan.json")
+
+
+# ------------------------------------------------------------------------------------------------ failed-run record contract (readiness 2, part 5)
+def _failed_record(**changes) -> dict:
+    record = {
+        "algorithm_id": "a", "dataset_id": "tsplib-eil51", "problem": "eil51", "protocol_version": "uniride-fair-tsp-v2",
+        "comparison_regime": "fixed_evaluation_budget", "evaluation_budget": 63750, "replicate": 0, "stage": "run",
+        "exception_category": "RuntimeError", "error": "synthetic failure",
+    }
+    record.update(changes)
+    return record
+
+
+def test_a_fixed_budget_failed_record_without_an_evaluation_budget_is_refused_not_turned_into_null():
+    from academic_benchmark.analysis.manifests import failed_run_entries
+
+    assert failed_run_entries([_failed_record()])[0].evaluation_budget == 63750
+    missing = _failed_record()
+    del missing["evaluation_budget"]
+    with pytest.raises(ManifestError, match="evaluation_budget"):
+        failed_run_entries([missing])
+    with pytest.raises(ManifestError, match="evaluation_budget"):
+        failed_run_entries([_failed_record(evaluation_budget=None)])
+
+
+def test_a_native_failed_record_has_no_budget_and_is_accepted():
+    from academic_benchmark.analysis.manifests import failed_run_entries
+
+    native = _failed_record(protocol_version="uniride-native-tsp-v1", comparison_regime="algorithm_native_termination", evaluation_budget=None)
+    assert failed_run_entries([native])[0].evaluation_budget is None
+    without_key = dict(native)
+    del without_key["evaluation_budget"]
+    assert failed_run_entries([without_key])[0].evaluation_budget is None  # a native run has no budget to record
+
+
+def test_the_index_contract_itself_refuses_a_fixed_failed_record_without_a_budget(paper):
+    _root, out, _report = paper
+    data = _index_json(out)
+    data["status"], data["failed_runs"] = "failed", [_failed_record(evaluation_budget=None)]
+    with pytest.raises(ValidationError, match="evaluation_budget"):
+        RunIndexV2.model_validate(data)
+
+
+def test_a_negative_replicate_is_refused_by_the_contract_and_the_schema():
+    from academic_benchmark.contracts.run_index import FailedRunV1
+
+    with pytest.raises(ValidationError):
+        FailedRunV1.model_validate(_failed_record(replicate=-1))
+    assert FailedRunV1.model_validate(_failed_record(replicate=0)).replicate == 0
+    schema = json.loads((Path(__file__).resolve().parents[1] / "schemas" / "run-index-v2.schema.json").read_text(encoding="utf-8"))
+    assert schema["$defs"]["FailedRunV1"]["properties"]["replicate"]["minimum"] == 0

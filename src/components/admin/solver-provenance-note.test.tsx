@@ -56,6 +56,29 @@ describe("SolverProvenanceNote", () => {
     expect(note.textContent).toContain("solver_error");
   });
 
+  it("says the solver stopped at its time limit (English)", () => {
+    render(<SolverProvenanceNote provenance={{ algorithm_used: "e2bso", termination_reason: "wall_clock_deadline" }} />);
+    expect(screen.getByTestId("solver-provenance").textContent).toContain(
+      "The solver stopped at its time limit; this plan may not be reproducible from its seed.",
+    );
+  });
+
+  it("says the solver stopped at its time limit (Turkish)", () => {
+    messages = tr;
+    render(<SolverProvenanceNote provenance={{ termination_reason: "wall_clock_deadline", effective_seed: 7 }} />);
+    const text = screen.getByTestId("solver-provenance").textContent;
+    expect(text).toContain("Çözücü süre sınırında durdu; bu plan tohumundan yeniden üretilemeyebilir.");
+    expect(text).toContain("tohum 7");
+    messages = en;
+  });
+
+  it("stays silent about other termination reasons and about the code version", () => {
+    const { container } = render(
+      <SolverProvenanceNote provenance={{ termination_reason: "iteration_limit", solver_code_version: "3f2a9c1" }} />,
+    );
+    expect(container.innerHTML).toBe("");
+  });
+
   it("renders nothing when only the algorithm names are known and no fallback happened", () => {
     const { container } = render(<SolverProvenanceNote provenance={{ algorithm_requested: "ga", algorithm_used: "ga" }} />);
     expect(container.innerHTML).toBe("");

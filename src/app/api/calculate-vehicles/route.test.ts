@@ -131,6 +131,31 @@ describe("POST /api/calculate-vehicles", () => {
     expect(body.meta).toMatchObject({ effectiveConfigSource: "default", effectiveSeed: 42 });
   });
 
+  it("passes the termination reason and the solver code version to the client meta (A20 L2/L3)", async () => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1", email: "admin@test", role: "admin" });
+    optimizeRoutesMock.mockResolvedValue(
+      happySolverResult({ direction: "pickup", termination_reason: "wall_clock_deadline", solver_code_version: "3f2a9c1" }),
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(validRequest() as never);
+
+    const body = await response.json();
+    expect(body.meta).toMatchObject({ terminationReason: "wall_clock_deadline", solverCodeVersion: "3f2a9c1" });
+  });
+
+  it("leaves terminationReason and solverCodeVersion out of meta when the optimizer reported none", async () => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1", email: "admin@test", role: "admin" });
+    optimizeRoutesMock.mockResolvedValue(happySolverResult({ direction: "pickup" }));
+
+    const { POST } = await import("./route");
+    const response = await POST(validRequest() as never);
+
+    const body = await response.json();
+    expect(body.meta).not.toHaveProperty("terminationReason");
+    expect(body.meta).not.toHaveProperty("solverCodeVersion");
+  });
+
   it("leaves the effective config keys out of meta when the optimizer reported none", async () => {
     requireAdminMock.mockResolvedValue({ id: "admin-1", email: "admin@test", role: "admin" });
     optimizeRoutesMock.mockResolvedValue(happySolverResult({ direction: "pickup" }));

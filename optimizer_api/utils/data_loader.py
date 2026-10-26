@@ -103,7 +103,6 @@ class DataLoader(metaclass=SingletonMeta):
         request_locations: List[str],
         coordinates: Optional[Dict[str, Dict[str, float]]] = None,
         geo_coords: bool = False,
-        asymmetric_haversine: bool = False,
     ) -> List[List[float]]:
         """
         Extract an NxN time submatrix for the given subset of location IDs.
@@ -116,7 +115,6 @@ class DataLoader(metaclass=SingletonMeta):
             request_locations,
             coordinates=coordinates,
             geo_coords=geo_coords,
-            asymmetric_haversine=asymmetric_haversine,
         )
 
     def get_duration(self, from_loc: str, to_loc: str) -> float:
@@ -184,8 +182,6 @@ class DataLoader(metaclass=SingletonMeta):
         locations: List[str],
         coordinates: Dict[str, Dict[str, float]],
         avg_speed_kmh: float = 40.0,
-        asymmetric: bool = False,
-        asymmetry_range: float = 0.15,
     ) -> List[List[float]]:
         """
         Build NxN travel-time matrix (minutes) from geographic lat/lng.
@@ -196,8 +192,6 @@ class DataLoader(metaclass=SingletonMeta):
             locations,
             coordinates,
             avg_speed_kmh=avg_speed_kmh,
-            asymmetric=asymmetric,
-            asymmetry_range=asymmetry_range,
         )
 
 

@@ -467,7 +467,6 @@ class TimeMatrixRepository:
         request_locations: List[str],
         coordinates: Optional[Dict[str, Dict[str, float]]] = None,
         geo_coords: bool = False,
-        asymmetric_haversine: bool = False,
     ) -> List[List[float]]:
         """Directed travel-time submatrix (minutes) from the stored matrix.
 
@@ -485,9 +484,7 @@ class TimeMatrixRepository:
         if coordinates and _ACADEMIC_COORDINATE_SCOPE.get():
             # Academic benchmark problem: its coordinates define the metric.
             if geo_coords:
-                return self.build_haversine_matrix(
-                    request_locations, coordinates, asymmetric=True
-                )
+                return self.build_haversine_matrix(request_locations, coordinates)
             return self.build_euclidean_matrix(request_locations, coordinates)
 
         with self._lock:
@@ -496,10 +493,7 @@ class TimeMatrixRepository:
             if self._use_coordinates or self.time_matrix is None:
                 if coordinates and self._coordinate_fallback_enabled():
                     if geo_coords:
-                        return self.build_haversine_matrix(
-                            request_locations, coordinates,
-                            asymmetric=asymmetric_haversine if not geo_coords else True,
-                        )
+                        return self.build_haversine_matrix(request_locations, coordinates)
                     return self.build_euclidean_matrix(request_locations, coordinates)
                 raise MatrixUnavailableError()
 
@@ -839,9 +833,9 @@ class TimeMatrixRepository:
         locations: List[str],
         coordinates: Dict[str, Dict[str, float]],
         avg_speed_kmh: float = 40.0,
-        asymmetric: bool = False,
-        asymmetry_range: float = 0.15,
     ) -> List[List[float]]:
+        """Symmetric haversine travel-time stand-in (minutes), a pure function
+        of the coordinates (no synthetic asymmetry, MT6F-05 / audit L10-a/b)."""
         from uniride_core.algorithms.distance import (
             estimate_travel_time,
             haversine_distance,
@@ -857,16 +851,8 @@ class TimeMatrixRepository:
                 lat2, lng2 = c2.get("lat", 0.0), c2.get("lng", 0.0)
                 dist_m = haversine_distance(lat1, lng1, lat2, lng2)
                 travel_min = estimate_travel_time(dist_m, avg_speed_kmh)
-                if asymmetric:
-                    h_ij = hash((locations[i], locations[j])) & 0xFFFFFFFF
-                    f_ij = 1.0 + asymmetry_range * (2.0 * (h_ij % 1000) / 1000.0 - 1.0)
-                    h_ji = hash((locations[j], locations[i])) & 0xFFFFFFFF
-                    f_ji = 1.0 + asymmetry_range * (2.0 * (h_ji % 1000) / 1000.0 - 1.0)
-                    matrix[i][j] = travel_min * f_ij
-                    matrix[j][i] = travel_min * f_ji
-                else:
-                    matrix[i][j] = travel_min
-                    matrix[j][i] = travel_min
+                matrix[i][j] = travel_min
+                matrix[j][i] = travel_min
         return matrix
 
 

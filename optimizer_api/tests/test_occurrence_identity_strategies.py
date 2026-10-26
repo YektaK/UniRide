@@ -19,7 +19,7 @@ from models.schemas import OptimizationRequest, StudentNode, LocationNode
 class FakeDataLoader:
     """Minimal DataLoader stand-in returning a coordinate-based submatrix."""
 
-    def get_submatrix(self, locations, coordinates=None, geo_coords=False, asymmetric_haversine=False):
+    def get_submatrix(self, locations, coordinates=None, geo_coords=False):
         n = len(locations)
         if not coordinates:
             return [[0.0] * n for _ in range(n)]

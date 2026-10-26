@@ -47,7 +47,7 @@ REQUESTED_KEYS = [
 class _EuclideanLoader:
     """Coordinate-fallback submatrix mirroring the real DataLoader."""
 
-    def get_submatrix(self, request_locations, coordinates=None, geo_coords=False, asymmetric_haversine=False):
+    def get_submatrix(self, request_locations, coordinates=None, geo_coords=False):
         n = len(request_locations)
         # A real matrix is a fixed table: callers that pass no coordinates (the
         # split strategies) must still get true arcs, not zeros (audit C2).

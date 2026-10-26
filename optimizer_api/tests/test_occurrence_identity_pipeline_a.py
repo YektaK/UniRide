@@ -67,7 +67,7 @@ class _EuclideanDataLoader:
     def __init__(self):
         self.recorded = []
 
-    def get_submatrix(self, request_locations, coordinates=None, geo_coords=False, asymmetric_haversine=False):
+    def get_submatrix(self, request_locations, coordinates=None, geo_coords=False):
         self.recorded.append(list(request_locations))
         n = len(request_locations)
         coords = coordinates or {}

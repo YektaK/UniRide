@@ -42,8 +42,9 @@ class ProfileRefV1(StrictContract):
 
 
 class AnalysisPlanRefV1(StrictContract):
-    """The analysis plan the campaign names. ``path`` and ``sha256`` are ``None`` only when no plan file resolved, which a
-    smoke campaign allows (descriptive output only); a paper campaign always has both."""
+    """The analysis plan the campaign names. ``path`` and ``sha256`` are ``None`` only when the plan did not resolve (no file, an
+    invalid file, or a file that is not this study's plan), which a smoke campaign allows (descriptive output only; the reason is
+    in the run report); a paper campaign always has both. The hash of a plan that did not resolve is never recorded."""
 
     analysis_plan_id: str = Field(min_length=1)
     path: Optional[RepositoryRelativePath]

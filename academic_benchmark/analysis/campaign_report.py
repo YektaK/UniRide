@@ -8,7 +8,9 @@ report (``analysis.report``) and writes ``descriptive_report.txt/json`` next to 
 ``rebuild_descriptive_report`` and ``python -m academic_benchmark.analysis.campaign_report <campaign dir> [--study <study.json>]`` build
 the report again from an existing campaign folder (for example after a crash between the run index and the report). Exit codes as in
 ``studies.run``: 0 written, 1 written for a campaign whose run status is "failed", 2 refused (campaign folder inside the repository, a
-folder that does not verify, an exact reference that fails its integrity checks, a refused report).
+folder that does not verify, an exact reference that fails its integrity checks or its cross-check with the published optima, a refused
+report, an analysis plan that cannot be read from git at the campaign's commit). The rebuild reads the analysis plan as committed at the
+commit the campaign recorded (``git show <commit>:<plan>``), not the working-tree file, and compares its hash with the run index.
 
 The exact reference is optional for a descriptive report, but only in one sense: when ``results_index.json`` is absent (or lists no
 TSP reference) the gap column is ``null`` with its reason and the report and the run text say so. An integrity refusal of the reference
@@ -20,11 +22,18 @@ checksum) and nothing ever reads them back as input.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
-from academic_benchmark.analysis.gaps import ExactReferenceTable, add_gap_columns, load_reference_table
+from academic_benchmark.analysis.gaps import (
+    ExactReferenceTable,
+    ReferenceCrossCheckError,
+    add_gap_columns,
+    load_reference_table,
+)
+from academic_benchmark.committed_bytes import GitQueryFailed, run_git
 from academic_benchmark.analysis.manifests import (
     DESCRIPTIVE_REPORT_FILES,
     ManifestError,
@@ -60,9 +69,29 @@ def default_reference_table(root: Path) -> ExactReferenceTable:
 def _write_from_campaign(
     output: Path, campaign: VerifiedCampaign, *, study: StudyManifestV1, plan: AnalysisPlanV1, root: Path,
     reference_table_provider: Optional[Callable[[Path], Any]],
+    plan_hashes: Optional[Sequence[str]] = None,
 ) -> List[str]:
+    """Build and write the report. ``plan_hashes`` are the sha256 values that count as "the analysis plan file this report loaded"
+    (one for the working-tree file; the caller may offer more than one for a file read from git, see ``_plan_bytes_hashes``).
+    The plan hash the run index records must be one of them: a difference refuses a paper campaign's report and is a warning in the
+    report and in the returned lines for a smoke campaign. The verifier's notes (checks it could not make) are shown in both."""
     lines: List[str] = []
     notes: List[str] = []
+    for verifier_note in campaign.notes:  # a note is not a pass: it is shown, never dropped
+        notes.append(verifier_note)
+        lines.append(f"Note: {verifier_note}")
+    recorded_hash = campaign.index.analysis_plan.sha256
+    if plan_hashes is None:
+        notes.append("the analysis plan file was not compared with the plan hash of the run index (the caller gave no hash)")
+    elif recorded_hash not in plan_hashes:
+        difference = (
+            f"the analysis plan differs: the plan this report loads has sha256 {plan_hashes[0]}, the run index records "
+            f"{recorded_hash if recorded_hash is not None else 'no plan hash'}"
+        )
+        if campaign.index.mode == "paper":
+            raise CampaignReportError(difference + " (a paper report needs the plan the campaign ran with)")
+        notes.append("Warning: " + difference)
+        lines.append("Warning: " + difference)
     try:
         table = (reference_table_provider or default_reference_table)(root)
     except FileNotFoundError as exc:  # no reference to read: the gap is null with its reason, and the text says so
@@ -72,6 +101,8 @@ def _write_from_campaign(
         lines.append(f"Note: {note}")
     except reference_reader.ExactReferenceRefused as exc:  # an integrity failure is never turned into null gaps
         raise CampaignReportError(f"the exact reference was refused (integrity): {exc}") from exc
+    except ReferenceCrossCheckError as exc:  # the reference disagrees with the published optimum or with another set: integrity too
+        raise CampaignReportError(f"the exact reference failed its cross-check (integrity): {exc}") from exc
     groups: Dict[str, List[tuple]] = {}
     for row, manifest in campaign.items:
         groups.setdefault(classify_row(row).pooling_group, []).append((row, manifest))
@@ -100,8 +131,13 @@ def write_smoke_descriptive_report(
     root: Path,
     run_index: Optional[Mapping[str, Any]],
     reference_table_provider: Optional[Callable[[Path], Any]] = None,
+    plan_sha256: Optional[str] = None,
 ) -> List[str]:
     """Write the descriptive report of the smoke campaign in ``output``; returns the lines to append to the run report text.
+
+    ``plan_sha256`` is the hash of the analysis plan file the caller loaded (``AnalysisPlanResolution.sha256``); it is compared with
+    the plan hash of the run index (a difference is a warning in smoke mode and a refusal in paper mode). Without it the report
+    says that the plan file was not compared.
 
     ``run_index`` is the summary the smoke run itself returned (``SmokeReport.run_index``: ``path``, ``sha256``, ``manifests``) or
     ``None`` when it wrote no manifests (unknown git state); whether manifests exist is taken from it, never from the files on disk.
@@ -116,14 +152,27 @@ def write_smoke_descriptive_report(
     if plan is None:
         return [f"Descriptive report not written: the analysis plan does not resolve ({plan_problem})."]
     try:
-        campaign = load_verified_campaign(output)
+        campaign = load_verified_campaign(output, repository_root=root)
     except ManifestError as exc:
         raise CampaignReportError(str(exc)) from exc
     if campaign.index_sha256 != run_index.get("sha256"):
         raise CampaignReportError(
             f"the run index on disk has sha256 {campaign.index_sha256}, the smoke run reported {run_index.get('sha256')}: the folder changed after the run"
         )
-    return _write_from_campaign(output, campaign, study=study, plan=plan, root=root, reference_table_provider=reference_table_provider)
+    return _write_from_campaign(
+        output, campaign, study=study, plan=plan, root=root, reference_table_provider=reference_table_provider,
+        plan_hashes=None if plan_sha256 is None else (plan_sha256,),
+    )
+
+
+def _plan_bytes_hashes(plan_bytes: bytes) -> tuple:
+    """The sha256 values that count as "this plan file" for bytes read from git: the bytes as they are, with LF line endings and with
+    CRLF line endings. The run service hashed the working-tree file, and a checkout with ``core.autocrlf`` holds the same committed
+    blob with other line endings (the known G1 caveat); nothing else is tolerated."""
+    lf = plan_bytes.replace(b"\r\n", b"\n")
+    crlf = lf.replace(b"\n", b"\r\n")
+    hashes = [hashlib.sha256(variant).hexdigest() for variant in (plan_bytes, lf, crlf)]
+    return tuple(dict.fromkeys(hashes))
 
 
 def _rebuild(
@@ -132,7 +181,7 @@ def _rebuild(
     """``(lines, run status)`` of a rebuilt report."""
     from academic_benchmark.fair_pilot import _is_within  # local imports: the run service imports this module
     from academic_benchmark.studies.run import _main_working_tree
-    from academic_benchmark.studies.service import load_study_with_plan
+    from academic_benchmark.studies.service import ANALYSIS_PLAN_FILENAME, load_study, resolve_analysis_plan_bytes
 
     output = Path(campaign_dir).expanduser().resolve()
     if not output.is_dir():
@@ -143,15 +192,29 @@ def _rebuild(
     for name in DESCRIPTIVE_REPORT_FILES:  # a refused rebuild must not leave an old report next to a campaign it no longer describes
         (output / name).unlink(missing_ok=True)
     try:
-        campaign = load_verified_campaign(output)
+        campaign = load_verified_campaign(output, repository_root=root)
     except ManifestError as exc:
         raise CampaignReportError(str(exc)) from exc
     relative = study_path or f"academic_benchmark/studies/{campaign.index.study_id}/study.json"
-    loaded = load_study_with_plan(relative, repository_root=root, mode="smoke")
-    if loaded.analysis_plan.plan is None:
-        raise CampaignReportError(f"the analysis plan does not resolve ({loaded.analysis_plan.problem}); there is nothing to build the report from")
+    study = load_study(relative, repository_root=root)
+    # the plan as it was when the campaign ran (git at the campaign's commit), not the working-tree file, which may have moved on
+    commit = campaign.index.git.commit
+    plan_name = (PurePosixPath(relative).parent / ANALYSIS_PLAN_FILENAME).as_posix()
+    try:
+        plan_bytes = run_git(["show", f"{commit}:{plan_name}"], root)
+    except GitQueryFailed as exc:
+        raise CampaignReportError(
+            f"the analysis plan {plan_name} at the campaign commit {commit[:12]} cannot be read from git in {root} ({exc}); "
+            "the rebuild reads the plan as it was when the campaign ran, so there is nothing to build the report from"
+        ) from exc
+    resolution = resolve_analysis_plan_bytes(study, plan_name, plan_bytes, repository_root=root, mode="smoke")
+    if resolution.plan is None:
+        raise CampaignReportError(
+            f"the analysis plan at the campaign commit {commit[:12]} does not resolve ({resolution.problem}); there is nothing to build the report from"
+        )
     lines = _write_from_campaign(
-        output, campaign, study=loaded.study, plan=loaded.analysis_plan.plan, root=root, reference_table_provider=reference_table_provider,
+        output, campaign, study=study, plan=resolution.plan, root=root, reference_table_provider=reference_table_provider,
+        plan_hashes=_plan_bytes_hashes(plan_bytes),
     )
     return lines, campaign.index.status
 

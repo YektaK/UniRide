@@ -335,7 +335,7 @@ def _paper_inference(active):
         row.setdefault("objective_evaluations", row["evaluation_budget"])
         row.setdefault("termination_reason", "budget_exhausted")
     analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,
-                              run_index=fx.index_for(items, "paper"))
+                              run_index=fx.index_for(items, "paper"), index_sha256=SHA)  # SHA = the index the report is given
     return items, analysis
 
 
@@ -553,8 +553,16 @@ def test_the_smoke_report_carries_the_index_the_run_wrote(tmp_path):
     assert f"index sha256 {_sha(out / 'run_index.json')}" in run.text
 
 
+def _head(root):
+    import subprocess
+
+    revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, timeout=60).stdout.decode().strip()
+    return {"revision": revision, "dirty": False}
+
+
 def _campaign_dir(tmp_path):
-    run, out, root = _smoke_with(tmp_path, _raises(FileNotFoundError("none")))
+    # a campaign that recorded the real HEAD of the fixture repository: the rebuild reads the analysis plan from git at that commit
+    run, out, root = _smoke_with(tmp_path, _raises(FileNotFoundError("none")), git=_head)
     return run, out, root
 
 
@@ -696,7 +704,7 @@ def test_the_banner_shows_the_analysis_plan_hash_and_the_planned_run_count(draft
 def test_the_banner_says_so_when_the_plan_file_hash_was_not_recorded(draft):
     report = _report(_items(), plan=draft, plan_sha="absent")
     assert report.data["banner"]["analysis_plan_sha256"] is None
-    assert "Analysis plan sha256: not recorded (the analysis plan file did not resolve)" in report.text
+    assert "Analysis plan sha256: not recorded (the analysis plan did not resolve)" in report.text
 
 
 def test_the_banner_counts_failed_runs_from_the_index(draft):

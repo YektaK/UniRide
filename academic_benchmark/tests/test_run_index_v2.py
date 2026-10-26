@@ -406,3 +406,30 @@ def test_the_writer_refuses_fewer_planned_runs_than_listed_and_a_status_that_dis
     other = tmp_path / "w2"
     with pytest.raises(ManifestError, match="status"):
         write_run_campaign(other, **_writer_kwargs(out, other, status="passed"))
+
+
+# ------------------------------------------------------------------------------------------------ run-index polish 1
+def test_a_smoke_run_whose_plan_file_exists_but_does_not_resolve_records_no_hash_and_says_why(tmp_path):
+    """A hash of a plan that did not resolve describes nothing the analysis used: the plan file is there but names another
+    plan id, so the index records the id with a null path and a null hash, and the reason stays in the run report."""
+    root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    plan_file = root / "studies" / "analysis_plan.json"
+    payload = json.loads(plan_file.read_text(encoding="utf-8"))
+    payload["analysis_plan_id"] = "some-other-plan-v9"
+    plan_file.write_text(json.dumps(payload), encoding="utf-8")
+    out = tmp_path / "out"
+    report = svc.run_study(svc.STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(),
+                           git_provider=svc.CLEAN, replicates=1)
+    assert report.status == "passed", report.text
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
+    assert index.analysis_plan.analysis_plan_id == "fixture-plan-v1"
+    assert index.analysis_plan.path is None and index.analysis_plan.sha256 is None
+    assert "unresolved" in report.text and "some-other-plan-v9" in report.text
+    assert verify_campaign_detailed(out).ok
+
+
+def test_the_plan_hash_is_recorded_when_the_plan_resolves_even_as_a_draft(smoke):
+    root, out, _report = smoke
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
+    assert index.analysis_plan.path == "studies/analysis_plan.json"
+    assert index.analysis_plan.sha256 == _sha(root / "studies" / "analysis_plan.json")

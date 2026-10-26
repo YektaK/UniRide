@@ -124,7 +124,7 @@ class StudyPlan:
     claims: tuple[ClaimCheck, ...]
     rows: tuple[PlanRow, ...]
     # the files the plan was read from, as the run index records them (G1): sha256 of the working-tree bytes (``read_bytes()``);
-    # the analysis plan fields are ``None`` when no plan file sits next to the profile
+    # the analysis plan fields are ``None`` when the plan did not resolve (missing, invalid, or not this study's plan)
     study_path: str
     study_sha256: str
     analysis_plan_path: str | None
@@ -221,6 +221,8 @@ class AnalysisPlanResolution:
     plan: AnalysisPlanV1 | None
     problem: str | None
     label: str
+    # sha256 of the plan file bytes this resolution parsed (one read); ``None`` when the plan did not resolve
+    sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -235,14 +237,12 @@ def _check_mode(mode: object) -> None:
 
 
 def _plan_problem(
-    study: StudyManifestV1, plan_path: Path, plan_name: str, repository_root: Path
+    study: StudyManifestV1, plan_bytes: bytes, plan_name: str, repository_root: Path
 ) -> tuple[AnalysisPlanV1 | None, str | None]:
-    """The validated plan, or ``None`` and the reason the plan id does not resolve."""
+    """The validated plan, or ``None`` and the reason the plan id does not resolve (``plan_bytes`` = the file's bytes)."""
     try:
-        payload = json.loads(plan_path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return None, f"analysis plan file not found: {plan_name}"
-    except (OSError, ValueError) as exc:
+        payload = json.loads(plan_bytes.decode("utf-8"))
+    except ValueError as exc:
         return None, f"analysis plan file is not readable JSON: {plan_name} ({exc})"
     try:
         plan = AnalysisPlanV1.model_validate(payload)
@@ -307,8 +307,37 @@ def resolve_analysis_plan(
     plan_name = (
         PurePosixPath(validate_repository_relative_path(study_path)).parent / ANALYSIS_PLAN_FILENAME
     ).as_posix()
+    try:
+        plan_bytes: bytes | None = plan_path.read_bytes()
+        read_problem = None
+    except FileNotFoundError:
+        plan_bytes, read_problem = None, f"analysis plan file not found: {plan_name}"
+    except OSError as exc:
+        plan_bytes, read_problem = None, f"analysis plan file is not readable JSON: {plan_name} ({exc})"
+    return resolve_analysis_plan_bytes(
+        study, plan_name, plan_bytes, repository_root=repository_root, mode=mode, read_problem=read_problem
+    )
+
+
+def resolve_analysis_plan_bytes(
+    study: StudyManifestV1,
+    plan_name: str,
+    plan_bytes: bytes | None,
+    *,
+    repository_root: Path,
+    mode: AnalysisPlanMode,
+    read_problem: str | None = None,
+) -> AnalysisPlanResolution:
+    """``resolve_analysis_plan`` for plan bytes the caller already holds (for example the plan as committed at a campaign's commit).
+
+    ``plan_name`` is the repository-relative name used in messages; ``plan_bytes`` is ``None`` when the file could not be read
+    (``read_problem`` says why). The resolution's ``sha256`` is the hash of exactly these bytes."""
+    _check_mode(mode)
     plan_id = study.analysis_plan_id
-    plan, problem = _plan_problem(study, plan_path, plan_name, Path(repository_root))
+    if plan_bytes is None:
+        plan, problem = None, read_problem or f"analysis plan file not found: {plan_name}"
+    else:
+        plan, problem = _plan_problem(study, plan_bytes, plan_name, Path(repository_root))
     if plan is None:
         if mode == "paper":
             raise StudyServiceError(f"analysis plan {plan_id!r} does not resolve: {problem}")
@@ -318,6 +347,7 @@ def resolve_analysis_plan(
             problem,
             f"analysis plan {plan_id} unresolved ({problem}): descriptive output only, no inference",
         )
+    plan_sha256 = hashlib.sha256(plan_bytes).hexdigest()  # plan resolved, so the bytes exist
     if plan.status != "active":
         names = ", ".join(item.field for item in plan.unresolved) or "none listed"
         if mode == "paper":
@@ -331,8 +361,9 @@ def resolve_analysis_plan(
             None,
             f"analysis plan {plan_id} ({plan.status}; unresolved: {names}): "
             "descriptive output only, no inference",
+            plan_sha256,
         )
-    return AnalysisPlanResolution(plan_id, plan, None, f"analysis plan {plan_id} (active)")
+    return AnalysisPlanResolution(plan_id, plan, None, f"analysis plan {plan_id} (active)", plan_sha256)
 
 
 def load_study_with_plan(
@@ -650,11 +681,15 @@ def build_study_plan(
     rows = expand_plan(study, datasets)
     study_file = _resolve_inside(Path(repository_root), study_path, "study path")
     plan_relative = (PurePosixPath(validate_repository_relative_path(study_path)).parent / ANALYSIS_PLAN_FILENAME).as_posix()
-    plan_file = study_file.parent / ANALYSIS_PLAN_FILENAME
+    # the plan is recorded only when it resolved (valid, this study's plan id and study id, datasets match): the hash of a
+    # file that did not resolve describes nothing the analysis used; the reason stays in the run report's plan label.
+    # The hash is the one of the bytes the resolution parsed (one read).
+    resolution = resolve_analysis_plan(study, study_path, repository_root=repository_root, mode="smoke")
+    plan_resolved = resolution.plan is not None
     return StudyPlan(
         study, backend_policy, datasets, claims, rows,
         study_path=validate_repository_relative_path(study_path),
         study_sha256=hashlib.sha256(study_file.read_bytes()).hexdigest(),
-        analysis_plan_path=plan_relative if plan_file.is_file() else None,
-        analysis_plan_sha256=hashlib.sha256(plan_file.read_bytes()).hexdigest() if plan_file.is_file() else None,
+        analysis_plan_path=plan_relative if plan_resolved else None,
+        analysis_plan_sha256=resolution.sha256 if plan_resolved else None,
     )

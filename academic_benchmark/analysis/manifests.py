@@ -767,21 +767,25 @@ def _check_campaign_fields(
 @dataclass(frozen=True)
 class VerifiedCampaign:
     """A campaign directory that verified: its index, the sha256 of ``run_index.json``, every completed row paired with its
-    run manifest (``items``, in result-file order) and the failed-run records (``failed``)."""
+    run manifest (``items``, in result-file order), the failed-run records (``failed``) and the verifier's ``notes`` (checks it
+    could not make or facts a reader must see; a note is not a pass, and a report must show them)."""
 
     index: RunIndexV2
     index_sha256: str
     items: list
     failed: list
+    notes: tuple[str, ...] = ()
 
 
-def load_verified_campaign(directory: Path | str) -> VerifiedCampaign:
+def load_verified_campaign(directory: Path | str, *, repository_root: Path | str | None = None) -> VerifiedCampaign:
     """Verify ``directory`` (``verify_campaign_detailed``) and return its rows bound to their manifests.
 
-    Raises ``ManifestError`` listing the verification errors when the campaign does not verify, so that a report or an
-    analysis never reads rows whose checksums, manifests or index do not hold. Rows are returned as read (no gap columns)."""
+    ``repository_root`` is the repository the caller loads the study from (default: the repository this code lives in); the
+    recorded profile and analysis-plan hashes are checked against that tree. Raises ``ManifestError`` listing the verification
+    errors when the campaign does not verify, so that a report or an analysis never reads rows whose checksums, manifests or index
+    do not hold. The verifier's notes are returned in ``notes``. Rows are returned as read (no gap columns)."""
     root = Path(directory)
-    result = verify_campaign_detailed(root)
+    result = verify_campaign_detailed(root, repository_root=repository_root)
     if not result.ok:
         raise ManifestError(f"{root}: the campaign does not verify ({len(result.errors)} problem(s)): " + "; ".join(result.errors[:5]))
     index_bytes = (root / INDEX_FILE).read_bytes()
@@ -805,7 +809,7 @@ def load_verified_campaign(directory: Path | str) -> VerifiedCampaign:
     failed = [json.loads(line) for line in failed_path.read_text(encoding="utf-8").splitlines() if line.strip()] if failed_path.is_file() else []
     return VerifiedCampaign(
         index=index, index_sha256=hashlib.sha256(index_bytes).hexdigest(),
-        items=[(row, manifest) for _, _, row, manifest in items], failed=failed,
+        items=[(row, manifest) for _, _, row, manifest in items], failed=failed, notes=tuple(result.notes),
     )
 
 

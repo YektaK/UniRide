@@ -129,6 +129,10 @@ class FamilyAnalysis:
     inference_refused: tuple
     inference: Optional[InferenceResult]
     excluded_pairs: tuple  # per-instance pairs that left the Holm family because a cell was excluded (OQ-9)
+    # the campaign this analysis was computed from: the commit of its run index and the sha256 of its ``run_index.json`` (``None``
+    # when the caller did not say; a paper report refuses an analysis whose identity it cannot match with its verified index)
+    campaign_commit: str
+    index_sha256: Optional[str]
     text: str
 
 
@@ -596,14 +600,22 @@ def _check_failed_against_index(
         (row["algorithm_id"], normalize_problem(row["problem"]), row.get("evaluation_budget"), row.get("replicate")) for row in failed
     )
     listed: Counter = Counter()
+    # the analysed level of an instance = the budgets of its completed rows, else of the failed rows given for it. An instance with
+    # no row at the analysed level has no level the check can name, so none of its listed failures is demanded (the family reports
+    # the instance as having no rows); failures listed at another level are never demanded as rows
+    levels: dict = {identity: set(known) for identity, known in budgets.items()}
+    for row in failed:
+        identity = normalize_problem(row["problem"])
+        if not levels.get(identity):
+            levels.setdefault(identity, set()).add(row.get("evaluation_budget"))
     for record in run_index.failed_runs:
         identity = normalize_problem(record.problem)
         if record.protocol_version != protocol_version or f"tsplib-{identity}" not in family.dataset_ids:
             continue
         if family.scope == "per_instance" and identity not in analysed_instances:
             continue
-        known = budgets.get(identity)
-        if known and record.evaluation_budget not in known:
+        known = levels.get(identity)
+        if not known or record.evaluation_budget not in known:
             continue
         listed[(record.algorithm_id, identity, record.evaluation_budget, record.replicate)] += 1
     for key in sorted((rows - listed).elements(), key=str):
@@ -639,12 +651,15 @@ def _check_conventions(plan: AnalysisPlanV1) -> None:
 
 
 def analyse_family(
-    items: Iterable[tuple], *, study: StudyManifestV1, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV2
+    items: Iterable[tuple], *, study: StudyManifestV1, plan: AnalysisPlanV1, family_id: str, run_index: RunIndexV2,
+    index_sha256: Optional[str] = None,
 ) -> FamilyAnalysis:
     """Analyse one declared comparison family. ``items`` are ``(row, manifest)`` pairs: rows with the D-06 gap column and their
     ``RunManifestV1``; failed runs are ``(row, None)``. ``run_index`` is the ``RunIndexV2`` of the campaign that the caller has verified
     (``manifests.verify_campaign``): its ``mode`` is the campaign mode ("smoke" or "paper"), and every manifest must be listed in it
-    with the comparison key digest of its row. Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must
+    with the comparison key digest of its row. ``index_sha256`` is the sha256 of that campaign's ``run_index.json``
+    (``VerifiedCampaign.index_sha256``); the result carries it with the campaign commit so that a paper report can check it quotes an
+    analysis of the campaign it reports. Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must
     not be analysed; otherwise returns descriptive cells plus either the inference or the named reasons why it was not performed."""
     require_analysis_environment()
     family = _plan_family(plan, family_id)
@@ -878,7 +893,7 @@ def analyse_family(
         "cells": cells, "exclusions": tuple(exclusions), "inference_refused": tuple(reasons), "inference": inference,
         "excluded_pairs": tuple(excluded_pairs),
     }
-    return FamilyAnalysis(**values, text=_render(values, plan, family))
+    return FamilyAnalysis(**values, campaign_commit=run_index.git.commit, index_sha256=index_sha256, text=_render(values, plan, family))
 
 
 __all__ = [

@@ -226,8 +226,9 @@ CASES = [
             "SciPy 1.18.1 and statsmodels 0.15.0, with their dependencies, are pinned in `requirements-analysis.txt` for academic analysis only, not as an operational dependency.",
             "NumPy 2.4.6, llvmlite 0.48.0 and Numba 0.66.0 stay pinned by `academic_benchmark/jit-benchmark-constraints.txt`.",
             "are local code in `academic_benchmark/analysis/statistics.py` (Gate D item D-05, merged `d8259753`)",
+            "Kendall's W is tested against a published worked example (Zar, example 12.6) and the tie-corrected Friedman statistic quoted by Demšar (2006); epsilon-squared and the matched-pairs rank-biserial correlation are tested against independent hand computations",
         ],
-        ["will be local code (Gate D item D-05)"],
+        ["will be local code (Gate D item D-05)", "tested against published examples"],
     ),
     (
         "A8.1",

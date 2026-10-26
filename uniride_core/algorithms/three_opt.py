@@ -78,6 +78,31 @@ def is_symmetric_matrix(
     return True
 
 
+def validate_three_opt_window(
+    window: object, *, allow_none: bool = True, name: str = "window"
+) -> Optional[int]:
+    """Return ``window`` as a plain ``int`` or raise a ``ValueError`` naming ``name``.
+
+    The one rule for the canonical 3-opt neighbourhood window: an integer
+    (anything ``operator.index`` accepts, so numpy integers pass and ``12.0`` /
+    ``12.5`` / strings do not) that is at least 2.  ``None`` means "unrestricted"
+    only when ``allow_none`` is true; callers that record the window in a result
+    (the academic registry) pass ``allow_none=False``.
+    """
+    if window is None:
+        if allow_none:
+            return None
+        raise ValueError(f"3-opt {name} must be an integer, got None")
+    try:
+        value = operator.index(window)  # type: ignore[call-overload]
+    except TypeError:
+        expected = "None or an integer" if allow_none else "an integer"
+        raise ValueError(f"3-opt {name} must be {expected}, got {window!r}") from None
+    if value < 2:
+        raise ValueError(f"3-opt {name} must be at least 2")
+    return value
+
+
 def iter_three_opt_cuts(n: int, window: Optional[int] = None) -> Iterable[Tuple[int, int, int]]:
     """Yield non-adjacent cut-edge triples in deterministic order.
 
@@ -88,15 +113,7 @@ def iter_three_opt_cuts(n: int, window: Optional[int] = None) -> Iterable[Tuple[
     """
     if n < 6:
         return
-    if window is not None:
-        try:
-            window = operator.index(window)
-        except TypeError:
-            raise ValueError(
-                f"3-opt window must be None or an integer, got {window!r}"
-            ) from None
-        if window < 2:
-            raise ValueError("3-opt window must be at least 2")
+    window = validate_three_opt_window(window)
 
     # Direct generation in the historical lexicographic order (i, then j, then
     # k): only triples that satisfy the separation rules and the window are

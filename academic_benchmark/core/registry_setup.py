@@ -276,6 +276,17 @@ def _run_fair_local_search(problem, params, run_idx, algorithm_name, strategy_pa
         raise ValueError(
             f"{algorithm_name} does not expose exact objective accounting in fair mode"
         )
+    three_opt_window = None
+    if strategy_payload == LocalSearchType.THREE_OPT:
+        # A20 L9 follow-up: the core's window rule (integer >= 2), checked before the matrix is built
+        # and before any evaluation is counted. ``max_segment_length`` is the legacy alias; the error
+        # names whichever key was actually used. None is refused: the result validator never accepted it.
+        from uniride_core.algorithms.three_opt import validate_three_opt_window
+
+        window_key = "window" if "window" in params else "max_segment_length"
+        three_opt_window = validate_three_opt_window(
+            params.get(window_key, 12), allow_none=False, name=window_key
+        )
 
     matrix, matrix_kind = _problem_matrix(problem)
     seed = manifest.paired_seed(problem.name, run_idx)
@@ -295,7 +306,7 @@ def _run_fair_local_search(problem, params, run_idx, algorithm_name, strategy_pa
         )
         family = "2-opt"
     else:
-        neighborhood_window = params.get("window", params.get("max_segment_length", 12))
+        neighborhood_window = three_opt_window
         search = improve_three_opt_budgeted(
             route, matrix, budget, max_iterations=max_iterations,
             first_improvement=first_improvement,
@@ -361,6 +372,13 @@ def _run_native_local_search(problem, params, run_idx, algorithm_name, strategy_
         raise ValueError("native local search requires max_iterations and first_improvement")
     if strategy_payload == LocalSearchType.THREE_OPT and "window" not in params:
         raise ValueError("native 3-opt requires window")
+    three_opt_window = None
+    if strategy_payload == LocalSearchType.THREE_OPT:
+        # A20 L9 follow-up: same core rule as the fixed-budget path, before the matrix is built
+        # (``int(params["window"])`` used to truncate 12.5 to 12 silently).
+        from uniride_core.algorithms.three_opt import validate_three_opt_window
+
+        three_opt_window = validate_three_opt_window(params["window"], allow_none=False)
 
     matrix, matrix_kind = _problem_matrix(problem)
     seed = manifest.paired_seed(problem.name, run_idx)
@@ -380,7 +398,7 @@ def _run_native_local_search(problem, params, run_idx, algorithm_name, strategy_
         )
         family = "2-opt"
     else:
-        neighborhood_window = int(params["window"])
+        neighborhood_window = three_opt_window
         search = improve_three_opt_budgeted(
             route, matrix, accounting, max_iterations=max_iterations,
             first_improvement=first_improvement, window=neighborhood_window,

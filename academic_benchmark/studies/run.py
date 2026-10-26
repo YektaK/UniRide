@@ -25,7 +25,12 @@ checksummed files. The report is written after the index because it quotes the i
 list it (``contracts/run_index.py``: the index never lists the report that quotes its checksum), so the report is not covered
 by a checksum. The checkpoint folder is removed only after the report, ``checkpoint/campaign.json`` first, so a crash between
 index and report leaves a folder that does not verify (``verify_manifests`` flags the checkpoint folder) and that ``--resume``
-re-derives from the progress files, while a removal that stops half way can never be resumed. An interrupted campaign therefore has no ``run_index.json`` and does not verify as
+re-derives from the progress files, while a removal that stops half way can never be resumed: ``checkpoint/campaign.json`` is deleted first, so the folder
+then holds no campaign marker, ``--resume`` refuses it ("holds a complete campaign"), and running the plan again would redo rows
+(a recorded failure is never retried). By hand, check that ``run_index.json`` and ``run_report.txt`` are there (the campaign is
+complete: result files, manifests, index and report were all written before the removal started), delete what is left of the
+``checkpoint/`` folder (only progress copies of rows already in the result files), and run ``verify_manifests`` on the output
+folder to confirm that it verifies. An interrupted campaign therefore has no ``run_index.json`` and does not verify as
 complete (``verify_manifests`` also flags the checkpoint folder). ``--resume`` verifies every progress file, refuses a
 changed profile, analysis plan, dataset artifact, plan row, commit, dirty state, environment, backend policy or seed
 protocol, runs only the rows that are not done, and produces the same rows as an uninterrupted run (timing aside).

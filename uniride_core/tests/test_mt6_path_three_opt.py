@@ -383,13 +383,15 @@ def test_first_improvement_takes_a_strict_improvement_in_scan_order():
 _CUT_ROUTE = [0, 1, 2, 3, 4, 5]
 _CUT = (0, 2, 4)
 _CUT_CANDIDATES = [
-    (0, 2, 1, 4, 3, 5),  # B'C'
-    (0, 2, 1, 3, 4, 5),  # B'C   (also made by the earlier cut (0, 1, 2))
-    (0, 1, 2, 4, 3, 5),  # BC'
-    (0, 3, 4, 1, 2, 5),  # CB
-    (0, 4, 3, 1, 2, 5),  # C'B
-    (0, 3, 4, 2, 1, 5),  # CB'
-    (0, 4, 3, 2, 1, 5),  # C'B'
+    # Which of these an earlier cut also produces (path cuts start at i = -1, the empty fixed
+    # prefix); checked by test_reference_cut_fixture_matches_the_reference_enumerator:
+    (0, 2, 1, 4, 3, 5),  # B'C'  first made by this cut
+    (0, 2, 1, 3, 4, 5),  # B'C   earlier: first by (-1, 0, 2)
+    (0, 1, 2, 4, 3, 5),  # BC'   earlier: first by (-1, 2, 4)
+    (0, 3, 4, 1, 2, 5),  # CB    first made by this cut
+    (0, 4, 3, 1, 2, 5),  # C'B   first made by this cut
+    (0, 3, 4, 2, 1, 5),  # CB'   first made by this cut
+    (0, 4, 3, 2, 1, 5),  # C'B'  earlier: first by (-1, 0, 4)
 ]
 
 
@@ -400,9 +402,15 @@ def _objective_from_table(table: Dict[Tuple, float], default: float = 100.0):
 def test_reference_cut_fixture_matches_the_reference_enumerator():
     assert _ref_ordered_neighbours(_CUT_ROUTE, *_CUT) == _CUT_CANDIDATES
     earlier = {cand for cut, cand in _ref_scan(_CUT_ROUTE, None) if cut < _CUT}
-    # CB (index 3), C'B (4) and CB' (5) are first made by this very cut; B'C, BC' and C'B' are
-    # also made by earlier cuts, so they must not be used as "first" or "best" below.
-    assert all(_CUT_CANDIDATES[idx] not in earlier for idx in (3, 4, 5))
+    # B'C' (index 0), CB (3), C'B (4) and CB' (5) are first made by this very cut; B'C (1), BC' (2)
+    # and C'B' (6) are also made by earlier cuts, so they must not be used as "first" or "best" below.
+    assert all(_CUT_CANDIDATES[idx] not in earlier for idx in (0, 3, 4, 5))
+    assert all(_CUT_CANDIDATES[idx] in earlier for idx in (1, 2, 6))
+    first_cut = {
+        idx: next(cut for cut, cand in _ref_scan(_CUT_ROUTE, None) if cand == _CUT_CANDIDATES[idx])
+        for idx in (1, 2, 6)
+    }
+    assert first_cut == {1: (-1, 0, 2), 2: (-1, 2, 4), 6: (-1, 0, 4)}
 
 
 def test_first_improvement_stops_at_the_first_improving_candidate_of_a_cut():
@@ -448,8 +456,9 @@ def test_equal_cost_improvements_in_one_cut_first_in_scan_order_wins(label, firs
 
 
 def test_equal_cost_improvements_in_different_cuts_first_in_scan_order_wins():
-    # Swapping positions (1, 2) is first made by cut (0, 1, 2); swapping (3, 4) is first made by
-    # cut (0, 2, 4) (BC'). (0, 1, 2) < (0, 2, 4), so the first swap comes first in the scan.
+    # Swapping positions (1, 2) is first made by cut (-1, 0, 2) (B'C); swapping (3, 4) is first made
+    # by cut (-1, 2, 4) (BC'; the same route is also made by (0, 2, 4)). (-1, 0, 2) < (-1, 2, 4), so
+    # the first swap comes first in the scan.
     early, late = (0, 2, 1, 3, 4, 5), (0, 1, 2, 4, 3, 5)
     objective = _objective_from_table({early: 90.0, late: 90.0})
     scan = _ref_scan(_CUT_ROUTE, None)

@@ -160,7 +160,7 @@ Run academic CLI/help through the package entry point:
 python -m academic_benchmark.cli_engine --help
 ```
 
-Academic study runs (Gate C is met; Gate D items are merged except close D-13 and publication D-12, so profiles and analysis plans are still `draft` and no paper-scale run exists). These commands write outside the repository; paper mode needs an `active` profile and plan and a clean tree, so only smoke mode is usable today:
+Academic study runs (Gate C is met; all Gate D items are merged except D-04b2 (final estimate on the stronger computer), D-13 (close) and D-12 (publication), so profiles and analysis plans are still `draft` and no paper-scale run exists). These commands write outside the repository; paper mode needs an `active` profile and plan and a clean tree, so only smoke mode is usable today:
 
 ```powershell
 python -m academic_benchmark.studies.run --study academic_benchmark/studies/bildiri2026/study.json --mode smoke --out <folder outside the repository>

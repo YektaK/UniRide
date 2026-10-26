@@ -28,7 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from typing import Any, Dict, Iterable, List, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 # The cutoff is the FIX date: rows stamped 2026-10-09 (any time) are NOT auto-marked,
 # because the fix landed that day. Pass an exact ISO instant via --cutoff to mark
@@ -208,17 +208,17 @@ def filter_obsolete_rows(
     return out
 
 
-_CURRENT_LABELS = (None, EVIDENCE_CURRENT, "CURRENT")
+CURRENT_EVIDENCE = (None, EVIDENCE_CURRENT, "CURRENT")  # the evidence_class values of a row that may be aggregated, analysed or reported
 
 
-def evidence_refusal(row: Mapping[str, Any], allow_obsolete: bool = False) -> Any:
+def evidence_refusal(row: Mapping[str, Any], allow_obsolete: bool = False) -> Optional[str]:
     """Why ``row`` must not enter an aggregate, statistic or report, or ``None`` when it may (Gate D, D-08b).
 
     Aggregation entry points (``matrix_run_summary``, the analysis statistics and report services) call this on every row they are given:
     a row labelled anything but current (``historical_unverified``, ``invalid``, ...; A13) is refused, and so is an INVALID row marked
     ``metadata.obsolete`` (A06) unless ``allow_obsolete`` (the explicit INVALID switch of ``summarize_run``)."""
     label = row.get("evidence_class") if isinstance(row, Mapping) else None
-    if label not in _CURRENT_LABELS:
+    if label not in CURRENT_EVIDENCE:
         return f"evidence_class {label!r}: historical_unverified and invalid rows are never aggregated, analysed or reported (A13)"
     if not allow_obsolete and isinstance(row, Mapping) and is_obsolete_row(row):
         return "obsolete row (INVALID, A06): rows marked metadata.obsolete are never aggregated, analysed or reported"

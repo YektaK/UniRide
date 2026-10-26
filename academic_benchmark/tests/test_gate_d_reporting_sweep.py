@@ -17,8 +17,10 @@ aggregator when ANY of these holds:
 
 1. it names (imports, defines, calls or references) a row source or aggregator in ``ROW_SOURCE_NAMES`` (``query_benchmark_results``,
    ``get_benchmark_rows``, ``load_csv_frames``, ``summarize_benchmark_rows``, ``analyse_family``, ...);
-2. it calls ``csv.DictReader`` or ``read_csv`` (any ``*.read_csv``);
-3. a string constant in it names a result file (``benchmark_progress.csv`` ...) or is SQL reading ``benchmark_results`` / ``best_solutions``.
+2. it calls ``csv.DictReader``, ``csv.reader`` (also ``from csv import reader``) or ``read_csv`` (any ``*.read_csv``);
+3. a string constant in it names a result file (``benchmark_progress.csv`` ...) or is SQL reading ``benchmark_results`` / ``best_solutions``;
+4. it calls ``json.load`` / ``json.loads`` AND holds a short string constant (at most 40 characters) containing the word ``rows`` or ``.jsonl``
+   (a plain ``json.load`` of a config file is not a row reader; ``json.load(...)["rows"]`` is).
 
 The scan covers non-test ``.py`` files of ``academic_benchmark``, ``optimizer_api``, ``uniride_core`` and ``scripts``. Every detected
 module must be in ``SWEPT`` (exercised below), ``COVERED_VIA`` (reached only through a swept module, with the reason) or ``EXEMPT`` (not
@@ -45,14 +47,19 @@ ROW_SOURCE_NAMES = frozenset({
     "load_csv_frames", "load_tuning_frames", "load_history_frames", "load_verified_campaign",
     "filter_obsolete_rows", "filter_obsolete_csv_rows", "filter_obsolete_frame",
     "summarize_benchmark_rows", "summarize_run", "analyse_family", "build_report", "build_descriptive_table",
+    "list_entries", "get_best_for",  # param_db: the CLI JSON parameter store (rows with legacy/obsolete flags)
 })
 _FILE_CONSTANT = re.compile(r"(benchmark_progress|benchmark_summary|tuning_progress)\.csv")
 _SQL_CONSTANT = re.compile(r"\bFROM\s+(benchmark_results|best_solutions)\b", re.IGNORECASE)
 
 
+_ROWS_KEY_CONSTANT = re.compile(r"\brows\b|\.jsonl\b")  # only SHORT constants count (a docstring saying "rows" does not)
+
+
 def module_reads_result_rows(source: str) -> bool:
-    """True when ``source`` reads or aggregates result rows (see the module docstring for the three rules)."""
+    """True when ``source`` reads or aggregates result rows (see the module docstring for the rules)."""
     tree = ast.parse(source)
+    json_read = rows_key = False
     for node in ast.walk(tree):
         names = []
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -63,16 +70,25 @@ def module_reads_result_rows(source: str) -> bool:
             names.append(node.attr)
             if node.attr in ("DictReader", "read_csv"):
                 return True
+            if isinstance(node.value, ast.Name):
+                if node.value.id == "csv" and node.attr == "reader":
+                    return True
+                json_read = json_read or (node.value.id == "json" and node.attr in ("load", "loads"))
         elif isinstance(node, (ast.ImportFrom, ast.Import)):
             names.extend(alias.name.split(".")[-1] for alias in node.names)
+            if isinstance(node, ast.ImportFrom) and node.module == "csv" and any(a.name in ("reader", "DictReader") for a in node.names):
+                return True
+            if isinstance(node, ast.ImportFrom) and node.module == "json" and any(a.name in ("load", "loads") for a in node.names):
+                json_read = True
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
             if _FILE_CONSTANT.search(node.value) or _SQL_CONSTANT.search(node.value):
                 return True
+            rows_key = rows_key or (len(node.value) <= 40 and bool(_ROWS_KEY_CONSTANT.search(node.value)))
         if any(name in ROW_SOURCE_NAMES for name in names):
             return True
         if isinstance(node, ast.Name) and node.id == "read_csv":
             return True
-    return False
+    return json_read and rows_key
 
 
 def scan_row_readers(repo_root: Path) -> List[str]:
@@ -110,6 +126,11 @@ COVERED_VIA: Dict[str, str] = {
     "academic_benchmark/dashboard.py": "Streamlit UI (cannot be imported without streamlit): its row reads go through dashboard_utils and "
     "filter_obsolete_rows, checked statically in test_dashboard_reads_only_through_the_filters",
     "academic_benchmark/matrix_validation_plan.py": "only calls summarize_run (swept)",
+    "academic_benchmark/exact_reference/reader.py": "exact_reference_v1 rows (WP-E8): every integrity failure raises ExactReferenceRefused, archived paths are refused, "
+    "and exact rows are never pooled (E12): the sweep shows assert_rankable / the pooling guard refusing exact rows in statistics, report and "
+    "summarize_benchmark_rows; the gap columns read only its verified reference table",
+    "academic_benchmark/studies/run.py": "campaign resume reads the run service's own checksummed progress files (fingerprint + digest checked); "
+    "campaign rows reach reporting only through load_verified_campaign (swept via campaign_report)",
 }
 _SCRIPTS_REASON = (
     "plan-experiment archive tooling (exact-day / fleet archives under docs/paper/results); it does not read the TSPLIB benchmark evidence "
@@ -120,11 +141,16 @@ EXEMPT: Dict[str, str] = {
     "academic_benchmark/cli_engine.py": "CLI runner: writes the result CSVs and reads only its own tuning_progress.csv keys for resume; not a report",
     "academic_benchmark/sota_engine.py": "runner that writes benchmark_progress/summary CSVs; not a report",
     "academic_benchmark/smart_benchmark.py": "runner: warm-start lookup of the best stored solution; not a report",
+    "academic_benchmark/fair_pilot.py": "pilot runner: summarises the rows it has just produced into aggregate.csv; reads no stored result rows (config JSON only)",
+    "academic_benchmark/native_pilot.py": "pilot runner: summarises the rows it has just produced into aggregate.csv; reads no stored result rows (config JSON only)",
+    "academic_benchmark/param_db.py": "the CLI parameter store (JSON): warm-start entries with legacy/obsolete flags, list_entries(include_obsolete=True) by default; "
+    "called by the runners cli_engine, sota_engine and smart_benchmark (all exempt, none a report); legacy entries are quarantined for warm start (A13 D2)",
+    "academic_benchmark/bks_manager.py": "writes a best-known-solution into problems / routing_constraints metadata; not a result-row reader and not a report",
     "academic_benchmark/tools/mark_obsolete_ga_split_variant_results.py": "marker tool: reads rows only to set metadata.obsolete (the INVALID writer); not a report",
     **{f"scripts/{name}": _SCRIPTS_REASON for name in (
         "compare_exact_day_joint_runs.py", "plan_exact_gap_report.py", "plan_fleet_pareto.py", "plan_fleet_scenarios.py",
         "plan_resource_profile.py", "plan_schedule_report.py", "probe_exact_enumeration_scaling.py", "report_exact_day_joint.py",
-        "run_exact_union_day.py",
+        "run_exact_union_day.py", "run_exact_tsp_reference.py", "run_exact_typed_menus.py",
     )},
 }
 
@@ -160,7 +186,19 @@ def test_the_scanner_flags_a_dummy_reader_in_a_temporary_scan_root(tmp_path):
         "dummy_pandas.py": "import pandas as pd\n\ndef load(p):\n    return pd.read_csv(p)\n",
         "dummy_file.py": "PATH = 'results/benchmark_progress.csv'\n",
         "dummy_sql.py": "SQL = 'SELECT * FROM benchmark_results WHERE 1=1'\n",
+        # reviewer mutation M15: readers that use csv.reader or a plain json.load of a rows file
+        "dummy_csv_reader.py": "import csv\n\ndef load(handle):\n    return [r for r in csv.reader(handle)]\n",
+        "dummy_csv_from_import.py": "from csv import reader\n\ndef load(handle):\n    return list(reader(handle))\n",
+        "dummy_json_rows.py": "import json\n\ndef load(path):\n    return json.load(open(path))['rows']\n",
+        "dummy_jsonl.py": "import json\n\ndef load(text):\n    return [json.loads(x) for x in text.splitlines()]\n\nNAME = 'runs.jsonl'\n",
     }
+    quiet = {  # not row readers: a plain json.load of a config file, and a docstring that merely says "rows"
+        "config_only.py": "import json\n\ndef load(path):\n    return json.load(open(path))['settings']\n",
+        "docstring_rows.py": "import json\n\ndef load(path):\n    '''Returns the rows of the config; rows are described in the design.'''\n    return json.load(open(path))\n",
+    }
+    for name, text in quiet.items():
+        (package / name).write_text(text, encoding="utf-8")
+    assert unlisted_row_readers(tmp_path) == []
     for name, text in readers.items():
         (package / name).write_text(text, encoding="utf-8")
     assert sorted(unlisted_row_readers(tmp_path)) == sorted(f"academic_benchmark/{name}" for name in readers)
@@ -431,6 +469,24 @@ def test_summarize_run_counts_current_rows_only(db):
     assert summarize_run("run-exact", db_path=db)["total_rows"] == 1  # an exact run is summarized alone, never pooled
     opted = summarize_run("run-fixed", db_path=db, include_obsolete=True)
     assert {k[1] for k in opted["best_feasible"]} == {"CUR-FIXED-GA", "ga_split_hf"}  # explicit INVALID switch; historical stays out
+
+
+@pytest.mark.parametrize("include_obsolete", [False, True])
+def test_summarize_run_passes_the_invalid_switch_through_unchanged(db, monkeypatch, include_obsolete):
+    """``allow_obsolete`` must equal ``include_obsolete``: a constant True (reviewer mutation M4) would let INVALID rows past
+    ``summarize_benchmark_rows`` whenever a caller changes the filter, so the value is captured at the call."""
+    from academic_benchmark import matrix_run_summary as mrs
+
+    seen = []
+    real = mrs.summarize_benchmark_rows
+
+    def spy(rows, **kwargs):
+        seen.append(kwargs)
+        return real(rows, **kwargs)
+
+    monkeypatch.setattr(mrs, "summarize_benchmark_rows", spy)
+    mrs.summarize_run("run-fixed", db_path=db, include_obsolete=include_obsolete)
+    assert seen == [{"allow_obsolete": include_obsolete}]
 
 
 FIXED = {"comparison_regime": "fixed_evaluation_budget", "protocol_version": "uniride-fair-tsp-v2", "problem": "tiny"}

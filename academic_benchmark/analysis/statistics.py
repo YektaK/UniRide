@@ -42,14 +42,13 @@ from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1, Compariso
 from academic_benchmark.contracts.run_index import RunIndexV1
 from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.fairness import normalize_problem
-from academic_benchmark.obsolete_results import evidence_refusal
+from academic_benchmark.obsolete_results import CURRENT_EVIDENCE, evidence_refusal
 from academic_benchmark.protocol_registry import assert_rankable
 
 GAP_COLUMN = "gap_to_exact_reference"  # D-06 (analysis/gaps.py); not imported, so this module needs no reference reader
 GAP_UNIT_COLUMN = "gap_unit"
 GAP_REASON_COLUMN = "gap_missing_reason"
 CAMPAIGN_MODES = ("smoke", "paper")
-CURRENT_EVIDENCE = (None, "current", "CURRENT")
 ZERO_METHODS = ("wilcox", "pratt", "zsplit")
 SUPPORTED_RULES = ("only_after_significant_omnibus", "always_over_declared_family")
 STATUS_COMPUTED = "computed"

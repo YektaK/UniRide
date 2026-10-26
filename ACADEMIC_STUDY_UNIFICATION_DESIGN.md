@@ -155,7 +155,7 @@ The active production strategy registry is a separate CVRP/CVRPTW/UniRide surfac
 
 These names have no registry entry of their own. Their raw registry entries are removed: `Numba-GA`/`Numba-PSO` in C-14, and `Core-GWO-TSP`, `Core-HHO-TSP`, `Numba-2-opt`, `Numba-3-opt-bounded`, `Numba-Or-opt`, `Numba-GWO`, `Numba-HHO`, `SOTA-ALNS-TSP` in the routing-refusal follow-up `58f77d66`. `B-GA` and `B-PSO` are refused like `GWO-LKH`/`HHO-LKH` and name `Core-GA-TSP` / `Core-PSO-TSP`.
 
-The names of the matrix engines (`Matrix-*-legacy`), the legacy `CVRP-*` / `CVRPTW-*` routing names and the routing refusals are listed only in the D-11 master-document migration table (Gate D plan, item D-11), not in this table; the routing contract is under Algorithm contracts.
+The names of the matrix engines (`Matrix-*-legacy`), the legacy `CVRP-*` / `CVRPTW-*` routing names and the routing refusals are listed only in the migration table of `CURRENT_ARCHITECTURE.md` (section 8, Gate D item D-11), not in this table; the routing contract is under Algorithm contracts.
 
 Stored manifests and new reports always emit canonical IDs, never compatibility aliases.
 
@@ -349,7 +349,7 @@ For genuinely matched cross-instance comparisons:
 - use paired post-hoc tests only over the same experimental units;
 - report assumptions, corrections, effect sizes, and exclusions.
 
-The implementation uses a proven statistical library under a pinned scientific environment. SciPy 1.18.1 and statsmodels 0.15.0, with their dependencies, are pinned in `requirements-analysis.txt` for academic analysis only, not as an operational dependency. NumPy 2.4.6, llvmlite 0.48.0 and Numba 0.66.0 stay pinned by `academic_benchmark/jit-benchmark-constraints.txt`. Effect sizes these libraries do not provide (epsilon-squared, matched-pairs rank-biserial, Kendall's W) will be local code (Gate D item D-05), tested against published examples. Each study's tests, alpha and effect sizes are predeclared in its analysis plan. Smoke pilots produce descriptive summaries only and cannot emit superiority, causality, or proof language.
+The implementation uses a proven statistical library under a pinned scientific environment. SciPy 1.18.1 and statsmodels 0.15.0, with their dependencies, are pinned in `requirements-analysis.txt` for academic analysis only, not as an operational dependency. NumPy 2.4.6, llvmlite 0.48.0 and Numba 0.66.0 stay pinned by `academic_benchmark/jit-benchmark-constraints.txt`. Effect sizes these libraries do not provide (epsilon-squared, matched-pairs rank-biserial, Kendall's W) are local code in `academic_benchmark/analysis/statistics.py` (Gate D item D-05, merged `d8259753`), tested against published examples. Each study's tests, alpha and effect sizes are predeclared in its analysis plan. Smoke pilots produce descriptive summaries only and cannot emit superiority, causality, or proof language.
 
 ## Reproducibility Manifest
 
@@ -366,7 +366,7 @@ Each run (algorithm x dataset x budget level x replicate) writes one `RunManifes
 - independent validation result;
 - output file checksums, excluding the run manifest itself.
 
-A detached `<manifest>.sha256` file contains the run manifest's checksum. This prevents self-referential hashing while still making the manifest independently verifiable. A campaign index (`run_index.json`, `uniride-run-index/v1`) lists every run manifest with its checksum and holds the seed protocol version; it has its own detached `.sha256`. Files are written atomically, each sidecar after its file and the index last, so a crash never verifies. The `statistics_library` field holds the literal `none` until a caller in the pinned environment passes `statistics_library_identifier()` (`scipy==1.18.1+statsmodels==0.15.0`).
+A detached `<manifest>.sha256` file contains the run manifest's checksum. This prevents self-referential hashing while still making the manifest independently verifiable. A campaign index (`run_index.json`, `uniride-run-index/v1`) lists every run manifest with its checksum and holds the seed protocol version; it has its own detached `.sha256`. Files are written atomically, each sidecar after its file and the index last, so a crash never verifies. Paper mode of the study run service passes `statistics_library_identifier()` (`scipy==1.18.1+statsmodels==0.15.0`) into the `statistics_library` field of every run manifest (`academic_benchmark/studies/run.py:473`); the statistics service records the same identifier in its report (`academic_benchmark/analysis/statistics.py:835`). Smoke mode and any caller that passes nothing keep the literal `none`.
 
 Paper-scale mode requires a clean tree. Smoke mode may run on a dirty tree only when the manifest and report label that state prominently.
 

@@ -153,8 +153,9 @@ CASES = [
         # OD-5: the new rows live only in the D-11 master table; the design gets a pointer.
         "A3.3",
         UNIFICATION,
-        ["D-11 master-document migration table"],
+        ["migration table of `CURRENT_ARCHITECTURE.md` (section 8, Gate D item D-11)"],
         [
+            "D-11 master-document migration table",
             "Matrix-TwoOpt/GA/PSO/GWO/HHO-TSP-legacy",
             "run `Matrix-TwoOpt-TSP-legacy`",
         ],
@@ -224,8 +225,9 @@ CASES = [
             "The implementation uses a proven statistical library under a pinned scientific environment.",
             "SciPy 1.18.1 and statsmodels 0.15.0, with their dependencies, are pinned in `requirements-analysis.txt` for academic analysis only, not as an operational dependency.",
             "NumPy 2.4.6, llvmlite 0.48.0 and Numba 0.66.0 stay pinned by `academic_benchmark/jit-benchmark-constraints.txt`.",
+            "are local code in `academic_benchmark/analysis/statistics.py` (Gate D item D-05, merged `d8259753`)",
         ],
-        [],
+        ["will be local code (Gate D item D-05)"],
     ),
     (
         "A8.1",
@@ -239,9 +241,11 @@ CASES = [
         [
             "A detached `<manifest>.sha256` file contains the run manifest's checksum.",
             "A campaign index (`run_index.json`, `uniride-run-index/v1`) lists every run manifest with its checksum",
-            "`statistics_library_identifier()` (`scipy==1.18.1+statsmodels==0.15.0`)",
+            "Paper mode of the study run service passes `statistics_library_identifier()` (`scipy==1.18.1+statsmodels==0.15.0`)",
+            "(`academic_benchmark/studies/run.py:473`)",
+            "Smoke mode and any caller that passes nothing keep the literal `none`.",
         ],
-        [],
+        ["until a caller in the pinned environment passes"],
     ),
     (
         # OD-2: study profiles, analysis plans and dataset manifests ship in the wheel.

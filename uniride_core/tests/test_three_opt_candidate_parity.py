@@ -397,3 +397,67 @@ def test_budgeted_three_opt_full_run_parity(monkeypatch, case, first_improvement
     assert _run_budgeted(matrix, first_improvement, 12, limit) == new
     if limit is not None and not first_improvement:  # best improvement scans 25+ candidates: budget binds
         assert new[4] is True and new[6] == "evaluation_budget_exhausted" and new[7] == limit
+
+
+# ---------------------------------------------------------------------------
+# M25-e: the Numba-module wrappers must not feed NumPy arrays to the Python engine
+# ---------------------------------------------------------------------------
+
+
+def _spy_on_three_opt_matrix(monkeypatch):
+    import uniride_core.algorithms.local_search_numba as lsn
+
+    seen = []
+    real = lsn.improve_three_opt
+
+    def spy(route, matrix, **kwargs):
+        seen.append(matrix)
+        return real(route, matrix, **kwargs)
+
+    monkeypatch.setattr(lsn, "improve_three_opt", spy)
+    return lsn, seen
+
+
+def _assert_plain_float_lists(matrix):
+    assert isinstance(matrix, list)
+    assert all(isinstance(row, list) for row in matrix)
+    assert all(type(value) is float for row in matrix for value in row)
+
+
+def test_improve_route_numba_passes_plain_list_matrix_to_python_engine(monkeypatch):
+    import numpy as np
+
+    lsn, seen = _spy_on_three_opt_matrix(monkeypatch)
+    matrix = np.array(_random_matrix(14, seed=1414, symmetric=True, integer=True))
+    route = np.array(_start_route(14, 5), dtype=np.int64)
+
+    improved, cost = lsn.improve_route_numba(route, matrix, "three_opt", 3)
+
+    expected = improve_three_opt(route.tolist(), matrix.tolist(), max_iterations=3)
+    assert improved.tolist() == expected.route and cost == expected.cost
+    assert len(seen) == 1
+    _assert_plain_float_lists(seen[0])
+
+
+def test_three_opt_local_search_class_passes_plain_list_matrix(monkeypatch):
+    import numpy as np
+
+    lsn, seen = _spy_on_three_opt_matrix(monkeypatch)
+    n = 12
+    matrix = np.array(_random_matrix(n, seed=1212, symmetric=False, integer=True))
+    names = [f"L{idx}" for idx in range(n)]
+
+    def duration_func(route):
+        index = {name: idx for idx, name in enumerate(names)}
+        return float(sum(matrix[index[a]][index[b]] for a, b in zip(route, route[1:] + route[:1])))
+
+    duration_func._np_dist_matrix = matrix
+    duration_func._np_unique_locs = names
+    start = [names[idx] for idx in _start_route(n, 3)]
+
+    improved, duration = lsn.ThreeOptLocalSearch(max_iterations=3).improve(start, duration_func)
+
+    assert sorted(improved) == sorted(names)
+    assert duration == duration_func(improved)
+    assert len(seen) == 1
+    _assert_plain_float_lists(seen[0])

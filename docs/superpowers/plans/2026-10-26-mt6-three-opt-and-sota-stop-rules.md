@@ -147,7 +147,7 @@ Model and review guidance (CLAUDE.md): developer Sonnet for every code item. Rev
 
 ### MT6-06: Re-measure the 3-opt rows of the D-04b1 table (lead run)
 
-- [x] **Done (lead run, planning numbers recorded in DECISION_LOG A19 at commit `78af0037`).** After MT6-01 is merged and no other timing run is active: re-run the D-04b1 calibration slice (`academic_benchmark/studies/estimate.py`, A18 `:501`) for `Core-ThreeOpt-TSP` and `Core-GWO/HHO-TSP-Memetic-3opt` on the same machine; record per-evaluation and per-iteration times and the new study totals in A19 as planning numbers. Evaluation upper bounds must be unchanged (parity). This replaces the 3-opt rows of D-04b1 as input to OQ-4 and D-04b2 (OQ-MT6-4).
+- [x] **Done (lead run, planning numbers measured at `78af0037`, recorded in DECISION_LOG A19 (`a08920e1`)).** After MT6-01 is merged and no other timing run is active: re-run the D-04b1 calibration slice (`academic_benchmark/studies/estimate.py`, A18 `:501`) for `Core-ThreeOpt-TSP` and `Core-GWO/HHO-TSP-Memetic-3opt` on the same machine; record per-evaluation and per-iteration times and the new study totals in A19 as planning numbers. Evaluation upper bounds must be unchanged (parity). This replaces the 3-opt rows of D-04b1 as input to OQ-4 and D-04b2 (OQ-MT6-4).
 
 ### MT6-07: Close MT6
 

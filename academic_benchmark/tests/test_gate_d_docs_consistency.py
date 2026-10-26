@@ -245,3 +245,29 @@ def test_the_workstate_gate_d_row_states_the_status_and_names_a_commit() -> None
             timeout=60,
         )
         assert result.returncode == 0, f"{sha} is not an ancestor of HEAD"
+
+
+# ---------------------------------------------------------------- run-index completeness is merged, no longer a run precondition
+RUN_INDEX_MERGED = "run-index completeness (`uniride-run-index/v2`)"
+PRECONDITION_DOCUMENTS = (ARCHITECTURE, WORKSTATE, REPO_ROOT / "ACTIVE_ROADMAP.md")
+
+
+@pytest.mark.parametrize("path", SYNCHRONIZED_DOCUMENTS, ids=lambda p: p.name)
+def test_no_document_lists_the_run_index_follow_up_as_a_paper_run_precondition(path: Path) -> None:
+    text = " ".join(_read(path).split())
+    assert "run-index completeness follow-up" not in text, path.name
+    assert "G1, G2, G3, G6, G7" not in text, path.name
+
+
+@pytest.mark.parametrize("path", PRECONDITION_DOCUMENTS, ids=lambda p: p.name)
+def test_the_paper_run_preconditions_are_mt6_d04b2_and_oq4(path: Path) -> None:
+    text = " ".join(_read(path).split())
+    start = text.index("reconditions of any paper-scale run")
+    sentence = text[start:start + 700]
+    assert "MT6" in sentence and "D-04b2" in sentence and "OQ-4" in sentence, path.name
+    assert "run-index" not in sentence, path.name
+
+
+@pytest.mark.parametrize("path", PRECONDITION_DOCUMENTS, ids=lambda p: p.name)
+def test_the_documents_that_list_what_is_merged_name_the_run_index_v2(path: Path) -> None:
+    assert RUN_INDEX_MERGED in " ".join(_read(path).split()), path.name

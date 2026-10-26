@@ -58,6 +58,7 @@ from academic_benchmark.studies.smoke import assert_no_ranking_words
 REPO = Path(__file__).resolve().parents[2]
 FAIR_V2 = "uniride-fair-tsp-v2"
 COMMIT = "a" * 40
+INDEX_SHA256 = "e" * 64  # the fixed run-index sha256 of the tests that build no campaign (A20 L7: analyse_family requires it)
 PER_INSTANCE = "per-instance-independent"
 ACROSS = "across-instances-tsp-matched"
 _BILDIRI = load_study_with_plan("academic_benchmark/studies/bildiri2026/study.json", repository_root=REPO, mode="smoke").study
@@ -240,7 +241,10 @@ def study_for(items, plan=None):
 
 def run(items, plan, family=PER_INSTANCE, *, mode="paper", study=None, **index_options):
     index_options.setdefault("plan_id", getattr(plan, "analysis_plan_id", None))
-    return analyse_family(items, study=study or study_for(items, plan), plan=plan, family_id=family, run_index=index_for(items, mode, **index_options))
+    return analyse_family(
+        items, study=study or study_for(items, plan), plan=plan, family_id=family, run_index=index_for(items, mode, **index_options),
+        index_sha256=INDEX_SHA256,
+    )
 
 
 # ---------------------------------------------------------------- effect sizes against independent values
@@ -781,25 +785,25 @@ def test_the_campaign_mode_comes_from_the_verified_run_index(active):
     assert run(items, active, mode="paper").campaign_mode == "paper"
     # a caller can no longer name the mode: a bare string is not an index, and the old keyword does not exist
     with pytest.raises(StatisticsRefusal, match="RunIndexV2"):
-        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index="paper")
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index="paper", index_sha256=INDEX_SHA256)
     with pytest.raises(TypeError):
-        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, campaign_mode="paper")
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, campaign_mode="paper", index_sha256=INDEX_SHA256)
 
 
 def test_manifests_that_the_index_does_not_list_are_refused(active):
     items = per_instance_items(SEPARATED)
     unlisted = items[0][1].run_id
     with pytest.raises(StatisticsRefusal, match="not listed in the run index"):
-        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, drop=(unlisted,)))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, drop=(unlisted,)), index_sha256=INDEX_SHA256)
     with pytest.raises(StatisticsRefusal, match="comparison key digest"):
-        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, digest_of="wrong"))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, digest_of="wrong"), index_sha256=INDEX_SHA256)
     with pytest.raises(StatisticsRefusal, match="study"):
-        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, study_id="yaem2026"))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, study_id="yaem2026"), index_sha256=INDEX_SHA256)
     with pytest.raises(StatisticsRefusal, match="dirty"):
-        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, dirty=True))
+        analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items, dirty=True), index_sha256=INDEX_SHA256)
     other_commit = [(row, manifest.model_copy(update={"git": manifest.git.model_copy(update={"commit": "c" * 40})})) for row, manifest in items]
     with pytest.raises(StatisticsRefusal, match="commit"):
-        analyse_family(other_commit, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items))
+        analyse_family(other_commit, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items), index_sha256=INDEX_SHA256)
 
 
 def test_a_sample_below_the_plan_minimum_gives_insufficient_sample_and_no_p_value(draft):

@@ -642,6 +642,7 @@ REFUSAL = "evidence_class|obsolete|historical|invalid"
 def _analyse(items, plan, clean):
     return fx.analyse_family(
         items, study=fx.study_for(clean, plan), plan=plan, family_id=fx.PER_INSTANCE, run_index=fx.index_for(clean, "paper"),
+        index_sha256=fx.INDEX_SHA256,
     )
 
 

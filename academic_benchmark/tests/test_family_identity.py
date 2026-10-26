@@ -26,9 +26,8 @@ def _analysis(active, *, index_sha256=INDEX_SHA):
     for row, _ in items:
         row.setdefault("objective_evaluations", row["evaluation_budget"])
         row.setdefault("termination_reason", "budget_exhausted")
-    options = {} if index_sha256 is None else {"index_sha256": index_sha256}
     analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,
-                              run_index=fx.index_for(items, "paper"), **options)
+                              run_index=fx.index_for(items, "paper"), index_sha256=index_sha256)  # None is passed explicitly where a test needs it
     return items, analysis
 
 

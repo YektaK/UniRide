@@ -363,13 +363,14 @@ def test_the_inferential_section_of_a_paper_report_is_the_d05_output_quoted_verb
 def test_a_paper_inference_of_another_plan_or_a_smoke_campaign_is_refused(active, draft):
     items, analysis = _paper_inference(active)
     smoke_analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,
-                                    run_index=fx.index_for(items, "smoke"))
+                                    run_index=fx.index_for(items, "smoke"), index_sha256=fx.INDEX_SHA256)
     with pytest.raises(ReportError, match="mode"):
         _report(items, plan=active, mode="paper", inference=[smoke_analysis])
     other = fx.activate(_load_plans()["yaem2026"])
     items2 = fx.per_instance_items(fx.SEPARATED, study_id="yaem2026")
     other_analysis = analyse_family(items2, study=fx.study_for(items2, other), plan=other, family_id=fx.PER_INSTANCE,
-                                    run_index=fx.index_for(items2, "paper", study_id="yaem2026", plan_id=other.analysis_plan_id))
+                                    run_index=fx.index_for(items2, "paper", study_id="yaem2026", plan_id=other.analysis_plan_id),
+                                    index_sha256=fx.INDEX_SHA256)
     with pytest.raises(ReportError, match="plan"):
         _report(items, plan=active, mode="paper", inference=[other_analysis])
 

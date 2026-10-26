@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .base_solver import BaseTSPSolver, TSPResult
+from .deadline import WallClockDeadline
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval
 from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
@@ -38,7 +39,6 @@ class E2BSOTSPConfig:
     entropy_check_interval: int = 10
     ls_intensity_normal: str = "light"
     ls_intensity_compress: str = "moderate"
-    ls_time_limit: float = 0.5
     three_opt_window: int = 12
     lahc_history: int = 200
     diversity_threshold: float = 0.3
@@ -50,7 +50,7 @@ class E2BSOTSPConfig:
     n_edges_normal: int = 3
     n_edges_aggressive: int = 5
     remove_ratio: float = 0.20
-    time_limit: float = 300.0
+    deadline_seconds: Optional[float] = None  # opt-in wall-clock safety deadline (H11); None = iteration limits only
     seed: int = 42
 
 
@@ -67,7 +67,6 @@ class E2BSOCPSPConfig:
     entropy_check_interval: int = 10
     ls_intensity_normal: str = "light"
     ls_intensity_compress: str = "moderate"
-    ls_time_limit: float = 0.5
     three_opt_window: int = 12
     lahc_history: int = 200
     diversity_threshold: float = 0.3
@@ -75,7 +74,7 @@ class E2BSOCPSPConfig:
     injection_rate: float = 0.2
     learn_period: int = 100
     remove_ratio: float = 0.20
-    time_limit: float = 300.0
+    deadline_seconds: Optional[float] = None  # opt-in wall-clock safety deadline (H11); None = iteration limits only
     seed: int = 42
     # Canonical PSO parameters
     c1: float = 1.5       # cognitive weight (pull toward pbest)
@@ -238,6 +237,7 @@ class E2BSO_TSP(BaseTSPSolver):
     def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
+        deadline = WallClockDeadline(self.cfg.deadline_seconds)
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
 
         population = self._init_population(rng)
@@ -293,7 +293,7 @@ class E2BSO_TSP(BaseTSPSolver):
                                                     n_edges, self.cfg.p_best, self.cfg.p_gbest)
                     candidate_cost = _tour_cost(candidate, self._dist_matrix)
                     candidate, candidate_cost, _ = MultiLayerLS.improve(
-                        candidate, self._dist_matrix, dm_np, ls_intensity, 200, self.cfg.ls_time_limit,
+                        candidate, self._dist_matrix, dm_np, ls_intensity, 200,
                         self.cfg.three_opt_window)
                     if lahc.decide(pop_costs[i], candidate_cost, t, rng):
                         population[i] = candidate
@@ -318,17 +318,14 @@ class E2BSO_TSP(BaseTSPSolver):
                 if diversity < self.cfg.diversity_threshold:
                     population, pop_costs = self._inject_diversity(population, pop_costs, rng)
 
-            if time.monotonic() - t_start > self.cfg.time_limit:
+            if t < self.cfg.max_iterations and deadline.expired():
                 break
 
-        # dm_np zaten solve() başında atandı — yeniden atamaya gerek yok
-        remaining = max(0.0, self.cfg.time_limit - (time.monotonic() - t_start))
-        final_ls_budget = min(self.cfg.ls_time_limit, remaining)
-        if final_ls_budget > 0.0:
-            gbest, gbest_cost, _ = MultiLayerLS.improve(
-                gbest, self._dist_matrix, dm_np, "full", 500, final_ls_budget,
-                self.cfg.three_opt_window,
-            )
+        # The final polish always runs, bounded by its iteration limit only (H11).
+        gbest, gbest_cost, _ = MultiLayerLS.improve(
+            gbest, self._dist_matrix, dm_np, "full", 500,
+            self.cfg.three_opt_window,
+        )
 
         elapsed_ms = (time.monotonic() - t_start) * 1000
         gap = float("nan")
@@ -344,6 +341,7 @@ class E2BSO_TSP(BaseTSPSolver):
             params={"population_size": self.cfg.population_size, "max_iterations": self.cfg.max_iterations},
             history=history,
             seed=self.cfg.seed,
+            extra_stats=deadline.stats(),
         )
 
 
@@ -449,6 +447,7 @@ class E2BSO_TSP_CPSO(E2BSO_TSP):
     def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
+        deadline = WallClockDeadline(self.cfg.deadline_seconds)
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
 
         population = self._init_population(rng)
@@ -510,7 +509,7 @@ class E2BSO_TSP_CPSO(E2BSO_TSP):
                     velocity[i] = new_vel
                     candidate_cost = _tour_cost(candidate, self._dist_matrix)
                     candidate, candidate_cost, _ = MultiLayerLS.improve(
-                        candidate, self._dist_matrix, dm_np, ls_intensity, 200, self.cfg.ls_time_limit,
+                        candidate, self._dist_matrix, dm_np, ls_intensity, 200,
                         self.cfg.three_opt_window)
                     if lahc.decide(pop_costs[i], candidate_cost, t, rng):
                         population[i] = candidate
@@ -537,16 +536,14 @@ class E2BSO_TSP_CPSO(E2BSO_TSP):
                     for i in range(len(population)):
                         velocity[i] = []
 
-            if time.monotonic() - t_start > self.cfg.time_limit:
+            if t < self.cfg.max_iterations and deadline.expired():
                 break
 
-        remaining = max(0.0, self.cfg.time_limit - (time.monotonic() - t_start))
-        final_ls_budget = min(self.cfg.ls_time_limit, remaining)
-        if final_ls_budget > 0.0:
-            gbest, gbest_cost, _ = MultiLayerLS.improve(
-                gbest, self._dist_matrix, dm_np, "full", 500, final_ls_budget,
-                self.cfg.three_opt_window,
-            )
+        # The final polish always runs, bounded by its iteration limit only (H11).
+        gbest, gbest_cost, _ = MultiLayerLS.improve(
+            gbest, self._dist_matrix, dm_np, "full", 500,
+            self.cfg.three_opt_window,
+        )
 
         elapsed_ms = (time.monotonic() - t_start) * 1000
         gap = float("nan")
@@ -568,4 +565,5 @@ class E2BSO_TSP_CPSO(E2BSO_TSP):
             },
             history=history,
             seed=self.cfg.seed,
+            extra_stats=deadline.stats(),
         )

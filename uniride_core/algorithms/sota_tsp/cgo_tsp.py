@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from .base_solver import BaseTSPSolver, TSPResult
+from .deadline import WallClockDeadline
 from .ls_engine import MultiLayerLS
 
 
@@ -38,9 +39,8 @@ class CGOConfig:
     max_iterations: int = 500
     chaos_rate: float = 3.99        # Logistic map r parameter (3.57–4.0 for chaos)
     seed_length_ratio: float = 0.25 # Initial seed length as fraction of n
-    ls_time_limit: float = 0.5
     three_opt_window: int = 12
-    time_limit: float = 300.0
+    deadline_seconds: Optional[float] = None  # opt-in wall-clock safety deadline (H11); None = iteration limits only
     seed: int = 42
 
 
@@ -270,6 +270,7 @@ class CGO_TSP(BaseTSPSolver):
 
     def _solve(self) -> TSPResult:
         t_start = time.perf_counter()
+        deadline = WallClockDeadline(self.cfg.deadline_seconds)
         n = self._n
 
         if n < 3:
@@ -280,6 +281,7 @@ class CGO_TSP(BaseTSPSolver):
                 elapsed_ms=(time.perf_counter() - t_start) * 1000,
                 iterations=0, params={"population_size": self.cfg.population_size},
                 seed=self.cfg.seed,
+                extra_stats=deadline.stats(),
             )
 
         # Initialize population
@@ -292,11 +294,10 @@ class CGO_TSP(BaseTSPSolver):
 
         # Main loop
         max_iter = self.cfg.max_iterations
-        time_limit = self.cfg.time_limit
 
         for iteration in range(max_iter):
-            # Check time limit
-            if time.perf_counter() - t_start > time_limit:
+            # Optional wall-clock safety deadline (H11); never active unless configured.
+            if deadline.expired():
                 break
 
             # Get current chaos value for this iteration
@@ -347,7 +348,7 @@ class CGO_TSP(BaseTSPSolver):
                         child = _mutate_2opt(parent_a, self._rng)
 
                 # Local search refinement (lightweight)
-                child, _, _ = MultiLayerLS.improve(child, self._dist_matrix, dm_np=None, intensity="light", time_limit=self.cfg.ls_time_limit, three_opt_window=self.cfg.three_opt_window)
+                child, _, _ = MultiLayerLS.improve(child, self._dist_matrix, dm_np=None, intensity="light", three_opt_window=self.cfg.three_opt_window)
                 child_cost = self.tour_length(child)
 
                 new_population.append(child)
@@ -369,7 +370,7 @@ class CGO_TSP(BaseTSPSolver):
             if iteration > 0 and abs(history[-1] - history[-2]) < 1e-6:
                 # Stagnation: apply chaos-based perturbation
                 perturbed = _mutate_swap(best_tour, self._rng, max(1, int(n * 0.1)))
-                perturbed, _, _ = MultiLayerLS.improve(perturbed, self._dist_matrix, dm_np=None, intensity="light", time_limit=self.cfg.ls_time_limit, three_opt_window=self.cfg.three_opt_window)
+                perturbed, _, _ = MultiLayerLS.improve(perturbed, self._dist_matrix, dm_np=None, intensity="light", three_opt_window=self.cfg.three_opt_window)
                 perturbed_cost = self.tour_length(perturbed)
                 if perturbed_cost <= best_cost:
                     best_tour = perturbed[:]
@@ -390,4 +391,5 @@ class CGO_TSP(BaseTSPSolver):
             },
             history=history,
             seed=self.cfg.seed,
+            extra_stats=deadline.stats(),
         )

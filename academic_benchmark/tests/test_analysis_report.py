@@ -203,9 +203,9 @@ def test_a_table_refuses_rows_of_two_instances(draft):
 
 
 def test_a_table_refuses_two_instances_even_when_their_budgets_are_equal(draft):
-    assert fx._levels("eil51") == fx._levels("eil76")  # same budget: only the instance identity tells the cells apart
+    assert fx._levels("kroA100") == fx._levels("rd100")  # same budget (the profile's own levels): only the instance identity tells them apart
     with pytest.raises(ReportError, match="comparison cell"):
-        build_descriptive_table(_items(problem="eil51") + _items(problem="eil76"), draft)
+        build_descriptive_table(_items(problem="kroA100") + _items(problem="rd100"), draft)
 
 
 def test_a_table_refuses_rows_of_two_budget_levels(draft):

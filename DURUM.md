@@ -7,7 +7,7 @@ Son güncelleme: 2026-10-24 (WIP `25333088` sonrası). Kararlar `docs/DECISION_L
 | İş | Dal | Durum |
 |---|---|---|
 | Sabit bütçede `max_no_improvement` zorunlu + YAEM tohumu 2027 | — | BİRLEŞTİ `e24a5cd1` (Opus ONAY). |
-| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-04b1 aracı, D-05, D-06, D-07, D-08a, D-09, D-10, D-14. Sıradaki: D-04b1 gerçek ölçümü (şef), D-08b, D-11, D-13, D-12. |
+| Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-04b1 (araç + ölçüm), D-05, D-06, D-07, D-08a, D-08b, D-09, D-10, D-14. BİRLEŞTİ ayrıca: tasarım redline (`ae118736`), D-11 (`69bd7168`). Çalışıyor: OQ-4 için ikinci native ölçüm (kroA100). Sıradaki: D-13, D-12 (sahip izniyle); D-04b2 güçlü bilgisayarda. |
 
 ## Bu turda biten
 

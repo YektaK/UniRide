@@ -124,7 +124,7 @@ Required coverage:
 The minimum regression command is:
 
 ```powershell
-python -m pytest academic_benchmark/tests/test_numba_registry_matrix.py academic_benchmark/tests/test_numba_three_opt.py academic_benchmark/tests/test_core_tsp_registry.py uniride_core/tests/test_local_search_core.py uniride_core/tests/test_tsp_meta_engines.py -q -p no:cacheprovider --tb=short
+python -m pytest academic_benchmark/tests/test_numba_registry_matrix.py academic_benchmark/tests/test_numba_three_opt.py academic_benchmark/tests/test_core_tsp_registry.py uniride_core/tests/test_local_search_core.py uniride_core/tests/test_tsp_meta_engines.py uniride_core/tests/test_three_opt_candidate_parity.py -q -p no:cacheprovider --tb=short
 ```
 
 Any new focused canonical-3-opt test modules must be added to that verification run.

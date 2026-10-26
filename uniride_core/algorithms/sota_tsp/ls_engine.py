@@ -4,7 +4,7 @@ Multi-Layer Local Search Engine — TSP variant.
 Chains (by intensity):
   light    : 2-opt
   moderate : 2-opt → Or-opt
-  full     : 2-opt → Or-opt → Swap
+  full     : 2-opt → Or-opt → canonical 3-opt (uniride_core.algorithms.three_opt) → Swap
 
 Core multi-layer local search helpers for SOTA algorithms.
 but operates on List[int] tours with Numba-accelerated kernels.
@@ -27,6 +27,8 @@ try:
 except ImportError:
     _NUMBA_OK = False
     _nb = None
+
+from uniride_core.algorithms.three_opt import improve_three_opt
 
 
 def _two_opt_swap(tour: List[int], i: int, j: int) -> List[int]:
@@ -141,47 +143,18 @@ def improve_swap(tour: List[int], dm: List[List[float]], dm_np=None,
 
 def improve_3opt(tour: List[int], dm: List[List[float]], dm_np=None,
                  max_iterations: int = 200, window: int = 12) -> Tuple[List[int], float]:
-    """Simple bounded 3-opt style improvement (reverse-middle neighborhood)."""
-    if _NUMBA_OK and dm_np is not None:
-        route_np = _nb._prepare_route(tour)
-        improved_np, length = _nb._three_opt_improve_atsp_numba(route_np, dm_np, max_iterations, False, window)
-        return _nb._extract_route(improved_np, tour), float(length)
-    if _NUMBA_OK and dm is not None:
-        return _nb.nb_three_opt(tour, dm, max_iterations, False, window)
-    best_tour = tour[:]
-    best_length = _tour_cost(best_tour, dm)
-    n = len(best_tour)
-    if n < 5:
-        return best_tour, best_length
-    improved = True
-    iters = 0
-    while improved and iters < max_iterations:
-        improved = False
-        iters += 1
-        for i in range(0, n - 3):
-            # Bound inner scan to keep runtime under control.
-            j_max = min(n - 2, i + window)
-            for j in range(i + 2, j_max + 1):
-                k_max = min(n - 1, j + window)
-                for k in range(j + 1, k_max + 1):
-                    # 3-opt inspired reconnect: keep prefix/suffix, reverse middle chunks.
-                    cand = (
-                        best_tour[:i + 1]
-                        + best_tour[i + 1:j + 1][::-1]
-                        + best_tour[j + 1:k + 1][::-1]
-                        + best_tour[k + 1:]
-                    )
-                    cand_len = _tour_cost(cand, dm)
-                    if cand_len < best_length - 1e-10:
-                        best_tour = cand
-                        best_length = cand_len
-                        improved = True
-                        break
-                if improved:
-                    break
-            if improved:
-                break
-    return best_tour, best_length
+    """Canonical windowed 3-opt (``uniride_core.algorithms.three_opt``), audit H10.
+
+    Symmetric matrices use the symmetric 3-opt neighbourhood, asymmetric ones the
+    directed (segment-exchange) neighbourhood; the mode is auto-detected from ``dm``.
+    ``dm_np`` is accepted for signature compatibility with the other layers and is
+    ignored. The old Numba kernel and the Python reverse-middle fallback are not
+    used here (``CANONICAL_THREE_OPT_DESIGN.md``). ``tour`` must be a permutation of
+    ``0..n-1`` with ``n == len(dm)``; tours shorter than 6 nodes are returned unchanged.
+    """
+    matrix = dm.tolist() if hasattr(dm, "tolist") else dm
+    result = improve_three_opt(tour, matrix, max_iterations=max_iterations, window=window)
+    return list(result.route), float(result.cost)
 
 
 class MultiLayerLS:

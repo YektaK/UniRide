@@ -161,3 +161,38 @@ def test_improve_3opt_tiny_tours_are_returned_unchanged():
     route, cost = ls_engine.improve_3opt(tour, matrix, None, 50, 12)
     assert route == tour
     assert cost == pytest.approx(ls_engine._tour_cost(tour, matrix))
+
+
+# Permutation contract: improve_three_opt validates its input (three_opt.py _validate_problem),
+# so every tour that reaches the polish of a SOTA solver must be a permutation of 0..n-1. ---
+
+
+@pytest.mark.parametrize("label,solver_cls,make_cfg", SOLVERS, ids=[s[0] for s in SOLVERS])
+@pytest.mark.parametrize("n,symmetric", [(7, True), (12, False), (20, True), (20, False)])
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_every_tour_reaching_the_3opt_layer_is_a_full_permutation(
+    monkeypatch, label, solver_cls, make_cfg, n, symmetric, seed
+):
+    seen: list[list[int]] = []
+    real = ls_engine.improve_three_opt
+
+    def recording(route, matrix, **kwargs):
+        seen.append(list(route))
+        assert sorted(route) == list(range(len(matrix)))
+        return real(route, matrix, **kwargs)
+
+    monkeypatch.setattr(ls_engine, "improve_three_opt", recording)
+    cfg = make_cfg()
+    cfg.seed = seed
+    result = solver_cls(cfg).solve_with_matrix(_matrix(n, seed, symmetric=symmetric))
+
+    assert seen, "the final polish must reach the canonical 3-opt layer"
+    assert sorted(result.tour) == list(range(n))
+
+
+def test_old_kernel_is_documented_as_non_canonical():
+    for name in ("nb_three_opt", "_three_opt_improve_atsp_numba"):
+        doc = (getattr(numba_accel, name).__doc__ or "") if name == "nb_three_opt" else (
+            getattr(numba_accel, name).py_func.__doc__ or ""
+        )
+        assert "NON-CANONICAL" in doc, name

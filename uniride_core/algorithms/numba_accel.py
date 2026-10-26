@@ -159,6 +159,8 @@ def _or_opt_improve_atsp_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
+# NON-CANONICAL 3-opt helper (MT6-02, audit H10): used only by the old kernel below, which has
+# no public caller. The canonical 3-opt lives in uniride_core/algorithms/three_opt.py.
 @jit(nopython=True, cache=True)
 def _build_3opt_candidate(route, n, seg_a_len, b_start, b_end, c_start, c_end, d_start,
                           rev_b, rev_c, rev_tail):
@@ -199,7 +201,13 @@ def _build_3opt_candidate(route, n, seg_a_len, b_start, b_end, c_start, c_end, d
 def _three_opt_improve_atsp_numba(route: np.ndarray, dist_matrix: np.ndarray,
                                   max_iterations: int, first_improvement: bool,
                                   window: int = 12) -> Tuple[np.ndarray, float]:
-    """3-opt local search with configurable bounded window.
+    """NON-CANONICAL 3-opt kernel (MT6-02, audit H10): kept only as history, no public caller.
+
+    It builds only A+B(+-rev)+C(+-rev)+D(+-rev) cases (never a segment exchange), reverses
+    segments on asymmetric matrices and admits adjacent cuts, so it is NOT the neighbourhood
+    of ``CANONICAL_THREE_OPT_DESIGN.md``. Use ``uniride_core.algorithms.three_opt``.
+
+    3-opt local search with configurable bounded window.
     
     For each breakpoint i, j and k are limited to [i+2, i+window] and [j+2, j+window]
     respectively. This reduces complexity from O(n^3) to O(n * window^2).
@@ -300,6 +308,12 @@ def nb_two_opt(student_nodes: List[int], dist_matrix_2d: List[List[float]],
 
 def nb_three_opt(student_nodes: List[int], dist_matrix_2d: List[List[float]],
                   max_iterations: int, first_improvement: bool, window: int = 12) -> Tuple[List[int], float]:
+    """NON-CANONICAL 3-opt (audit H10, MT6-02): wrapper of the old kernel, no public caller.
+
+    Not the canonical neighbourhood (``CANONICAL_THREE_OPT_DESIGN.md``); SOTA polish and every
+    public entry point use ``uniride_core.algorithms.three_opt.improve_three_opt`` instead.
+    Kept only so the kernel's own behaviour stays testable (``test_numba_three_opt.py``).
+    """
     route = _prepare_route(student_nodes)
     dm = np.array(dist_matrix_2d, dtype=np.float64)
     improved_route, length = _three_opt_improve_atsp_numba(route, dm, max_iterations, first_improvement, window)

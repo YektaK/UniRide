@@ -636,7 +636,8 @@
         "studentLoadError": "Failed to load students",
         "saveError": "Save Error",
         "solverProvenance": {
-          "fallback": "The requested solver did not run; {used} was used instead (reason: {reason})."
+          "fallback": "The requested solver did not run; {used} was used instead (reason: {reason}).",
+          "deadline": "The solver stopped at its time limit; this plan may not be reproducible from its seed."
         }
       },
       "compare": {

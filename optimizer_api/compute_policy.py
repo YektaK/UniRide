@@ -435,6 +435,10 @@ def apply_compute_policy(request, resolution, strategy, policy: ComputePolicy):
             if key in caller:
                 value = caller[key]
                 source = PolicyValueSource.CALLER
+            elif key == "deadline_seconds" and "time_limit" in caller:
+                # The caller sent the legacy key, which merge_sota_config maps to
+                # deadline_seconds; the registered default must not outrank it.
+                continue
             elif key in registered and registered[key] is not None:
                 value = _capped_registered_budget(key, registered[key], ceiling)
                 source = _source_for_default(key, registered[key], value, policy)

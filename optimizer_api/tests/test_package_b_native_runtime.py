@@ -271,6 +271,6 @@ def test_sota_policy_metadata_labels_legacy_clock_keys(
     assert "deadline_seconds" in metadata.limits["time_limit"].enforcement
     assert metadata.limits["ls_time_limit"].source is PolicyValueSource.CALLER
     assert "ignored" in metadata.limits["ls_time_limit"].enforcement
-    assert "deadline_seconds" not in metadata.limits  # nothing registered, nothing claimed
+    assert "deadline_seconds" not in metadata.limits  # the caller's time_limit wins; no default claimed
     assert strategy._config is registered
-    assert strategy._config.deadline_seconds is None
+    assert strategy._config.deadline_seconds == 60  # registered production default, not mutated (A20 L3)

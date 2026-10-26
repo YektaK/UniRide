@@ -335,6 +335,8 @@ export async function POST(request: NextRequest) {
                 ...(result.fallback_reason ? { fallbackReason: result.fallback_reason } : {}),
                 ...(result.effective_config_source ? { effectiveConfigSource: result.effective_config_source } : {}),
                 ...(typeof result.effective_seed === "number" ? { effectiveSeed: result.effective_seed } : {}),
+                ...(result.termination_reason ? { terminationReason: result.termination_reason } : {}),
+                ...(result.solver_code_version ? { solverCodeVersion: result.solver_code_version } : {}),
                 feasibilityCertificate: result.feasibility_certificate,
                 appliedPolicy: result.applied_policy,
                 options: {

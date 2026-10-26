@@ -20,6 +20,8 @@ const fieldSchemas = {
   fallback_reason: token(200),
   effective_config_source: token(64),
   effective_seed: z.number().int(),
+  termination_reason: token(64),
+  solver_code_version: token(64),
 } as const;
 
 export const SOLVER_PROVENANCE_KEYS = Object.keys(fieldSchemas) as ReadonlyArray<keyof typeof fieldSchemas>;
@@ -31,6 +33,8 @@ export const solverProvenanceSchema = z
     fallback_reason: fieldSchemas.fallback_reason.optional(),
     effective_config_source: fieldSchemas.effective_config_source.optional(),
     effective_seed: fieldSchemas.effective_seed.optional(),
+    termination_reason: fieldSchemas.termination_reason.optional(),
+    solver_code_version: fieldSchemas.solver_code_version.optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, { message: "solverProvenance must not be empty" });
@@ -43,12 +47,16 @@ export interface SolverProvenanceSource {
   readonly fallback_reason?: unknown;
   readonly effective_config_source?: unknown;
   readonly effective_seed?: unknown;
+  readonly termination_reason?: unknown;
+  readonly solver_code_version?: unknown;
   readonly meta?: {
     readonly algorithmUsed?: unknown;
     readonly algorithmRequested?: unknown;
     readonly fallbackReason?: unknown;
     readonly effectiveConfigSource?: unknown;
     readonly effectiveSeed?: unknown;
+    readonly terminationReason?: unknown;
+    readonly solverCodeVersion?: unknown;
   } | null;
 }
 
@@ -67,6 +75,8 @@ export function buildSolverProvenance(source: SolverProvenanceSource, calculatio
     fallback_reason: meta?.fallbackReason ?? source.fallback_reason,
     effective_config_source: meta?.effectiveConfigSource ?? source.effective_config_source,
     effective_seed: meta?.effectiveSeed ?? source.effective_seed,
+    termination_reason: meta?.terminationReason ?? source.termination_reason,
+    solver_code_version: meta?.solverCodeVersion ?? source.solver_code_version,
   };
 
   const value: Record<string, string | number> = {};

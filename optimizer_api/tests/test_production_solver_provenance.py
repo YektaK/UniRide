@@ -64,6 +64,21 @@ def test_default_deadline_reaches_the_effective_request_config(cls, name):
     assert metadata.limits["deadline_seconds"].source.value == "strategy_default"
 
 
+@pytest.mark.parametrize("cls,name", CLASSES)
+def test_legacy_time_limit_in_the_request_beats_the_injected_default(cls, name):
+    # The compute policy writes the registered 60 s default into the effective
+    # sota_config as deadline_seconds; that must not outrank a caller time_limit.
+    request = schemas.OptimizationRequest(
+        algorithm=name, students=truth._students(), depot=truth.DEPOT,
+        sota_config={"time_limit": 9},
+    )
+    resolution = resolve_strategy(name)
+    strategy = resolution.create()
+    effective, metadata = apply_compute_policy(request, resolution, strategy, HARD_CEILINGS)
+    assert merge_sota_config(strategy._config, effective.sota_config).deadline_seconds == 9
+    assert "deadline_seconds" not in metadata.limits
+
+
 def test_core_and_academic_defaults_stay_unbounded():
     for config_cls in (E2BSOTSPConfig, R2DMATSPConfig, PAOEAConfig):
         assert config_cls().deadline_seconds is None

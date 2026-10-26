@@ -6,7 +6,8 @@ import type { SolverProvenance } from "@/services/solver-provenance";
 
 /**
  * Which algorithm settings, seed and fallback produced a calculated or saved plan (H17, M26;
- * DECISION_LOG S08). Reuses the daily-plan wording for source and seed. Null/absent
+ * DECISION_LOG S08), and whether the solver stopped at its wall-clock deadline (A20 L3). The
+ * build stamp `solver_code_version` is stored but not shown. Reuses the daily-plan wording for source and seed. Null/absent
  * provenance (old plan, older optimizer) renders nothing; nothing is inferred.
  */
 export function SolverProvenanceNote({ provenance }: { provenance?: SolverProvenance | null }) {
@@ -28,6 +29,7 @@ export function SolverProvenanceNote({ provenance }: { provenance?: SolverProven
   if (provenance.fallback_reason) {
     sentences.push(t("fallback", { used: provenance.algorithm_used ?? "greedy_fallback", reason: provenance.fallback_reason }));
   }
+  if (provenance.termination_reason === "wall_clock_deadline") sentences.push(t("deadline"));
   if (sentences.length === 0) return null;
 
   return (

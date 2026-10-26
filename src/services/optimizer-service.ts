@@ -116,6 +116,10 @@ export interface OptimizationResult {
     /** H17: where the effective solver config came from and the seed used (ga_split family; absent otherwise). */
     effective_config_source?: string;
     effective_seed?: number;
+    /** A20 L3: "wall_clock_deadline" only when a SOTA solver stopped at its time limit (absent otherwise). */
+    termination_reason?: string;
+    /** A20 L2: build identifier of the optimizer (UNIRIDE_BUILD_COMMIT); absent when the optimizer has none. */
+    solver_code_version?: string;
     feasibility_certificate?: unknown;
     applied_policy?: AppliedComputePolicyInfo;
 }
@@ -317,6 +321,8 @@ export async function optimizeRoutes(
             ...(data.fallback_reason ? { fallback_reason: data.fallback_reason } : {}),
             ...(typeof data.effective_config_source === "string" ? { effective_config_source: data.effective_config_source } : {}),
             ...(typeof data.effective_seed === "number" ? { effective_seed: data.effective_seed } : {}),
+            ...(typeof data.termination_reason === "string" ? { termination_reason: data.termination_reason } : {}),
+            ...(typeof data.solver_code_version === "string" ? { solver_code_version: data.solver_code_version } : {}),
             feasibility_certificate: data.feasibility_certificate,
             applied_policy: data.applied_policy,
         };

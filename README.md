@@ -112,6 +112,7 @@ Keep local values outside version control. Never put credential values in docume
 | `UNIRIDE_COMPUTE_MAX_ITERATIONS` | FastAPI | optional override of the 2,000-iteration ceiling; may only lower it |
 | `UNIRIDE_COMPUTE_MAX_POPULATION` | FastAPI | optional override of the 250 population/swarm-member ceiling; may only lower it |
 | `UNIRIDE_COMPUTE_LOCAL_SEARCH_SECONDS` | FastAPI | optional override of the 2-second local-search sublimit; may only lower it |
+| `UNIRIDE_BUILD_COMMIT` | FastAPI | optional build or deploy stamp (a short token, `[A-Za-z0-9_.+-]`, 1-64 characters, e.g. the short commit hash); the optimizer returns it as `solver_code_version`, and it is saved in `route_plans.solver_provenance` (DECISION_LOG A20 L2). Set it in the build or deploy, never derive it at runtime; unset or malformed means the field is omitted |
 | `ENABLE_DEV_RESET` / `DEV_RESET_SECRET` | Next.js server | development reset control |
 | `AZURE_AI_ENDPOINT`, `AZURE_AI_API_KEY`, `AZURE_AI_API_VERSION` | optional utility | Azure AI configuration |
 

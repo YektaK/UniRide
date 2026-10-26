@@ -116,8 +116,8 @@ ROUTING_ALIAS_NAMES = {
     f"{prefix}-{base}" for prefix in ("CVRP", "CVRPTW") for base in ROUTING_ALIAS_ENGINES
 }
 GATE_D_STATUS_PHRASE = (
-    "all Gate D items are merged except D-04b2 (final estimate on the stronger computer), "
-    "D-13 (close) and D-12 (publication)"
+    "Gate D is closed except D-12 (publication, owner permission); D-04b2 (final estimate on the stronger computer) "
+    "is a precondition of the paper-scale run, not a Gate D acceptance item"
 )
 
 

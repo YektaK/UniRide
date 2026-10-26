@@ -26,9 +26,8 @@ def _analysis(active, *, index_sha256=INDEX_SHA):
     for row, _ in items:
         row.setdefault("objective_evaluations", row["evaluation_budget"])
         row.setdefault("termination_reason", "budget_exhausted")
-    options = {} if index_sha256 is None else {"index_sha256": index_sha256}
     analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,
-                              run_index=fx.index_for(items, "paper"), **options)
+                              run_index=fx.index_for(items, "paper"), index_sha256=index_sha256)  # None is passed explicitly where a test needs it
     return items, analysis
 
 
@@ -61,7 +60,8 @@ def test_a_paper_report_refuses_an_analysis_of_another_campaign_commit(active):
 
 
 def test_a_paper_report_refuses_an_analysis_that_does_not_know_its_campaign(active):
-    items, analysis = _analysis(active, index_sha256=None)
+    items, analysis = _analysis(active)
+    analysis = dataclasses.replace(analysis, index_sha256=None)  # analyse_family itself no longer produces one (review item 8)
     assert analysis.index_sha256 is None
     with pytest.raises(ReportError, match="run index"):
         tar._report(items, plan=active, mode="paper", inference=[analysis])

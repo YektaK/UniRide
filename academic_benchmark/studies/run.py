@@ -340,6 +340,7 @@ def _excluded_cells(failed: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]
 def _paper_report_text(
     plan: StudyPlan, status: str, planned: int, completed: int, written: Mapping[str, int],
     excluded: Sequence[Mapping[str, Any]], git: Mapping[str, Any], run_index: Mapping[str, Any], plan_label: str,
+    output: Optional[Path] = None,
 ) -> str:
     lines = [
         "UniRide study run (paper mode)",
@@ -371,6 +372,16 @@ def _paper_report_text(
         "This report lists what ran and what failed. It makes no comparison between algorithms and supports no claim. "
         "Fixed-budget and native rows are written to separate files and are never pooled."
     )
+    if output is not None:
+        # A20 L12: the analysis is a separate step on the sealed campaign; the run itself analyses nothing
+        shown = f'"{output}"' if any(c.isspace() for c in str(output)) else str(output)
+        lines.append("No analysis ran here. To build the paper report (descriptive tables and the inferential section) from this verified campaign, run:")
+        lines.append(f"python -m academic_benchmark.analysis.campaign_report {shown} --paper")
+        if status != "passed":
+            lines.append(
+                "This campaign has failed runs: the command still builds the report, the failed cells are excluded from inference and "
+                "named in it, and the command exits 1 (not 0)."
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -413,7 +424,7 @@ def _finalize_paper(
     if run_index is None:  # the git state was checked before the first run
         raise StudyRunError("run manifests could not be written: the git state is unknown")
     excluded = _excluded_cells(failed)
-    text = _paper_report_text(plan, status, len(rows), len(completed), written, excluded, git, run_index, plan_label)
+    text = _paper_report_text(plan, status, len(rows), len(completed), written, excluded, git, run_index, plan_label, output)
     assert_no_ranking_words(text)
     (output / RUN_REPORT_TEXT_FILE).write_text(text, encoding="utf-8")
     _json_atomic(output / RUN_REPORT_JSON_FILE, {

@@ -32,9 +32,7 @@ from uniride_core.algorithms.sota_tsp.run_tsp import RUN_TSP, RUNConfig
 
 
 def _move(tour, matrix, rng, window=12):
-    # RED-COMMIT ONLY: falls back to the old function so the failures show behaviour.
-    fn = getattr(run_tsp, "_apply_random_cut_three_opt", None) or run_tsp._apply_3opt_bounded
-    return fn(tour, matrix, rng, window)
+    return run_tsp._apply_random_cut_three_opt(tour, matrix, rng, window)
 
 
 def _cost(tour, matrix):

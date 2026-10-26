@@ -53,3 +53,11 @@ def test_a_failure_at_the_analysed_level_that_the_rows_drop_is_demanded(active):
     items = ts.per_instance_items(ts.SEPARATED)
     with pytest.raises(StatisticsRefusal, match="missing from the rows"):
         ts.run(items, active, study=ts.STUDY3, failed=[ts.failed_item("eil51", "Core-PSO-TSP", 0)])
+
+
+# ------------------------------------------------------------------------------------------------ gated pre-close polish 3
+def test_an_index_failure_whose_budget_is_no_level_of_the_profile_is_refused_not_skipped(active):
+    """The index lists a failure whose budget is in no level list of the profile: the analysed study is not the campaign's profile."""
+    items = ts.per_instance_items(ts.SEPARATED)
+    with pytest.raises(StatisticsRefusal, match="not a budget level of the study profile"):
+        ts.run(items, active, study=ts.STUDY3, failed=[ts.failed_item("eil51", "Core-PSO-TSP", 0, evaluation_budget=987_654_321)])

@@ -625,9 +625,16 @@ def _check_failed_against_index(
         identity = normalize_problem(record.problem)
         if record.protocol_version != protocol_version or f"tsplib-{identity}" not in family.dataset_ids:
             continue
+        level = _level_index_of(study, f"tsplib-{identity}", record.evaluation_budget)
+        if level == NOT_A_LEVEL:  # never skipped silently: the analysed study is not the profile the campaign ran
+            raise StatisticsRefusal(
+                f"the run index lists a failed run of {record.algorithm_id!r} on {identity!r} (replicate {record.replicate}) with "
+                f"evaluation budget {record.evaluation_budget}, which is not a budget level of the study profile for that instance: "
+                "the analysed study differs from the campaign's profile"
+            )
         if family.scope == "per_instance" and identity not in analysed_instances:
             continue
-        if _level_index_of(study, f"tsplib-{identity}", record.evaluation_budget) != analysed_level:
+        if level != analysed_level:
             continue  # another level than the family's: outside this analysis, neither demanded nor reported
         listed[(record.algorithm_id, identity, record.evaluation_budget, record.replicate)] += 1
     for key in sorted((rows - listed).elements(), key=str):

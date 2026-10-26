@@ -14,11 +14,10 @@ Son güncelleme: 2026-10-27 (Gate D ve MT6 kapanış birleşmesi). Kararlar `doc
 
 - Run index v2, MT6-01..07, native kabul testi, MT6-06 yeniden ölçüm (Bildiri 45,1 → 16,7 sa, YAEM 31,0 → 11,5 sa; bu bilgisayar, yük altında; kesin sayı D-04b2), makale raporu hazırlığı 1–2, üretim çözücü kaydı, kapanış öncesi cila, problem türü düzeltmesi (A20 L10; kapanış kontrolünün bulduğu gerçek hata), Gate D kapanışı.
 - OQ-4 yanıtlandı: her algoritma native'de, global 1000 yineleme, yerel arama/cila kendiliğinden durur (güvenlik sınırı 1000).
-- Birleşmiş worktree'ler ve geçici klasörler Geri Dönüşüm Kutusu'na taşındı (sahip OK); ölçüm klasörleri (`C:\wt\d04b1*`, `C:\wt\mt6-06*`) duruyor.
 
 ## Makale ölçeğinde koşudan önce zorunlu
 
-- Paper raporunun paper koşu servisine bağlanması; o dalda `analyse_family(index_sha256=...)` zorunlu olsun (A20 L7).
+- Yazılım ön koşulları TAMAM: makale raporu komutu birleşti `ebddbb37` (`python -m academic_benchmark.analysis.campaign_report <klasör> --paper`, A20 L12; `index_sha256` zorunlu, L7). Kalanlar donanım ve sahip işleri:
 - D-04b2 güçlü bilgisayarda (tam test koşusu dahil).
 - Şefin ön-onay commit'i: OQ-1/3/4/16 değerlerinin profillere yazılması (30 koşu, native 1000; A20 L11), `.gitattributes` ile JSON satır sonlarının sabitlenmesi (A20 L6 d), D-10 şablonuyla doldurulmuş ve sahibin onayladığı koşu planı.
 
@@ -29,17 +28,12 @@ Son güncelleme: 2026-10-27 (Gate D ve MT6 kapanış birleşmesi). Kararlar `doc
 
 ## Ertelenen küçük işler
 
-- Çalışıyor: makale raporu komutu (`feat/gated-paper-report-command`, A20 L12 + L7) ve birikmiş küçük işler 1. parti (`test/backlog-polish-1`: tamsayılık sınırı, Gate C A17 penceresi, ALNS yardımcı testleri, D-04b1 cilası, lisans `real_deps` testi, hibrit cila penceresi).
+- Birikmiş küçük işler 1. parti BİRLEŞTİ `867c078f` (tamsayılık sınırı, Gate C A17 penceresi, ALNS yardımcı testleri, D-04b1 cilası, lisans `real_deps` testi, hibrit cila penceresi).
+- Makale raporu cilası: komutun "çıkış 1" satırı yalnız ret yoksa doğru; makale raporu betimsel raporla aynı başlık ve şema adını paylaşıyor (karar bekliyor).
 - Or-opt native kabulünün `native_protocol.py` kuyruk yamasından ana kümelere taşınması (A20 L5: makale koşusundan sonra).
 - L10 cilası: yardımcı boşluk kırpıyor; manifest/aile ve veri kümesi manifesti karşılaştırma yerleri için ayrı test; `gaps.py:131` çıplak `ProblemContractError`; `studies/service.py:292, :458` ham büyük harf karşılaştırması.
 - `/compare` ve yönetici rota-test sayfası `termination_reason`/`solver_code_version` taşımıyor (plan kaydetmiyorlar; yalnız görüntü).
 - J11 README'den `scripts/compare_exact_day_joint_runs.py` betiğine işaret (yazı hattı).
-- Tamsayılık payı sınır testi (bound = raw + 5e-7).
-- Gate C uygunluk testinin A17 penceresi `## ` başlığında da durmalı.
 - `scratch/test_hho.py`; eski cila listesi (C-12/C-16b/J3/ayrıştırıcı).
-- ALNS birleşik cila dalı için iki yardımcı test (mutant kaldı); Smart/CLI parametre bloklarının ön kontrolü (isteğe bağlı).
 - D-03 cila: smoke varsayılanı 3 tekrar için test; yarım kalan checkpoint silmesinin elle temizlenmesi docstring'e.
 - D-05 cila: başarısız satır aile kontrolü `tsplib-<ad>` veri kümesi kimliğini varsayıyor; plana örnek başına uygulanabilirlik beyanı yok (karma aile reddedilir).
-- D-04b1 cila: `objective_count < 0` koruması ve nedensiz prob yedeği için test.
-- Lisans tekrar denemesi: `real_deps` üzerinden Gurobi probe sayısının manifeste ulaştığını sınayan test (mutant kaldı).
-- Birleşmiş worktree'lerin ve `C:\wt` geçici klasörlerinin temizliği (sahip OK birleşmişler için var; Geri Dönüşüm Kutusu + `git worktree prune`).

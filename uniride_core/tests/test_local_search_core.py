@@ -28,3 +28,25 @@ def test_core_local_search_keeps_legacy_two_opt_swap_helper():
     ls = TwoOptLocalSearch()
 
     assert ls._two_opt_swap(["A", "B", "C", "D"], 1, 2) == ["A", "C", "B", "D"]
+
+
+def test_core_three_opt_uses_path_neighbourhood_through_apply_local_search():
+    # M14 (MT6-04): the first position can move and C'B' is reachable; ["A".."D"] with
+    # cost = position of "D" must end with "D" first.
+    route = ["A", "B", "C", "D"]
+    improved, cost = apply_local_search(
+        route, lambda r: float(r.index("D")), LocalSearchType.THREE_OPT
+    )
+
+    assert improved[0] == "D"
+    assert cost == 0.0
+
+
+def test_core_three_opt_small_route_is_unchanged_not_two_opt():
+    route = ["A", "B", "C"]
+    improved, cost = apply_local_search(
+        route, lambda r: float(r.index("C")), LocalSearchType.THREE_OPT
+    )
+
+    assert improved == route
+    assert cost == 2.0

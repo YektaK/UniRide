@@ -103,6 +103,9 @@ def _build_sota_config(algo_name: str, params: Dict[str, Any], seed: int):
     """Build a SOTA config object from a parameter dict."""
     _, cfg_cls = SOTA_ALGO_MAP[algo_name]
     valid_fields = {f.name for f in dataclasses.fields(cfg_cls)}
+    # Unknown keys are dropped silently, including the old time_limit / ls_time_limit (MT6-03 renamed
+    # the former to deadline_seconds). Harmless: SOTA is refused in protocol mode, so no
+    # fixed-budget or native evidence can depend on a clock key.
     cfg_kwargs = {k: v for k, v in params.items() if k in valid_fields}
     cfg_kwargs["seed"] = seed
     return cfg_cls(**cfg_kwargs)

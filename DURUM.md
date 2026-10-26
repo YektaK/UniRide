@@ -1,6 +1,6 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-26 (WIP `0e3d0ee8` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
+Son güncelleme: 2026-10-26 (WIP `d0c73a8b` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir.
 
 ## Çalışan işler
 
@@ -8,7 +8,7 @@ Son güncelleme: 2026-10-26 (WIP `0e3d0ee8` sonrası). Kararlar `docs/DECISION_L
 |---|---|---|
 | Sabit bütçede `max_no_improvement` zorunlu + YAEM tohumu 2027 | — | BİRLEŞTİ `e24a5cd1` (Opus ONAY). |
 | Gate D (Paket D) | — | BİRLEŞTİ: D-01, D-02, D-03, D-04a, D-04b1 (araç + ölçüm), D-05, D-06, D-07, D-08a, D-08b, D-09, D-10, D-14. BİRLEŞTİ ayrıca: tasarım redline (`ae118736`), D-11 (`69bd7168`), run index tamlığı (`0e3d0ee8`, uniride-run-index/v2, Opus ONAY). OQ-4 ölçümü MT6-01 sonrasına ertelendi (sahip OQ-MT6-4). |
-| MT6 (tek kanonik 3-opt, deterministik SOTA durdurma) | — | Plan BİRLEŞTİ `e3be3873`; sahip OQ-MT6-1..7 hepsi öneri (A19). Sıra: MT6-01 hız (sonuç değişmez) → MT6-02 (H10) → MT6-03 (H11); MT6-04 (M14, Dudullu tekrar oynatma sahibe) MT6-01'den sonra; MT6-05; MT6-06 şef ölçümü; MT6-07 kapanış. Sıradaki: D-13, D-12 (sahip izniyle); D-04b2 güçlü bilgisayarda. |
+| MT6 (tek kanonik 3-opt, deterministik SOTA durdurma) | — | Plan BİRLEŞTİ `e3be3873`; sahip OQ-MT6-1..7 hepsi öneri (A19). MT6-01 + MT6-02 BİRLEŞTİ (`d0c73a8b`). Sıra: MT6-01 hız (sonuç değişmez) → MT6-02 (H10) → MT6-03 (H11); MT6-04 (M14, Dudullu tekrar oynatma sahibe) MT6-01'den sonra; MT6-05; MT6-06 şef ölçümü; MT6-07 kapanış. Sıradaki: D-13, D-12 (sahip izniyle); D-04b2 güçlü bilgisayarda. |
 
 ## Bu turda biten
 
@@ -19,7 +19,7 @@ Son güncelleme: 2026-10-26 (WIP `0e3d0ee8` sonrası). Kararlar `docs/DECISION_L
 
 ## Makale ölçeğinde koşudan önce zorunlu
 
-- MT6 planı (H10 + M25 birlikte, H11, M14): Gate C planı Q4 gereği Gate C sonrası, her makale ölçeğindeki koşudan önce; MT6-01 Opus ONAY (MT6-02 ile art arda birleşecek), MT6-02 denetimde.
+- MT6 planı (H10 + M25 birlikte, H11, M14): Gate C planı Q4 gereği Gate C sonrası, her makale ölçeğindeki koşudan önce; MT6-01 (`7c41237b`) ve MT6-02 (`d0c73a8b`) BİRLEŞTİ; kalan MT6-03, MT6-04, MT6-05, MT6-06 şef ölçümü, MT6-07.
 - Run index v2 cilası (A18 notu `0e3d0ee8`): plan özeti ifadesi ("çözülmedi" yerine dosya yokluğu), rapor yolunda doğrulayıcı notlarının ve plan dosyası özetinin kontrolü, başka düzeydeki hataların istenmesi uç durumu, hayatta kalan 5 mutasyon için test.
 
 - Paper raporunun paper koşu servisine bağlanması (D-07 izleme): önce `FamilyAnalysis` kampanya kimliğini (indeks sha256 + commit) taşısın, rapor bunu banner ile karşılaştırsın.
@@ -41,4 +41,7 @@ Son güncelleme: 2026-10-26 (WIP `0e3d0ee8` sonrası). Kararlar `docs/DECISION_L
 - D-05 cila: başarısız satır aile kontrolü `tsplib-<ad>` veri kümesi kimliğini varsayıyor; plana örnek başına uygulanabilirlik beyanı yok (karma aile reddedilir).
 - D-07 cila: `ReferenceCrossCheckError` bütünlük reddi sayılsın (yeniden kurma çıkış 2); 3 mutasyon için test; yeniden kurma planı kampanya commit'inden okusun.
 - D-04b1 cila: `objective_count < 0` koruması ve nedensiz prob yedeği için test.
+- MT6-01 cila: tamsayı olmayan pencere (12.0) artık TypeError veriyor, açık doğrulama; yakınsamaya kadar window None tam koşu eşlik testi; tasarım :57 ifadesi.
+- MT6-02 cila: yok sayılan `window`/`max_iterations` argümanını yakalayan test; `ls_engine.py:10` başlık cümlesi.
+- Sahibe sorulacak: S08 sağlayıcı kaydına kod commit'i alanı (şimdi yalnız `created_at` ile ayrılıyor).
 - Lisans tekrar denemesi: `real_deps` üzerinden Gurobi probe sayısının manifeste ulaştığını sınayan test (mutant kaldı).

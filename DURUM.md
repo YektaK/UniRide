@@ -25,7 +25,7 @@ Son güncelleme: 2026-10-24 (WIP `25333088` sonrası). Kararlar `docs/DECISION_L
 
 ## Sahibin kararını bekleyenler
 
-- D-04b1 zaman ölçümünden sonra: OQ-1 (30 koşu), OQ-3 (YAEM), OQ-4 (native sınırlar), OQ-16 (Bildiri ayarları) kesinleşecek.
+- OQ-4 (native sınırlar): kroA100 üzerinde ikinci geçici ölçümden sonra (3-opt aileleri en çok ~1 saat). OQ-1 (30 koşu), OQ-3 (YAEM) ve OQ-16 (Bildiri) 2026-10-26'da onaylandı.
 
 
 ## Ertelenen küçük işler

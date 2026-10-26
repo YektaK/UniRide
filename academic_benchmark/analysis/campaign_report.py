@@ -33,7 +33,7 @@ through it the campaign commit, and writes ``paper_report.txt/json`` (the descri
 labelled with its comparison cell) next to the campaign. Exit codes as above: 0 written, 1 written for a campaign with failed runs, 2
 refused (not a paper campaign, integrity, identity or plan mismatch, a refusal of the statistics service). Rows that belong to no declared
 family and failed runs of a cell with no completed run are listed in the report notes; a failed run whose recorded dataset id is not
-``tsplib-<normalised problem name>`` is refused. A refused ``--paper`` run leaves no ``paper_report.*`` behind. The paper run service prints
+``tsplib-<normalised problem name>`` is refused. A folder inside the repository is refused first and nothing in it is touched; for a campaign folder outside the repository an old ``paper_report.*`` is removed once the folder checks pass, so a later refusal leaves none behind. The paper run service prints
 this command at the end of every paper campaign (a campaign with failed runs also gets a line saying the command exits 1) and runs no
 analysis itself.
 
@@ -344,13 +344,12 @@ def _rebuild(
     output = Path(campaign_dir).expanduser().resolve()
     if not output.is_dir():
         raise CampaignReportError(f"{output} is not a campaign folder")
-    if paper:  # a refused paper report run leaves no paper report behind, whichever refusal comes first (the descriptive rebuild keeps its pinned order)
-        for name in PAPER_REPORT_FILES:
-            (output / name).unlink(missing_ok=True)
     main_tree = _main_working_tree(root)
     if _is_within(output, root) or (main_tree is not None and _is_within(output, main_tree)):
         raise CampaignReportError(f"the campaign folder {output} is inside the repository; reports are rebuilt only for output outside it")
-    for name in (PAPER_REPORT_FILES if paper else DESCRIPTIVE_REPORT_FILES):  # a refused rebuild must not leave an old report next to a campaign it no longer describes
+    # only now, after every folder check passed (a folder inside the repository is refused above without touching anything): a refused
+    # rebuild of a campaign folder must not leave an old report next to a campaign it no longer describes
+    for name in (PAPER_REPORT_FILES if paper else DESCRIPTIVE_REPORT_FILES):
         (output / name).unlink(missing_ok=True)
     try:
         campaign = load_verified_campaign(output, repository_root=root)

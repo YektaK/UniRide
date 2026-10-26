@@ -227,10 +227,11 @@ def test_a_campaign_folder_inside_the_repository_is_refused_for_the_paper_report
 
     assert cr.main([str(out), *_paper_args(root)]) == 0
     shutil.copytree(out, inside)  # a folder with a paper report of an earlier run
-    assert all((inside / name).is_file() for name in PAPER_FILES)
+    before = {name: (inside / name).read_bytes() for name in PAPER_FILES}
     assert cr.main([str(inside), *_paper_args(root)]) == 2
     assert "inside the repository" in capsys.readouterr().err
-    assert not any((inside / name).exists() for name in PAPER_FILES)  # a refused run leaves no paper report behind (review item 7)
+    # the refusal touches nothing inside the repository: the existing paper report is still there, byte for byte
+    assert {name: (inside / name).read_bytes() for name in PAPER_FILES} == before
 
 
 def test_a_smoke_overwrite_removes_a_paper_report_of_an_earlier_run(tmp_path):

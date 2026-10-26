@@ -2,7 +2,7 @@
   "$defs": {
     "AnalysisPlanRefV1": {
       "additionalProperties": false,
-      "description": "The analysis plan the campaign names. ``path`` and ``sha256`` are ``None`` only when no plan file resolved, which a\nsmoke campaign allows (descriptive output only); a paper campaign always has both.",
+      "description": "The analysis plan the campaign names. ``path`` and ``sha256`` are ``None`` only when the plan did not resolve (no file, an\ninvalid file, or a file that is not this study's plan), which a smoke campaign allows (descriptive output only; the reason is\nin the run report); a paper campaign always has both. The hash of a plan that did not resolve is never recorded.",
       "properties": {
         "analysis_plan_id": {
           "minLength": 1,

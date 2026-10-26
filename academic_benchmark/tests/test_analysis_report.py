@@ -696,7 +696,7 @@ def test_the_banner_shows_the_analysis_plan_hash_and_the_planned_run_count(draft
 def test_the_banner_says_so_when_the_plan_file_hash_was_not_recorded(draft):
     report = _report(_items(), plan=draft, plan_sha="absent")
     assert report.data["banner"]["analysis_plan_sha256"] is None
-    assert "Analysis plan sha256: not recorded (the analysis plan file did not resolve)" in report.text
+    assert "Analysis plan sha256: not recorded (the analysis plan did not resolve)" in report.text
 
 
 def test_the_banner_counts_failed_runs_from_the_index(draft):

@@ -449,7 +449,7 @@ def build_report(
         f"Working tree dirty: {'YES' if banner['dirty'] else 'no'}",
         f"Study profile: {study.study_id} (status {study.status})",
         f"Analysis plan: {plan.analysis_plan_id} (status {plan.status})",
-        "Analysis plan sha256: " + (banner["analysis_plan_sha256"] or "not recorded (the analysis plan file did not resolve)"),
+        "Analysis plan sha256: " + (banner["analysis_plan_sha256"] or "not recorded (the analysis plan did not resolve)"),
         f"Planned runs: {banner['planned_runs']} ({banner['planned_runs_per_cell']} per cell); "
         f"completed {banner['completed_runs']}; failed {banner['failed_runs']}",
         f"Manifest index sha256: {index_sha256}",

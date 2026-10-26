@@ -1,32 +1,31 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-26 akşam (WIP `985c6509` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L5; her biri seçenekler, artı/eksi, seçim, geri alma yolu ile).
+Son güncelleme: 2026-10-26 gece (WIP `56b1a35a` sonrası). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L10; her biri seçenekler, artı/eksi, seçim, geri alma yolu ile).
 
 ## Çalışan işler
 
 | İş | Dal | Durum |
 |---|---|---|
-| Gate D (Paket D) | — | BİRLEŞTİ: D-01..D-11, D-14, tasarım redline, run index v2 (`0e3d0ee8`). OQ-1/3/4/16 yanıtlandı (A18). Kalan: D-13 kapanış (A20 L1: MT6-07'den hemen sonra, D-04b2 makale koşusunun ön koşulu olarak açık kalır), D-12 yayın (yalnız sahip izniyle), D-04b2 güçlü bilgisayarda. |
-| Makale raporu hazırlığı | `fix/gated-paper-report-readiness` | Geliştirici bitti (run index v2 cilası 1–4, D-07 cilası, `FamilyAnalysis` kampanya kimliği); Opus denetimi sürüyor. |
-| MT6 (tek kanonik 3-opt, deterministik SOTA durdurma) | — | BİRLEŞTİ: MT6-01 `7c41237b`, MT6-02 `d0c73a8b`, MT6-03 `693d8fd2`, MT6-04 `dfaadc2d`, MT6-05 `9bd31aea`; MT6-06 ölçümü bitti (A19). Kalan: denetim cilası (`fix/mt6-review-polish`, geliştirici çalışıyor), MT6-07 kapanış. |
-| Üretim çözücü kaydı (A20 L2 + L3) | `feat/production-solver-provenance` | Geliştirici bitti (SOTA üretim varsayılan süre sınırı 60 s, yanıtta `termination_reason`, `solver_code_version` = `UNIRIDE_BUILD_COMMIT`, S08 anahtarları, EN/TR not cümlesi); Opus denetimi sürüyor. |
+| Gate D (Paket D) | — | BİRLEŞTİ: D-01..D-11, D-14, redline, run index v2, makale raporu hazırlığı 1 ve 2 (`2c169b26`, `8bfeaeca`), kapanış öncesi cila (`03baaaf8`). D-13 kontrolü `eeeb727b` üzerinde bir GERÇEK HATA buldu: smoke raporu `tsp`/`TSP` büyük-küçük harf farkıyla reddediliyor (A20 L10). Düzeltme çalışıyor: `fix/gated-problem-type-canonical`. Ardından D-13 + MT6-07 kontrolü yeni commit'te yeniden. D-12 yalnız sahip izniyle; D-04b2 güçlü bilgisayarda. |
+| MT6 | — | MT6-01..05 + iki cila turu BİRLEŞTİ; MT6-06 ölçümü bitti. MT6 kabul maddeleri 1–6 `eeeb727b` üzerinde sağlandı; MT6-07 kaydı D-13 ile birlikte yazılacak. |
+| Üretim çözücü kaydı (A20 L2 + L3) | — | BİRLEŞTİ `37963463` (SOTA üretim varsayılan 60 s, `termination_reason`, `solver_code_version`); A16 go-live maddeleri eklendi. |
 
 ## Bu turda biten
 
-- Run index v2, MT6-01..05, native kabul testi (her iki profilin her kimliği native protokolde geçiyor), MT6-06 yeniden ölçüm: Bildiri 45,1 → 16,7 sa, YAEM 31,0 → 11,5 sa (bu bilgisayar, yük altında; kesin sayı D-04b2).
+- Run index v2, MT6-01..05, native kabul testi, MT6-06 yeniden ölçüm (Bildiri 45,1 → 16,7 sa, YAEM 31,0 → 11,5 sa; bu bilgisayar, yük altında; kesin sayı D-04b2), makale raporu hazırlığı 1–2, üretim çözücü kaydı, kapanış öncesi cila.
 - OQ-4 yanıtlandı: her algoritma native'de, global 1000 yineleme, yerel arama/cila kendiliğinden durur (güvenlik sınırı 1000); profillere onay öncesi commit'te girecek.
+- Birleşmiş 19 worktree ve 31 geçici klasör Geri Dönüşüm Kutusu'na taşındı (sahip OK); ölçüm klasörleri (`C:\wt\d04b1*`, `C:\wt\mt6-06*`) duruyor.
 
 ## Makale ölçeğinde koşudan önce zorunlu
 
-- MT6-07 kapanış ve D-13.
-- Makale raporu hazırlığı dalının birleşmesi; ardından paper raporunun paper koşu servisine bağlanması (`FamilyAnalysis` kimliği hazır olunca).
-- D-04b2 güçlü bilgisayarda; onay öncesi commit'te OQ-1/3/4/16 değerlerinin profillere yazılması (D-10 kuralı).
-- A16 go-live listesine: derlemede `UNIRIDE_BUILD_COMMIT` ayarlanması (provenance dalı birleşince).
+- L10 düzeltmesi, sonra MT6-07 ve D-13 kapanışı.
+- Paper raporunun paper koşu servisine bağlanması; o dalda `analyse_family(index_sha256=...)` zorunlu olsun (A20 L7).
+- D-04b2 güçlü bilgisayarda; onay öncesi commit'te OQ-1/3/4/16 değerlerinin profillere yazılması (D-10 kuralı) ve `.gitattributes` ile JSON satır sonlarının sabitlenmesi (A20 L6 d).
 
 ## Sahibin kararını bekleyenler
 
 - D-12 yayın (WIP → main, taslak PR) yalnız sahibin açık izniyle.
-- A20 kararlarının (L1–L5) sahip tarafından gözden geçirilmesi.
+- A20 kararlarının (L1–L10) sahip tarafından gözden geçirilmesi.
 
 ## Ertelenen küçük işler
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import operator
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 
@@ -87,8 +88,15 @@ def iter_three_opt_cuts(n: int, window: Optional[int] = None) -> Iterable[Tuple[
     """
     if n < 6:
         return
-    if window is not None and window < 2:
-        raise ValueError("3-opt window must be at least 2")
+    if window is not None:
+        try:
+            window = operator.index(window)
+        except TypeError:
+            raise ValueError(
+                f"3-opt window must be None or an integer, got {window!r}"
+            ) from None
+        if window < 2:
+            raise ValueError("3-opt window must be at least 2")
 
     # Direct generation in the historical lexicographic order (i, then j, then
     # k): only triples that satisfy the separation rules and the window are

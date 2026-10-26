@@ -160,6 +160,17 @@ Run academic CLI/help through the package entry point:
 python -m academic_benchmark.cli_engine --help
 ```
 
+Academic study runs (Gate C is met; Gate D items are merged except close D-13 and publication D-12, so profiles and analysis plans are still `draft` and no paper-scale run exists). These commands write outside the repository; paper mode needs an `active` profile and plan and a clean tree, so only smoke mode is usable today:
+
+```powershell
+python -m academic_benchmark.studies.run --study academic_benchmark/studies/bildiri2026/study.json --mode smoke --out <folder outside the repository>
+python -m academic_benchmark.studies.verify_manifests <campaign folder>
+python -m academic_benchmark.studies.estimate --study academic_benchmark/studies/bildiri2026/study.json --out <folder outside the repository>
+python -m academic_benchmark.analysis.campaign_report <campaign folder>
+```
+
+The analysis libraries are pinned in `requirements-analysis.txt`. The old-to-new algorithm ID table is in [CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md) section 8. Smoke runs and cost estimates support no superiority, causality or proof claim.
+
 Do not publish benchmark evidence without a versioned dataset/matrix manifest, seed schedule, configuration, environment record, independent feasibility evidence, and the declared comparison protocol.
 
 ## Verification

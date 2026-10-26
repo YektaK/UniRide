@@ -103,6 +103,16 @@ MATRIX_LEGACY = _dict_keys(
 )
 
 
+ROUTING_ALIAS_NAMES = {
+    f"{prefix}-{base}"
+    for prefix in ("CVRP", "CVRPTW")
+    for base in _dict_keys(
+        REPO_ROOT / "academic_benchmark" / "core" / "registry_setup.py",
+        "_ROUTING_ALIAS_ENGINES",
+    )
+}
+
+
 def test_the_migration_table_exists_and_cites_decision_log_entries() -> None:
     rows = _table_rows()
     assert rows, "no migration table between the markers in CURRENT_ARCHITECTURE.md"
@@ -147,6 +157,7 @@ def test_the_table_names_nothing_the_code_does_not_know() -> None:
         | set(FORBIDDEN_ALGORITHM_REPLACEMENTS)
         | set(MATRIX_LEGACY)
         | set(ROUTING_REFUSING_NONCATALOG)
+        | ROUTING_ALIAS_NAMES
     )
     stray = sorted(set(_table_rows()) - known)
     assert not stray, f"migration table rows for IDs that no code path knows: {stray}"

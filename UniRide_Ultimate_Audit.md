@@ -39,6 +39,8 @@ The following earlier findings must no longer be presented as current open defec
 - **Compute protection:** current heavy endpoints use service/tenant authorization, immutable lowering-only limits, canonical alias resolution, bounded compare workers, a soft response deadline, deterministic ranking, and a process-local tenant/IP rate window.
 - **Validation integrity:** Vitest is restricted to the current root `src` tree; the matrix timeout fallback test owns its credential-free precondition; ignored local Bildiri artifacts were hash-preserved outside the repository before boundary re-verification.
 
+Academic unification status (2026-10-26, WIP commit `b814b674`): Gate C is met and Gate D items are merged except the close (D-13) and publication (D-12); the Bildiri closure above is therefore no longer the latest academic state. See [docs/UNIRIDE_WORKSTATE.md](docs/UNIRIDE_WORKSTATE.md) (row ACAD-01), [CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md) (sections 2 and 8) and DECISION_LOG A17 and A18. No paper-scale campaign has run, so no comparative claim stands.
+
 These are scoped closures. A passing build does not prove deployment credentials, authorization policy, distributed quotas, or dependency security, and a new solver/router still requires explicit certificate and compute-policy evidence.
 
 ## 3. Critical open risks

@@ -14,15 +14,15 @@ The protocol must prevent pure and memetic algorithms, different seeds, differen
 
 Existing `RunResult.algorithm` and `RunResult.evaluations` consumers remain supported. Fairness fields are additive and optional outside fair-comparison mode. Inside fair-comparison mode, all required fields become mandatory and are validated before a result may be accepted.
 
-Existing GWO/HHO public registry names remain registered. Because their implementations include initial, periodic, and final 2-opt polishing, those aliases report the truthful `memetic_2opt` variant. Separately named pure and memetic variants are added for new experiments.
+The former GWO/HHO registry names (`Numba-GWO`, `Numba-HHO`, `Core-GWO-TSP`, `Core-HHO-TSP`) are no longer registry entries. The resolver keeps them as deprecated CLI aliases, with a warning, that resolve to `Core-GWO-TSP-Memetic-2opt` / `Core-HHO-TSP-Memetic-2opt`. A manifest that names them is refused. Separately named pure and memetic variants are added for new experiments.
 
 ## Result Contract
 
 Each fair result records:
 
 - `algorithm_id`: exact public registry name used for the run;
-- `algorithm_family`: `GWO`, `HHO`, `2-opt`, or `3-opt`;
-- `variant`: at minimum `pure` or `memetic_2opt`;
+- `algorithm_family`: `GWO`, `HHO`, `GA`, `PSO`, `ALNS`, `2-opt`, `3-opt` or `Or-opt`;
+- `variant`: `pure`, `memetic_2opt`, `global_then_final_3opt` or `global_then_final_alns`; local searches, ALNS, PSO and pure GA carry `pure`;
 - `seed_group`: stable identifier derived only from the problem, replicate, and experiment base seed;
 - `objective_evaluations`: exact number of complete candidate-tour objective evaluations;
 - `evaluation_budget`: configured upper bound;
@@ -60,6 +60,7 @@ The selected policy is `atomic_upper_bound_v1`:
 5. Scheduled polishing consumes the same budget. If its next candidate evaluation cannot start, polishing terminates without overshoot.
 6. An algorithm may finish below the common budget because its next atomic phase does not fit or because another declared termination condition fires.
 7. The result records both the budget and actual usage. Fair mode rejects overshoot, fabricated counts, and solvers whose exact accounting cannot be established.
+8. On fixed-budget paths the secondary stopping keys are written explicitly: `max_no_improvement` and `max_iterations` for GWO/HHO, `max_iterations` for 2-opt, 3-opt and Or-opt. A missing or non-positive key is refused before any evaluation.
 
 This preserves population-update equations: fair mode never advances to a partially evaluated GWO/HHO generation.
 
@@ -72,7 +73,9 @@ New explicit registry identities:
 - `Core-HHO-TSP-Pure`
 - `Core-HHO-TSP-Memetic-2opt`
 
-Existing GWO/HHO aliases remain backward-compatible and report `variant=memetic_2opt`. Pure variants disable initial, periodic, and final 2-opt calls; no GWO/HHO position-update or selection equation is changed.
+The full set of canonical identities is the 15 VERIFIED IDs of the capability catalog (`uniride_core/algorithms/capabilities.py`), listed in the unification design's capability table and its design addition.
+
+Deprecated GWO/HHO aliases resolve to the memetic 2-opt canonical IDs (CLI only, with a warning). Pure variants disable initial, periodic, and final 2-opt calls; no GWO/HHO position-update or selection equation is changed.
 
 Legacy local-search executors receive their registered public identity through the executor factory and may no longer emit `algorithm="legacy"`.
 
@@ -92,6 +95,8 @@ A `FairComparisonManifest` activates fair mode and contains at least:
 
 Validation rejects missing fields, identity mismatches, evaluation-field mismatches, budget overshoot, invalid seed provenance, ambiguous polish policies, and unsupported exact accounting. Unit tests use in-memory matrices and must not write benchmark artifacts.
 
+Rows of different protocol versions (`uniride-fair-tsp-v1`, `uniride-fair-tsp-v2`) are never one comparison cell, although the protocol registry puts them in one pooling group.
+
 ## Verification Strategy
 
 Focused tests prove:
@@ -109,4 +114,4 @@ The requested regression suite and all new focused tests will be run without gen
 
 ## Non-Goals
 
-This change does not alter TSPLIB data, frontend or production API code, GWO/HHO search equations, canonical 3-opt neighborhood semantics, dependencies, or historical benchmark artifacts. It does not claim Numba parity in the current NumPy 2.5.1 environment.
+This change does not alter TSPLIB data, frontend or production API code, GWO/HHO search equations, canonical 3-opt neighborhood semantics, dependencies, or historical benchmark artifacts. It does not claim Numba parity in the ordinary interpreter's NumPy 2.5.1 environment (recorded 2026-07-17). The JIT benchmark environment is separate and pins NumPy 2.4.6, llvmlite 0.48.0 and Numba 0.66.0 (`academic_benchmark/jit-benchmark-constraints.txt`).

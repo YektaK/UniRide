@@ -27,9 +27,21 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from scipy import stats as sps
-from statsmodels.stats.multitest import multipletests
-from statsmodels.stats.nonparametric import rank_compare_2indep
+
+# SciPy and statsmodels are the academic-only analysis extra (requirements-analysis.txt, D-04a). The per-push CI job
+# collects this module without the extra; the nightly python-full job installs it and runs the module. Skip with a
+# reason when the extra is absent (as requires_highspy / requires_ampl do) so collection does not fail with exit 2;
+# the modules that import this one as a fixture module (test_analysis_report, test_gate_d_reporting_sweep) skip too.
+try:
+    from scipy import stats as sps
+    from statsmodels.stats.multitest import multipletests
+    from statsmodels.stats.nonparametric import rank_compare_2indep
+except ImportError as exc:  # pragma: no cover - depends on the installed extra
+    pytest.skip(
+        f"needs the academic analysis extra ({exc.name}): pip install -r requirements-analysis.txt "
+        "-c academic_benchmark/jit-benchmark-constraints.txt",
+        allow_module_level=True,
+    )
 
 from academic_benchmark.analysis import environment as analysis_environment
 from academic_benchmark.analysis import statistics as stats_service

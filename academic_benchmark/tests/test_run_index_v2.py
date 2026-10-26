@@ -364,3 +364,45 @@ def test_a_smoke_run_that_stops_at_its_first_failure_lists_it_and_planned_exceed
     assert index.failed_runs[0].error == "synthetic failure"
     assert index.planned.runs > len(index.runs) + len(index.failed_runs)  # smoke stops at the first failure
     assert verify_campaign_detailed(out).ok
+
+
+# ------------------------------------------------------------------------------------------------ the writer enforces the same rules
+def _writer_kwargs(out: Path, target: Path, **changes) -> dict:
+    import shutil
+
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
+    target.mkdir()
+    shutil.copy(out / "failed_runs.jsonl", target / "failed_runs.jsonl")
+    kwargs = dict(
+        mode="smoke", study_id=index.study_id, seed_protocol_version=index.seed_protocol_version, base_seed=index.base_seed,
+        git=index.git, environment=index.environment, status="failed", runs=[], output_files=["failed_runs.jsonl"],
+        profile=index.profile, analysis_plan=index.analysis_plan, planned={"runs_per_cell": 1, "runs": 5},
+        output_location=index.output_location, failed_runs=index.failed_runs,
+    )
+    kwargs.update(changes)
+    return kwargs
+
+
+def test_the_writer_refuses_a_failed_list_that_differs_from_the_failed_runs_file(failed_paper, tmp_path):
+    from academic_benchmark.analysis.manifests import write_run_campaign
+
+    _root, out, _report = failed_paper
+    index = RunIndexV2.model_validate_json((out / "run_index.json").read_bytes())
+    altered = [index.failed_runs[0].model_copy(update={"replicate": 99})]
+    target = tmp_path / "w"
+    with pytest.raises(ManifestError, match="differ from failed_runs.jsonl"):
+        write_run_campaign(target, **_writer_kwargs(out, target, failed_runs=altered))
+    assert not (target / "run_index.json").exists()
+
+
+def test_the_writer_refuses_fewer_planned_runs_than_listed_and_a_status_that_disagrees(failed_paper, tmp_path):
+    from academic_benchmark.analysis.manifests import write_run_campaign
+
+    _root, out, _report = failed_paper
+    target = tmp_path / "w"
+    with pytest.raises(ManifestError, match="planned"):
+        write_run_campaign(target, **_writer_kwargs(out, target, planned={"runs_per_cell": 1, "runs": 1}, runs=[]) | {"failed_runs": [
+            *RunIndexV2.model_validate_json((out / "run_index.json").read_bytes()).failed_runs] * 2})
+    other = tmp_path / "w2"
+    with pytest.raises(ManifestError, match="status"):
+        write_run_campaign(other, **_writer_kwargs(out, other, status="passed"))

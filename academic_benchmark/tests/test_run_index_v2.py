@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -484,3 +485,63 @@ def test_a_negative_replicate_is_refused_by_the_contract_and_the_schema():
     assert FailedRunV1.model_validate(_failed_record(replicate=0)).replicate == 0
     schema = json.loads((Path(__file__).resolve().parents[1] / "schemas" / "run-index-v2.schema.json").read_text(encoding="utf-8"))
     assert schema["$defs"]["FailedRunV1"]["properties"]["replicate"]["minimum"] == 0
+
+
+# ------------------------------------------------------------------------------------------------ L8: no user name in output_location.path
+def _fake_home(monkeypatch, home: Path) -> Path:
+    home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    assert Path.home() == home
+    return home
+
+
+def test_the_output_location_is_written_with_the_home_prefix_replaced_by_a_tilde(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "alice")
+    inside = home / "campaigns" / "paper-1"
+    assert outside_location(inside, [tmp_path / "repo"])["path"] == "~/campaigns/paper-1"
+    assert outside_location(home, [tmp_path / "repo"])["path"] == "~"
+    elsewhere = tmp_path / "data" / "out"
+    assert outside_location(elsewhere, [tmp_path / "repo"])["path"] == str(elsewhere.resolve())  # not under the home folder: unchanged
+    from academic_benchmark.contracts.run_index import OutputLocationV1
+
+    record = outside_location(inside, [tmp_path / "repo"])
+    assert OutputLocationV1.model_validate(record).path == "~/campaigns/paper-1"  # the contract accepts the tilde form
+
+
+def test_only_a_leading_home_prefix_is_replaced(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "bob")
+    lookalike = tmp_path / "bobby" / "out"  # shares the text prefix, is not under the home folder
+    assert outside_location(lookalike, [tmp_path / "repo"])["path"] == str(lookalike.resolve())
+    nested = tmp_path / "x" / "bob" / "out"  # the home folder's name as a later component only
+    assert outside_location(nested, [tmp_path / "repo"])["path"] == str(nested.resolve())
+    assert outside_location(home / "bob" / "bob", [tmp_path / "repo"])["path"] == "~/bob/bob"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="path case is insignificant on Windows only")
+def test_the_home_prefix_is_matched_case_insensitively_on_windows(tmp_path, monkeypatch):
+    from academic_benchmark.analysis.manifests import outside_location
+
+    home = _fake_home(monkeypatch, tmp_path / "Carol")
+    shouted = Path(str(home).upper()) / "Out"
+    assert outside_location(shouted, [tmp_path / "repo"])["path"] == "~/Out"
+
+
+def test_the_verifier_expands_the_tilde_and_old_absolute_paths_still_verify(smoke, monkeypatch):
+    _root, out, _report = smoke
+    _fake_home(monkeypatch, out.parent)
+    _reseal(out, lambda d: d["output_location"].update(path=f"~/{out.name}"))
+    result = verify_campaign_detailed(out)
+    assert result.ok, result.errors
+    assert not any("recorded output location" in note for note in result.notes)  # ~ expands to this folder: not moved
+    _reseal(out, lambda d: d["output_location"].update(path=str(out.resolve())))  # an index written before L8
+    result = verify_campaign_detailed(out)
+    assert result.ok and not any("recorded output location" in note for note in result.notes)
+    _reseal(out, lambda d: d["output_location"].update(path=f"~/{out.name}"))
+    _fake_home(monkeypatch, out.parent / "elsewhere")  # another home folder: the folder is not where the index says
+    assert any("recorded output location" in note for note in verify_campaign_detailed(out).notes)
+    _reseal(out, lambda d: d["output_location"].update(path=str(out.resolve())))  # leave the shared fixture as it was

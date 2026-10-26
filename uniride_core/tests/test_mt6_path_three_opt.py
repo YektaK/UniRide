@@ -113,7 +113,7 @@ def test_first_position_can_move_with_empty_prefix():
     # B = [A, B], C = [C, D]
     assert ["C", "D", "A", "B"] in candidates
     assert ["D", "C", "B", "A"] in candidates
-    assert all(c[0] != "A" for c in candidates), "every arrangement moves the first node"
+    assert ["B", "A", "C", "D"] in candidates  # B'C moves the first position too
 
 
 def test_single_node_segments_give_no_duplicates_and_no_identity():

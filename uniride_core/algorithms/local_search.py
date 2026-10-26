@@ -27,6 +27,8 @@ from enum import Enum
 import random
 import time
 
+from uniride_core.algorithms.three_opt import improve_path_three_opt
+
 
 class LocalSearchType(str, Enum):
     """Available local search types"""
@@ -142,114 +144,63 @@ class TwoOptLocalSearch(BaseLocalSearch):
 
 class ThreeOptLocalSearch(BaseLocalSearch):
     """
-    3-opt Local Search Algorithm.
+    Path 3-opt local search for production routes (reversals fully costed).
 
-    3-opt extends 2-opt by considering three edges instead of two.
-    It creates 7 different reconnection patterns and picks the best.
-    Time complexity is O(n³) per iteration.
+    The route is an open sequence costed by a caller's black-box
+    ``duration_func`` (for example a Split-decoded chromosome), so the
+    neighbourhood is the core-owned *path* 3-opt in
+    ``uniride_core.algorithms.three_opt`` (audit M14, MT6-04): cuts
+    ``-1 <= i < j < k <= n - 1``, the two middle segments B and C are
+    re-arranged in the 7 non-identity order x reversal ways (C'B' included),
+    the first position can move, and every candidate is costed in full.
+    This is a production operator; it is not the canonical cycle 3-opt used
+    for academic claims.
 
-    Best for: High-quality solutions, when runtime is not critical
-    Reference: Lin, S. (1965). Computer solutions of the traveling salesman problem.
+    Acceptance: strict improvement of ``duration_func`` (no tolerance).  The
+    default pass is a true best-improvement pass; ``first_improvement=True``
+    takes the first strictly better candidate in scan order.  Routes with fewer
+    than 4 nodes are returned unchanged (no 2-opt fallback under the 3-opt name).
+
+    Reference for the move family: Lin, S. (1965). Computer solutions of the
+    traveling salesman problem.
     """
+
+    # Routes shorter than this are returned unchanged (the former threshold at
+    # which the class silently ran 2-opt instead).
+    MIN_ROUTE_LENGTH = 4
 
     def __init__(self, max_iterations: int = 500, first_improvement: bool = False, window: int = 12):
         """
-        Initialize 3-opt local search.
+        Initialize path 3-opt local search.
 
         Args:
-            max_iterations: Maximum number of improvement iterations
+            max_iterations: Maximum number of complete improvement passes
             first_improvement: If True, accept first improvement found
-            window: Maximum index distance for 3-opt moves to bound complexity
+            window: Maximum segment length of B and C (canonical window rule
+                ``j - i <= window``, ``k - j <= window``); None = unbounded
         """
         self.max_iterations = max_iterations
         self.first_improvement = first_improvement
         self.window = window
-
-    def _three_opt_cases(
-        self,
-        route: List[str],
-        i: int,
-        j: int,
-        k: int
-    ) -> List[List[str]]:
-        """
-        Generate all 7 3-opt reconnection patterns.
-
-        Given breakpoints i, j, k, we have segments:
-        A = route[0:i+1], B = route[i+1:j+1], C = route[j+1:k+1], D = route[k+1:]
-
-        The 7 reconnection patterns are:
-        1. A + B_rev + C_rev + D (reverse B and C)
-        2. A + B_rev + C + D (reverse B only)
-        3. A + B + C_rev + D (reverse C only)
-        4. A + B + C + D (original)
-        5. A + C + B + D (swap B and C)
-        6. A + C_rev + B + D (swap, reverse C)
-        7. A + C + B_rev + D (swap, reverse B)
-        """
-        A = route[:i + 1]
-        B = route[i + 1:j + 1]
-        C = route[j + 1:k + 1]
-        D = route[k + 1:]
-
-        B_rev = list(reversed(B))
-        C_rev = list(reversed(C))
-
-        cases = [
-            A + B_rev + C_rev + D,
-            A + B_rev + C + D,
-            A + B + C_rev + D,
-            A + B + C + D,
-            A + C + B + D,
-            A + C_rev + B + D,
-            A + C + B_rev + D,
-        ]
-
-        return cases
 
     def improve(
         self,
         route: List[str],
         duration_func: Callable[[List[str]], float]
     ) -> Tuple[List[str], float]:
-        """Improve route using 3-opt"""
-        if len(route) < 4:
-            # Fall back to 2-opt for small routes
-            two_opt = TwoOptLocalSearch(self.max_iterations)
-            return two_opt.improve(route, duration_func)
+        """Improve route using path 3-opt (core-owned neighbourhood)."""
+        if len(route) < self.MIN_ROUTE_LENGTH:
+            # Too small for a meaningful 3-opt: unchanged, never a 2-opt.
+            return list(route), duration_func(route)
 
-        best_route = route.copy()
-        best_duration = duration_func(best_route)
-        improved = True
-        iterations = 0
-
-        while improved and iterations < self.max_iterations:
-            improved = False
-            iterations += 1
-
-            for i in range(len(best_route) - 3):
-                for j in range(i + 2, min(i + 2 + self.window, len(best_route) - 1)):
-                    for k in range(j + 2, min(j + 2 + self.window, len(best_route))):
-                        # Try all reconnection patterns
-                        candidates = self._three_opt_cases(best_route, i, j, k)
-
-                        for candidate in candidates:
-                            candidate_duration = duration_func(candidate)
-
-                            if candidate_duration < best_duration:
-                                best_route = candidate
-                                best_duration = candidate_duration
-                                improved = True
-
-                                if self.first_improvement:
-                                    break
-
-                        if improved and self.first_improvement:
-                            break
-                    if improved and self.first_improvement:
-                        break
-
-        return best_route, best_duration
+        result = improve_path_three_opt(
+            route,
+            duration_func,
+            max_iterations=self.max_iterations,
+            first_improvement=self.first_improvement,
+            window=self.window,
+        )
+        return result.route, result.cost
 
 
 class OrOptLocalSearch(BaseLocalSearch):

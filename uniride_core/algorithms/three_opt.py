@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Callable, Iterable, List, Optional, Sequence, Tuple
 
 
 @dataclass(frozen=True)
@@ -236,11 +236,161 @@ def improve_three_opt(
     return ThreeOptResult(current, current_cost, iterations, evaluations, mode)
 
 
+# ---------------------------------------------------------------------------
+# Path 3-opt for production local search (audit M14, MT6-04)
+#
+# "Path 3-opt, reversals fully costed": a neighbourhood over an OPEN sequence
+# whose cost is a caller-supplied black-box objective (for example a Split
+# decoded chromosome).  It is a production operator.  It is not the canonical
+# cycle neighbourhood above (no matrix, no closing edge, no rotation to an
+# anchor, no symmetric/directed mode) and must never be used for paper claims.
+# Every candidate, reversed segments included, is costed in full by the
+# caller's objective, so it is also valid when reversal is not cost-neutral.
+# ---------------------------------------------------------------------------
+
+# Fixed candidate order for one cut.  Each entry is
+# (segment C first, reverse B, reverse C): the legacy production case order
+# (B'C', B'C, BC', CB, C'B, CB') with the formerly missing C'B' appended; the
+# identity BC is not a candidate.
+_PATH_ARRANGEMENTS: Tuple[Tuple[bool, bool, bool], ...] = (
+    (False, True, True),    # B'C'
+    (False, True, False),   # B'C
+    (False, False, True),   # BC'
+    (True, False, False),   # CB
+    (True, False, True),    # C'B
+    (True, True, False),    # CB'
+    (True, True, True),     # C'B'
+)
+
+
+@dataclass(frozen=True)
+class PathThreeOptResult:
+    """Result returned by :func:`improve_path_three_opt`."""
+
+    route: list
+    cost: float
+    iterations: int
+    evaluations: int
+
+
+def iter_path_three_opt_cuts(
+    n: int, window: Optional[int] = None
+) -> Iterable[Tuple[int, int, int]]:
+    """Yield path cuts ``-1 <= i < j < k <= n - 1`` in lexicographic order.
+
+    ``B = route[i + 1:j + 1]`` and ``C = route[j + 1:k + 1]`` are non-empty;
+    ``i = -1`` means an empty fixed prefix (the first position can move) and
+    ``k = n - 1`` an empty fixed suffix.  ``window`` bounds the two segment
+    lengths by the canonical rule ``j - i <= window`` and ``k - j <= window``
+    (the same inequalities as :func:`iter_three_opt_cuts`); ``None`` admits
+    every cut.
+    """
+    if window is not None and window < 1:
+        raise ValueError("path 3-opt window must be at least 1")
+    if n < 2:
+        return
+    max_gap = n if window is None else window
+    for i in range(-1, n - 2):
+        for j in range(i + 1, min(i + max_gap, n - 2) + 1):
+            for k in range(j + 1, min(j + max_gap, n - 1) + 1):
+                yield i, j, k
+
+
+def generate_path_three_opt_candidates(
+    route: Sequence, i: int, j: int, k: int
+) -> List[list]:
+    """Return the distinct non-identity arrangements of ``(B, C)`` for one cut.
+
+    The seven arrangements (order x reversal) are produced in the fixed order
+    ``B'C', B'C, BC', CB, C'B, CB', C'B'`` with ``A`` and ``D`` unchanged.
+    A candidate equal (as a sequence) to the input or to an earlier candidate
+    of the same cut is dropped: a one-node segment makes ``B' = B`` (or
+    ``C' = C``).  Duplicates across different cuts are not removed.
+    """
+    route_list = list(route)
+    n = len(route_list)
+    if not (-1 <= i < j < k <= n - 1):
+        raise ValueError("path 3-opt cuts must satisfy -1 <= i < j < k <= n - 1")
+
+    prefix = route_list[:i + 1]
+    seg_b = route_list[i + 1:j + 1]
+    seg_c = route_list[j + 1:k + 1]
+    suffix = route_list[k + 1:]
+
+    seen: List[list] = [route_list]
+    candidates: List[list] = []
+    for c_first, reverse_b, reverse_c in _PATH_ARRANGEMENTS:
+        b = seg_b[::-1] if reverse_b else seg_b
+        c = seg_c[::-1] if reverse_c else seg_c
+        candidate = prefix + (c + b if c_first else b + c) + suffix
+        if candidate in seen:
+            continue
+        seen.append(candidate)
+        candidates.append(candidate)
+    return candidates
+
+
+def improve_path_three_opt(
+    route: Sequence,
+    objective: Callable[[list], float],
+    *,
+    max_iterations: int = 500,
+    first_improvement: bool = False,
+    window: Optional[int] = 12,
+) -> PathThreeOptResult:
+    """Improve an open sequence with path 3-opt costed by ``objective``.
+
+    Acceptance keeps the production semantics: a candidate is taken only if
+    its objective is strictly lower than the incumbent's (no tolerance; equal
+    or NaN costs never replace it).  ``first_improvement=False`` is a true
+    best-improvement pass: every candidate of the pass is compared against the
+    best found so far in that pass, and the best (the first of equal costs in
+    scan order) replaces the incumbent once at the end of the pass.
+    ``first_improvement=True`` takes the first strictly improving candidate in
+    (cut, arrangement) order.  ``max_iterations`` bounds complete passes.  The
+    objective is evaluated once for the start route and once per candidate.
+    """
+    if max_iterations < 0:
+        raise ValueError("path 3-opt max_iterations must be non-negative")
+
+    current = list(route)
+    current_cost = objective(current)
+    evaluations = 1
+    iterations = 0
+    while iterations < max_iterations:
+        iterations += 1
+        selected: Optional[list] = None
+        selected_cost = current_cost
+        stop = False
+        for i, j, k in iter_path_three_opt_cuts(len(current), window):
+            for candidate in generate_path_three_opt_candidates(current, i, j, k):
+                candidate_cost = objective(candidate)
+                evaluations += 1
+                if candidate_cost < selected_cost:
+                    selected = candidate
+                    selected_cost = candidate_cost
+                    if first_improvement:
+                        stop = True
+                        break
+            if stop:
+                break
+        if selected is None:
+            break
+        current = selected
+        current_cost = selected_cost
+
+    return PathThreeOptResult(current, current_cost, iterations, evaluations)
+
+
 __all__ = [
+    "PathThreeOptResult",
     "ThreeOptResult",
     "closed_tour_cost",
+    "generate_path_three_opt_candidates",
     "generate_three_opt_candidates",
+    "improve_path_three_opt",
     "improve_three_opt",
     "is_symmetric_matrix",
+    "iter_path_three_opt_cuts",
     "iter_three_opt_cuts",
 ]

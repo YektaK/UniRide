@@ -1,6 +1,6 @@
 # Design-document redline proposal (Gate D, OQ-14 a)
 
-Status: APPLIED on 2026-10-26 in COMMIT_PLACEHOLDER.
+Status: APPLIED on 2026-10-26 in ed29a614.
 
 The owner chose OQ-14 a): the lead drafts a redline, the owner approves it, then D-11 and D-14 apply it. [DECISION_LOG.md:486; Gate D plan :330]
 

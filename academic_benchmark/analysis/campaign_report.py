@@ -251,7 +251,7 @@ def rebuild_descriptive_report(
 ) -> List[str]:
     """Build ``descriptive_report.txt/json`` again from an existing campaign folder; returns the report lines.
 
-    ``study_path`` is repository-relative (default ``academic_benchmark/studies/<study id of the run index>/study.json``). Refuses a folder
+    ``study_path`` is repository-relative (default: the run index's ``profile.path``). Refuses a folder
     inside the repository, a folder that does not verify and a reference that fails its integrity checks (``CampaignReportError``);
     any old descriptive report in the folder is removed first."""
     root = (Path(repository_root) if repository_root is not None else Path(__file__).resolve().parents[2]).resolve()
@@ -263,7 +263,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     parser = argparse.ArgumentParser(description="Rebuild the descriptive report of an existing campaign folder (Gate D, D-07)")
     parser.add_argument("campaign_dir", help="campaign output directory (holds run_index.json), outside the repository")
-    parser.add_argument("--study", default=None, help="repository-relative study.json (default: the run index's study folder)")
+    parser.add_argument("--study", default=None, help="repository-relative study.json (default: the run index's profile.path)")
     parser.add_argument("--repository-root", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     root = (Path(args.repository_root) if args.repository_root else Path(__file__).resolve().parents[2]).resolve()

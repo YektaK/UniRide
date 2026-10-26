@@ -5,8 +5,11 @@ The core rule (``uniride_core.algorithms.three_opt.validate_three_opt_window``):
 search (the error then came from deep inside it, after the matrix was built) and the native path
 truncated it with ``int(...)`` (``12.5`` silently became ``12``). Both now refuse a bad value
 before the matrix is built and before any objective evaluation is counted. ``None`` is refused as
-well: the result validator already rejects a 3-opt run whose recorded window is not an integer
->= 2, so ``None`` was never accepted on these two paths (it failed after the whole run).
+well. On a V1 fixed-budget manifest (the default protocol) ``window=None`` used to run an
+unrestricted 3-opt and could pass validation (``fairness.py`` ``validate_result``: the check that the
+window is an integer >= 2 is inside the V2 block only); it is now refused up front. Both study
+profiles are V2 with integer windows, where the result validator rejected ``None`` only after the
+whole run.
 """
 
 from __future__ import annotations

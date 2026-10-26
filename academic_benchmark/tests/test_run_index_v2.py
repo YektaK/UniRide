@@ -490,6 +490,43 @@ def test_a_negative_replicate_is_refused_by_the_contract_and_the_schema():
     assert schema["$defs"]["FailedRunV1"]["properties"]["replicate"]["minimum"] == 0
 
 
+def _schema_refuses_failed_record(definition: dict, record: dict) -> bool:
+    """Evaluates only the ``if``/``then`` of the exported FailedRunV1 definition (``jsonschema`` is not installed): refused when
+    the ``if`` holds and the ``then`` requires a key the record lacks or a type it does not have."""
+    condition, consequence = definition["if"], definition["then"]
+    holds = all(key in record for key in condition["required"]) and all(
+        record[name] == rule["const"] for name, rule in condition["properties"].items()
+    )
+    if not holds:
+        return False
+    types = {"integer": int}
+    for key in consequence["required"]:
+        if key not in record:
+            return True
+    for name, rule in consequence["properties"].items():
+        value = record[name]
+        if isinstance(value, bool) or not isinstance(value, types[rule["type"]]):
+            return True
+    return False
+
+
+def test_the_exported_schema_refuses_a_fixed_failed_record_without_a_budget():
+    """The pydantic validator is not the only place of the rule: the exported (and the committed) JSON schema says it too."""
+    for schema in (
+        json.loads(render_schemas()["run-index-v2.schema.json"]),
+        json.loads((Path(__file__).resolve().parents[1] / "schemas" / "run-index-v2.schema.json").read_text(encoding="utf-8")),
+    ):
+        definition = schema["$defs"]["FailedRunV1"]
+        assert "if" in definition and "then" in definition
+        assert _schema_refuses_failed_record(definition, _failed_record(evaluation_budget=None))  # fixed regime, null budget
+        missing = _failed_record()
+        del missing["evaluation_budget"]
+        assert _schema_refuses_failed_record(definition, missing)
+        assert not _schema_refuses_failed_record(definition, _failed_record())  # fixed regime with its budget
+        native = _failed_record(protocol_version="uniride-native-tsp-v1", comparison_regime="algorithm_native_termination", evaluation_budget=None)
+        assert not _schema_refuses_failed_record(definition, native)  # null is for native runs
+
+
 # ------------------------------------------------------------------------------------------------ L8: no user name in output_location.path
 def _fake_home(monkeypatch, home: Path) -> Path:
     home.mkdir(parents=True, exist_ok=True)
@@ -534,6 +571,21 @@ def test_the_home_prefix_is_matched_case_insensitively_on_windows(tmp_path, monk
     assert outside_location(shouted, [tmp_path / "repo"])["path"] == "~/Out"
 
 
+@pytest.mark.skipif(os.name != "nt", reason="path case is insignificant on Windows only")
+def test_home_relative_compares_an_unresolved_path_with_normcase(tmp_path, monkeypatch):
+    """``outside_location`` resolves its output path (which also repairs the case), so the test above cannot see whether
+    ``home_relative`` compares case-insensitively; here it is called directly with a path whose home part differs in case."""
+    from academic_benchmark.analysis.manifests import home_relative
+
+    home = (tmp_path / "Erin").resolve()
+    home.mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    shouted = Path(str(home).upper()) / "Work"
+    assert str(shouted) != str(home / "Work")  # the spelling really differs in case
+    assert home_relative(shouted) == "~/Work"
+    assert home_relative(Path(str(home).lower())) == "~"
+
+
 def test_the_verifier_expands_the_tilde_and_old_absolute_paths_still_verify(smoke, monkeypatch):
     _root, out, _report = smoke
     _fake_home(monkeypatch, out.parent)
@@ -550,6 +602,18 @@ def test_the_verifier_expands_the_tilde_and_old_absolute_paths_still_verify(smok
     _reseal(out, lambda d: d["output_location"].update(path=str(out.resolve())))  # leave the shared fixture as it was
 
 
+def _all_strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            yield from _all_strings(key)
+            yield from _all_strings(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _all_strings(item)
+
+
 def test_checked_against_is_written_without_the_home_prefix(tmp_path, monkeypatch):
     from academic_benchmark.analysis.manifests import outside_location
 
@@ -557,7 +621,9 @@ def test_checked_against_is_written_without_the_home_prefix(tmp_path, monkeypatc
     elsewhere = tmp_path / "mirror" / "repo"
     record = outside_location(home / "out", [home / "repo", elsewhere, home])
     assert record["outside_repository_check"]["checked_against"] == ["~/repo", str(elsewhere), "~"]
-    assert str(home) not in json.dumps(record)  # neither the path nor the checked trees carry the user-home prefix
+    strings = list(_all_strings(record))  # the decoded values, not their JSON text (where a Windows backslash is doubled)
+    assert len(strings) >= 4
+    assert not [s for s in strings if str(home) in s or home.as_posix() in s]  # neither the path nor the checked trees carry the home prefix
 
 
 def test_an_index_with_absolute_checked_against_paths_still_verifies_and_so_does_the_tilde_form(smoke, monkeypatch):

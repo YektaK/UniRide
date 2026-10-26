@@ -701,7 +701,7 @@ def _write_campaign_report(monkeypatch, items, folder, plan):
     clean = _clean_items()
     stripped = [({k: v for k, v in row.items() if k not in GAP_COLUMNS}, manifest) for row, manifest in items]  # rows as read: no gap columns
     campaign = VerifiedCampaign(index=fx.index_for(clean, "smoke"), index_sha256="a" * 64, items=stripped, failed=[])
-    monkeypatch.setattr(cr, "load_verified_campaign", lambda directory: campaign)
+    monkeypatch.setattr(cr, "load_verified_campaign", lambda directory, **_kwargs: campaign)
     return cr.write_smoke_descriptive_report(
         folder, study=fx.study_for(clean, plan), plan=plan, plan_problem=None, root=REPO, run_index={"sha256": "a" * 64},
         reference_table_provider=lambda root: ExactReferenceTable(),  # no exact reference: every gap is null with its reason

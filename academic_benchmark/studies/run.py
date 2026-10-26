@@ -553,6 +553,7 @@ def _run_smoke(
         extra = write_smoke_descriptive_report(
             output, study=loaded.study, plan=loaded.analysis_plan.plan, plan_problem=loaded.analysis_plan.problem,
             root=root, run_index=report.run_index, reference_table_provider=reference_table_provider,
+            plan_sha256=loaded.analysis_plan.sha256,
         )
     except CampaignReportError as exc:
         raise StudyRunError(f"descriptive report refused: {exc}") from exc

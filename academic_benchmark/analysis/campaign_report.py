@@ -60,9 +60,29 @@ def default_reference_table(root: Path) -> ExactReferenceTable:
 def _write_from_campaign(
     output: Path, campaign: VerifiedCampaign, *, study: StudyManifestV1, plan: AnalysisPlanV1, root: Path,
     reference_table_provider: Optional[Callable[[Path], Any]],
+    plan_hashes: Optional[Sequence[str]] = None,
 ) -> List[str]:
+    """Build and write the report. ``plan_hashes`` are the sha256 values that count as "the analysis plan file this report loaded"
+    (one for the working-tree file; the caller may offer more than one for a file read from git, see ``_plan_bytes_hashes``).
+    The plan hash the run index records must be one of them: a difference refuses a paper campaign's report and is a warning in the
+    report and in the returned lines for a smoke campaign. The verifier's notes (checks it could not make) are shown in both."""
     lines: List[str] = []
     notes: List[str] = []
+    for verifier_note in campaign.notes:  # a note is not a pass: it is shown, never dropped
+        notes.append(verifier_note)
+        lines.append(f"Note: {verifier_note}")
+    recorded_hash = campaign.index.analysis_plan.sha256
+    if plan_hashes is None:
+        notes.append("the analysis plan file was not compared with the plan hash of the run index (the caller gave no hash)")
+    elif recorded_hash not in plan_hashes:
+        difference = (
+            f"the analysis plan differs: the plan this report loads has sha256 {plan_hashes[0]}, the run index records "
+            f"{recorded_hash if recorded_hash is not None else 'no plan hash'}"
+        )
+        if campaign.index.mode == "paper":
+            raise CampaignReportError(difference + " (a paper report needs the plan the campaign ran with)")
+        notes.append("Warning: " + difference)
+        lines.append("Warning: " + difference)
     try:
         table = (reference_table_provider or default_reference_table)(root)
     except FileNotFoundError as exc:  # no reference to read: the gap is null with its reason, and the text says so
@@ -100,8 +120,13 @@ def write_smoke_descriptive_report(
     root: Path,
     run_index: Optional[Mapping[str, Any]],
     reference_table_provider: Optional[Callable[[Path], Any]] = None,
+    plan_sha256: Optional[str] = None,
 ) -> List[str]:
     """Write the descriptive report of the smoke campaign in ``output``; returns the lines to append to the run report text.
+
+    ``plan_sha256`` is the hash of the analysis plan file the caller loaded (``AnalysisPlanResolution.sha256``); it is compared with
+    the plan hash of the run index (a difference is a warning in smoke mode and a refusal in paper mode). Without it the report
+    says that the plan file was not compared.
 
     ``run_index`` is the summary the smoke run itself returned (``SmokeReport.run_index``: ``path``, ``sha256``, ``manifests``) or
     ``None`` when it wrote no manifests (unknown git state); whether manifests exist is taken from it, never from the files on disk.
@@ -116,14 +141,17 @@ def write_smoke_descriptive_report(
     if plan is None:
         return [f"Descriptive report not written: the analysis plan does not resolve ({plan_problem})."]
     try:
-        campaign = load_verified_campaign(output)
+        campaign = load_verified_campaign(output, repository_root=root)
     except ManifestError as exc:
         raise CampaignReportError(str(exc)) from exc
     if campaign.index_sha256 != run_index.get("sha256"):
         raise CampaignReportError(
             f"the run index on disk has sha256 {campaign.index_sha256}, the smoke run reported {run_index.get('sha256')}: the folder changed after the run"
         )
-    return _write_from_campaign(output, campaign, study=study, plan=plan, root=root, reference_table_provider=reference_table_provider)
+    return _write_from_campaign(
+        output, campaign, study=study, plan=plan, root=root, reference_table_provider=reference_table_provider,
+        plan_hashes=None if plan_sha256 is None else (plan_sha256,),
+    )
 
 
 def _rebuild(
@@ -143,7 +171,7 @@ def _rebuild(
     for name in DESCRIPTIVE_REPORT_FILES:  # a refused rebuild must not leave an old report next to a campaign it no longer describes
         (output / name).unlink(missing_ok=True)
     try:
-        campaign = load_verified_campaign(output)
+        campaign = load_verified_campaign(output, repository_root=root)
     except ManifestError as exc:
         raise CampaignReportError(str(exc)) from exc
     relative = study_path or f"academic_benchmark/studies/{campaign.index.study_id}/study.json"
@@ -152,6 +180,7 @@ def _rebuild(
         raise CampaignReportError(f"the analysis plan does not resolve ({loaded.analysis_plan.problem}); there is nothing to build the report from")
     lines = _write_from_campaign(
         output, campaign, study=loaded.study, plan=loaded.analysis_plan.plan, root=root, reference_table_provider=reference_table_provider,
+        plan_hashes=(loaded.analysis_plan.sha256,),
     )
     return lines, campaign.index.status
 

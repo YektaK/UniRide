@@ -29,10 +29,10 @@ Son güncelleme: 2026-10-27 (Gate D ve MT6 kapanış birleşmesi). Kararlar `doc
 
 ## Ertelenen küçük işler
 
-- MT6-05 cila: 1'in altındaki maliyetlerle test (`max(1, …)` tabanı korumasız); altın vakaların bütçe tükenmesiyle bittiğini söyleyen docstring; `registry_setup.py` pencere doğrulaması erken ve tutarlı (`:298` sabit bütçe, `:383` native `int(12.5)`).
+- Çalışıyor: makale raporu komutu (`feat/gated-paper-report-command`, A20 L12 + L7) ve birikmiş küçük işler 1. parti (`test/backlog-polish-1`: tamsayılık sınırı, Gate C A17 penceresi, ALNS yardımcı testleri, D-04b1 cilası, lisans `real_deps` testi, hibrit cila penceresi).
 - Or-opt native kabulünün `native_protocol.py` kuyruk yamasından ana kümelere taşınması (A20 L5: makale koşusundan sonra).
-- Run index v2 küçükleri: `failed_run_entries` eksik `evaluation_budget`'ı null yapıyor, `replicate` alt sınırı yok, `output_location.path` Windows kullanıcı adını içeriyor (D-12 öncesi).
-- `/compare` yolu `termination_reason`/`solver_code_version` taşımıyor (kaydedilmiyor; denetim kararı bekleniyor).
+- L10 cilası: yardımcı boşluk kırpıyor; manifest/aile ve veri kümesi manifesti karşılaştırma yerleri için ayrı test; `gaps.py:131` çıplak `ProblemContractError`; `studies/service.py:292, :458` ham büyük harf karşılaştırması.
+- `/compare` ve yönetici rota-test sayfası `termination_reason`/`solver_code_version` taşımıyor (plan kaydetmiyorlar; yalnız görüntü).
 - J11 README'den `scripts/compare_exact_day_joint_runs.py` betiğine işaret (yazı hattı).
 - Tamsayılık payı sınır testi (bound = raw + 5e-7).
 - Gate C uygunluk testinin A17 penceresi `## ` başlığında da durmalı.

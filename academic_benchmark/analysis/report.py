@@ -355,11 +355,12 @@ def _inference_section(analysis: FamilyAnalysis) -> dict:
         "exclusions": [dict(item) for item in analysis.exclusions],
         "excluded_pairs": [dict(item) for item in analysis.excluded_pairs],
         "inference_refused": list(analysis.inference_refused),
+        "campaign_commit": analysis.campaign_commit, "index_sha256": analysis.index_sha256,
         "text": analysis.text,
     })
 
 
-def _check_inference(inference: Sequence[Any], *, mode: str, plan: AnalysisPlanV1) -> list:
+def _check_inference(inference: Sequence[Any], *, mode: str, plan: AnalysisPlanV1, index_sha256: str, commit: str) -> list:
     sections = list(inference)
     if not sections:
         return []
@@ -373,6 +374,17 @@ def _check_inference(inference: Sequence[Any], *, mode: str, plan: AnalysisPlanV
         if analysis.analysis_plan_id != plan.analysis_plan_id:
             raise ReportError(
                 f"family {analysis.family_id!r} was analysed under analysis plan {analysis.analysis_plan_id!r}, the report's plan is {plan.analysis_plan_id!r}"
+            )
+        # the analysis must be of the campaign the banner names: the verified run index (sha256) and its commit
+        if analysis.index_sha256 != index_sha256:
+            raise ReportError(
+                f"family {analysis.family_id!r} was analysed from run index "
+                f"{analysis.index_sha256 if analysis.index_sha256 is not None else '(not recorded)'}, the report's verified run index is "
+                f"{index_sha256}: a paper report quotes only the analysis of the campaign it reports"
+            )
+        if analysis.campaign_commit != commit:
+            raise ReportError(
+                f"family {analysis.family_id!r} was analysed for campaign commit {analysis.campaign_commit}, the report's is {commit}"
             )
     return sections
 
@@ -400,7 +412,7 @@ def build_report(
         raise ReportError("the report has no rows")
     index = _check_campaign(good, study=study, plan=plan, run_index=run_index, index_sha256=index_sha256)
     mode = index.mode
-    sections = _check_inference(inference, mode=mode, plan=plan)
+    sections = _check_inference(inference, mode=mode, plan=plan, index_sha256=index_sha256, commit=index.git.commit)
     allow_dirty = mode == "smoke"
     cells: dict = {}
     for row, manifest in good:

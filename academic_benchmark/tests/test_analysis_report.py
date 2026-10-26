@@ -335,7 +335,7 @@ def _paper_inference(active):
         row.setdefault("objective_evaluations", row["evaluation_budget"])
         row.setdefault("termination_reason", "budget_exhausted")
     analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,
-                              run_index=fx.index_for(items, "paper"))
+                              run_index=fx.index_for(items, "paper"), index_sha256=SHA)  # SHA = the index the report is given
     return items, analysis
 
 

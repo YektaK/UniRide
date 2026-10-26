@@ -23,6 +23,7 @@ from uniride_core.algorithms.composition import (
     CompositionError,
     validate_alns_polish_params,
 )
+from uniride_core.algorithms.three_opt import validate_three_opt_window
 from uniride_core.algorithms.objective_budget import (
     BudgetedSearchResult,
     EvaluationBudgetExhausted,
@@ -368,9 +369,10 @@ def _validate_hybrid(
             raise ValueError("invalid hybrid polish parameter: max_iterations")
         if not isinstance(polish_params["first_improvement"], bool):
             raise ValueError("invalid hybrid polish parameter: first_improvement")
-        value = polish_params["window"]
-        if isinstance(value, bool) or not isinstance(value, int) or value < 2:
-            raise ValueError("invalid hybrid polish parameter: window")
+        try:  # the one 3-opt window rule (integers incl. numpy integers >= 2; a float is refused)
+            validate_three_opt_window(polish_params["window"], allow_none=False)
+        except ValueError:
+            raise ValueError("invalid hybrid polish parameter: window") from None
     if fixed_budget:
         fraction = params["global_fraction"]
         if not _is_finite_alns_number(fraction) or not 0 < fraction < 1:

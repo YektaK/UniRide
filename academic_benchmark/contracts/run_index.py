@@ -96,10 +96,17 @@ class FailedRunV1(StrictContract):
     protocol_version: str = Field(min_length=1)
     comparison_regime: str = Field(min_length=1)
     evaluation_budget: Optional[int]
-    replicate: int
+    replicate: int = Field(ge=0)
     stage: str = Field(min_length=1)
     exception_category: str = Field(min_length=1)
     error: str
+
+    @model_validator(mode="after")
+    def fixed_budget_record_has_its_budget(self) -> "FailedRunV1":
+        """A failed run of the fixed-budget regime names the budget it was given; null is for native runs only (no silent null)."""
+        if self.comparison_regime == "fixed_evaluation_budget" and self.evaluation_budget is None:
+            raise ValueError("a failed run of the fixed_evaluation_budget regime needs its evaluation_budget (null is for native runs)")
+        return self
 
 
 class RunIndexV2(StrictContract):

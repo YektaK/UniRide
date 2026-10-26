@@ -332,6 +332,10 @@ def failed_run_entries(records: Iterable[Mapping[str, Any]]) -> list[FailedRunV1
     """The index records of ``failed_runs.jsonl`` rows (the fields ``FailedRunV1`` names, as the file has them)."""
     entries = []
     for number, record in enumerate(records, start=1):
+        if record.get("comparison_regime") == "fixed_evaluation_budget" and record.get("evaluation_budget") is None:
+            raise ManifestError(  # a missing key is not read as "no budget": only native runs have none
+                f"{FAILED_FILE}: record {number} is of the fixed_evaluation_budget regime but has no evaluation_budget"
+            )
         try:
             entries.append(FailedRunV1.model_validate({name: record.get(name) for name in FailedRunV1.model_fields}))
         except ValidationError as exc:

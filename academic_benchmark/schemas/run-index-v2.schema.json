@@ -157,6 +157,7 @@
           "type": "string"
         },
         "replicate": {
+          "minimum": 0,
           "title": "Replicate",
           "type": "integer"
         },

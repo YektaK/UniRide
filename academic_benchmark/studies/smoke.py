@@ -35,6 +35,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Seque
 
 from academic_benchmark.analysis.manifests import (
     DESCRIPTIVE_REPORT_FILES,
+    PAPER_REPORT_FILES,
     INDEX_FILE,
     build_run_manifest,
     collect_environment,
@@ -530,7 +531,7 @@ def run_study_smoke(
     output = _prepare_output_dir(
         output_dir, SimpleNamespace(allow_repository_output=False, overwrite=overwrite), root
     )
-    for name in DESCRIPTIVE_REPORT_FILES:  # an overwritten folder must not keep a descriptive report of an earlier run
+    for name in (*DESCRIPTIVE_REPORT_FILES, *PAPER_REPORT_FILES):  # an overwritten folder must not keep a descriptive or paper report of an earlier run
         (output / name).unlink(missing_ok=True)
     runtime_backends = runtime_probe()
     registered = frozenset(registered_algorithms_provider())

@@ -372,11 +372,16 @@ def _paper_report_text(
         "This report lists what ran and what failed. It makes no comparison between algorithms and supports no claim. "
         "Fixed-budget and native rows are written to separate files and are never pooled."
     )
-    if status == "passed" and output is not None:
+    if output is not None:
         # A20 L12: the analysis is a separate step on the sealed campaign; the run itself analyses nothing
         shown = f'"{output}"' if any(c.isspace() for c in str(output)) else str(output)
         lines.append("No analysis ran here. To build the paper report (descriptive tables and the inferential section) from this verified campaign, run:")
         lines.append(f"python -m academic_benchmark.analysis.campaign_report {shown} --paper")
+        if status != "passed":
+            lines.append(
+                "This campaign has failed runs: the command still builds the report, the failed cells are excluded from inference and "
+                "named in it, and the command exits 1 (not 0)."
+            )
     return "\n".join(lines) + "\n"
 
 

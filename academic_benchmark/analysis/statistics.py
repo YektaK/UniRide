@@ -593,7 +593,7 @@ def _check_index_algorithms(run_index: RunIndexV2, study: StudyManifestV1) -> No
 NOT_A_LEVEL = -1  # level position of a raw budget that is not in the profile's level list of the instance
 
 
-def _level_index_of(study: StudyManifestV1, dataset_id: str, budget: Any) -> Optional[int]:
+def level_index_of(study: StudyManifestV1, dataset_id: str, budget: Any) -> Optional[int]:
     """Position of the raw ``budget`` in the profile's level list of ``dataset_id`` (the position is what the run id's
     ``fixed-l<position>`` token and the comparison key's ``budget_level_index`` carry, and it is the same on every instance of a
     family while the raw budget is not). ``None`` for no budget (a native run); ``NOT_A_LEVEL`` for a budget that is no level."""
@@ -626,7 +626,7 @@ def _check_failed_against_index(
         identity = normalize_problem(record.problem)
         if record.protocol_version != protocol_version or f"tsplib-{identity}" not in family.dataset_ids:
             continue
-        level = _level_index_of(study, f"tsplib-{identity}", record.evaluation_budget)
+        level = level_index_of(study, f"tsplib-{identity}", record.evaluation_budget)
         if level == NOT_A_LEVEL:  # never skipped silently: the analysed study is not the profile the campaign ran
             raise StatisticsRefusal(
                 f"the run index lists a failed run of {record.algorithm_id!r} on {identity!r} (replicate {record.replicate}) with "
@@ -682,6 +682,8 @@ def analyse_family(
     paper report can check it quotes an analysis of the campaign it reports. Raises ``StatisticsRefusal`` (or ``AnalysisEnvironmentError``) for input that must
     not be analysed; otherwise returns descriptive cells plus either the inference or the named reasons why it was not performed."""
     require_analysis_environment()
+    if not isinstance(index_sha256, str) or len(index_sha256) != 64 or any(c not in "0123456789abcdef" for c in index_sha256):
+        raise StatisticsRefusal(f"index_sha256 must be the lower-case hex sha256 of the campaign's run_index.json (64 characters), got {index_sha256!r}")
     family = _plan_family(plan, family_id)
     _check_conventions(plan)
     if not isinstance(study, StudyManifestV1):
@@ -798,7 +800,7 @@ def analyse_family(
                 f"a failed run of {algorithm!r} is on {problem!r}, not on the analysed instance {sorted(analysed_instances)}; "
                 "a per-instance family is analysed one instance at a time"
             )
-        if _level_index_of(study, f"tsplib-{identity}", row.get("evaluation_budget")) != analysed_level:
+        if level_index_of(study, f"tsplib-{identity}", row.get("evaluation_budget")) != analysed_level:
             raise StatisticsRefusal(
                 f"a failed run of {algorithm!r} on {problem!r} belongs to another budget level than the analysed one "
                 f"(level index {analysed_level}); the level is the family's, whether or not the instance has completed rows"
@@ -924,7 +926,7 @@ def analyse_family(
 
 __all__ = [
     "CellSummary", "FamilyAnalysis", "InferenceResult", "Omnibus", "PairResult", "StatisticsRefusal", "analyse_family",
-    "describe_sample", "epsilon_squared", "holm_adjust", "iman_davenport_f", "is_significant", "kendalls_w",
-    "mannwhitney_method_used", "matched_pairs_rank_biserial", "smallest_possible_adjusted_p", "vargha_delaney_a12",
+    "NOT_A_LEVEL", "describe_sample", "epsilon_squared", "holm_adjust", "iman_davenport_f", "is_significant", "kendalls_w",
+    "level_index_of", "mannwhitney_method_used", "matched_pairs_rank_biserial", "smallest_possible_adjusted_p", "vargha_delaney_a12",
     "wilcoxon_method_used",
 ]

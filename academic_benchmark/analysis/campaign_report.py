@@ -70,7 +70,7 @@ from academic_benchmark.analysis.report import (
     build_report,
     write_report,
 )
-from academic_benchmark.analysis.statistics import NOT_A_LEVEL, StatisticsRefusal, _level_index_of, analyse_family
+from academic_benchmark.analysis.statistics import NOT_A_LEVEL, StatisticsRefusal, analyse_family, level_index_of
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.contracts.study import StudyManifestV1
 from academic_benchmark.exact_reference import reader as reference_reader
@@ -147,9 +147,16 @@ def _paper_analyses(
                 raise CampaignReportError("a failed run of the campaign has no problem name, so it belongs to no comparison cell")
             identity = normalize_problem(problem)
             dataset_id = f"tsplib-{identity}"
+            recorded = row.get("dataset_id")  # the run service records the dataset id of a failed run
+            if recorded is not None and recorded != dataset_id:
+                raise CampaignReportError(
+                    f"a failed run of {row.get('algorithm_id')!r} on {problem!r} records dataset id {recorded!r}; a failed run is placed "
+                    f"in its comparison cell by the id 'tsplib-<normalised problem name>' ({dataset_id!r}), the form of every dataset "
+                    "id of the analysis plans, so a failed run of another dataset form cannot be analysed"
+                )
             if dataset_id not in family.dataset_ids:
                 continue
-            level = _level_index_of(study, dataset_id, row.get("evaluation_budget"))
+            level = level_index_of(study, dataset_id, row.get("evaluation_budget"))
             if level == NOT_A_LEVEL:
                 raise CampaignReportError(
                     f"a failed run of {row.get('algorithm_id')!r} on {identity!r} has evaluation budget {row.get('evaluation_budget')}, "
@@ -335,6 +342,9 @@ def _rebuild(
     output = Path(campaign_dir).expanduser().resolve()
     if not output.is_dir():
         raise CampaignReportError(f"{output} is not a campaign folder")
+    if paper:  # a refused paper report run leaves no paper report behind, whichever refusal comes first (the descriptive rebuild keeps its pinned order)
+        for name in PAPER_REPORT_FILES:
+            (output / name).unlink(missing_ok=True)
     main_tree = _main_working_tree(root)
     if _is_within(output, root) or (main_tree is not None and _is_within(output, main_tree)):
         raise CampaignReportError(f"the campaign folder {output} is inside the repository; reports are rebuilt only for output outside it")

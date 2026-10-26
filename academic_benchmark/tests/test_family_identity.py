@@ -60,7 +60,8 @@ def test_a_paper_report_refuses_an_analysis_of_another_campaign_commit(active):
 
 
 def test_a_paper_report_refuses_an_analysis_that_does_not_know_its_campaign(active):
-    items, analysis = _analysis(active, index_sha256=None)
+    items, analysis = _analysis(active)
+    analysis = dataclasses.replace(analysis, index_sha256=None)  # analyse_family itself no longer produces one (review item 8)
     assert analysis.index_sha256 is None
     with pytest.raises(ReportError, match="run index"):
         tar._report(items, plan=active, mode="paper", inference=[analysis])

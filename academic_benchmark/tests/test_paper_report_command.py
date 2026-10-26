@@ -18,6 +18,7 @@ import inspect
 import json
 import shlex
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -27,7 +28,7 @@ import test_study_run_service as svc
 from academic_benchmark.analysis import campaign_report as cr
 from academic_benchmark.analysis.gaps import ExactReferenceTable, ExactReferenceValue
 from academic_benchmark.analysis.manifests import verify_campaign
-from academic_benchmark.analysis.statistics import analyse_family
+from academic_benchmark.analysis.statistics import StatisticsRefusal, analyse_family
 
 PAPER_FILES = ("paper_report.txt", "paper_report.json")
 
@@ -44,12 +45,26 @@ def _provider(_root):
     return _reference_table()
 
 
-def _paper_campaign(tmp_path: Path, *, minimum_n: int = 2, gateway=None):
-    """A finished paper campaign of the fixture in a real git repository (HEAD is the commit the index records)."""
+def _paper_campaign(tmp_path: Path, *, minimum_n: int = 2, gateway=None, tsplib_ids: bool = False):
+    """A finished paper campaign of the fixture in a real git repository (HEAD is the commit the index records).
+
+    ``tsplib_ids=True`` names the fixture dataset ``tsplib-tiny10`` (the form of every real dataset id and of the ids the analysis plans
+    declare) instead of ``tiny10``; failed runs are only analysed under that form."""
     root = svc._paper_repo(tmp_path)
     plan_file = root / "studies" / "analysis_plan.json"
     plan = json.loads(plan_file.read_text("utf-8"))
     plan["minimum_n_per_cell"] = minimum_n
+    if tsplib_ids:
+        plan["families"][0]["dataset_ids"] = ["tsplib-tiny10"]
+        dataset_file = root / "datasets" / "tiny10.json"
+        dataset = json.loads(dataset_file.read_text("utf-8"))
+        dataset["dataset_id"] = "tsplib-tiny10"
+        dataset_file.write_text(json.dumps(dataset), encoding="utf-8")
+        study_file = root / svc.STUDY
+        study = json.loads(study_file.read_text("utf-8"))
+        levels = study["scaled_fixed_budget_levels"]["levels_by_dataset"]
+        levels["tsplib-tiny10"] = levels.pop("tiny10")
+        study_file.write_text(json.dumps(study), encoding="utf-8")
     plan_file.write_text(json.dumps(plan), encoding="utf-8")
     svc._git(root, "add", "-A")
     svc._git(root, "commit", "-q", "-m", "fixture plan with a small minimum")
@@ -210,22 +225,159 @@ def test_a_campaign_folder_inside_the_repository_is_refused_for_the_paper_report
     inside = root / "results-copy"
     import shutil
 
-    shutil.copytree(out, inside)
+    assert cr.main([str(out), *_paper_args(root)]) == 0
+    shutil.copytree(out, inside)  # a folder with a paper report of an earlier run
+    assert all((inside / name).is_file() for name in PAPER_FILES)
     assert cr.main([str(inside), *_paper_args(root)]) == 2
     assert "inside the repository" in capsys.readouterr().err
+    assert not any((inside / name).exists() for name in PAPER_FILES)  # a refused run leaves no paper report behind (review item 7)
+
+
+def test_a_smoke_overwrite_removes_a_paper_report_of_an_earlier_run(tmp_path):
+    root = svc._paper_repo(tmp_path, study_active=False, plan_status="draft")
+    out = tmp_path / "out"
+    options = dict(repository_root=root, problem_loader=rebuild.comp._loader(), git_provider=rebuild._head, replicates=1,
+                   reference_table_provider=rebuild.tar._raises(FileNotFoundError("none")))
+    svc.run_study(svc.STUDY, out, mode="smoke", **options)
+    for name in PAPER_FILES:
+        (out / name).write_text("stale", encoding="utf-8")
+    svc.run_study(svc.STUDY, out, mode="smoke", overwrite=True, **options)
+    assert not any((out / name).exists() for name in PAPER_FILES)
+
+
+# ------------------------------------------------------------------------------------------------ the guards in front of the analysis
+def test_a_dirty_run_index_is_refused_before_any_analysis(tmp_path, default_reference, monkeypatch, capsys):
+    import dataclasses
+
+    root, out, _run = _paper_campaign(tmp_path)
+    real = cr.load_verified_campaign
+
+    def dirty(directory, **kwargs):  # the run service never writes a dirty paper index; model one that does
+        campaign = real(directory, **kwargs)
+        git = campaign.index.git.model_copy(update={"dirty": True})
+        return dataclasses.replace(campaign, index=campaign.index.model_copy(update={"git": git}))
+
+    monkeypatch.setattr(cr, "load_verified_campaign", dirty)
+    assert cr.main([str(out), *_paper_args(root)]) == 2
+    err = capsys.readouterr().err
+    assert "REFUSED" in err and "dirty working tree" in err and "statistics service" not in err  # refused by the command's own guard
+    assert not any((out / name).exists() for name in PAPER_FILES)
+
+
+def test_a_profile_that_is_not_active_is_refused(tmp_path, default_reference, monkeypatch, capsys):
+    import academic_benchmark.studies.service as service
+
+    root, out, _run = _paper_campaign(tmp_path)
+    real = service.load_study_bytes
+    monkeypatch.setattr(service, "load_study_bytes", lambda *a, **k: real(*a, **k).model_copy(update={"status": "draft"}))
+    assert cr.main([str(out), *_paper_args(root)]) == 2
+    err = capsys.readouterr().err
+    assert "REFUSED" in err and "needs an active profile" in err
+    assert not any((out / name).exists() for name in PAPER_FILES)
+
+
+def test_an_analysis_plan_that_is_not_active_is_refused(tmp_path, default_reference, monkeypatch, capsys):
+    import academic_benchmark.studies.service as service
+
+    root, out, _run = _paper_campaign(tmp_path)
+    real = service.resolve_analysis_plan_bytes
+
+    def draft_plan(study, plan_name, plan_bytes, **kwargs):  # the same plan bytes, but the plan the resolver sees says draft
+        payload = json.loads(plan_bytes)
+        payload["status"] = "draft"
+        return real(study, plan_name, json.dumps(payload).encode("utf-8"), **kwargs)
+
+    monkeypatch.setattr(service, "resolve_analysis_plan_bytes", draft_plan)
+    assert cr.main([str(out), *_paper_args(root)]) == 2
+    err = capsys.readouterr().err
+    assert "REFUSED" in err and "needs an active plan" in err
+    assert not any((out / name).exists() for name in PAPER_FILES)
 
 
 # ------------------------------------------------------------------------------------------------ a failed campaign (exit 1)
-def test_a_paper_campaign_with_failed_runs_gets_its_report_with_exit_1_and_names_the_failures(tmp_path, default_reference):
-    def fail_one(kwargs):
-        return kwargs["requested_algorithm_id"] == svc.ALGS[0] and kwargs["run_idx"] == 1 and kwargs["evaluation_budget"] == svc.LEVELS[0]
+def _fail_one(kwargs):
+    return kwargs["requested_algorithm_id"] == svc.ALGS[0] and kwargs["run_idx"] == 1 and kwargs["evaluation_budget"] == svc.LEVELS[0]
 
-    root, out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=fail_one))
+
+def test_a_paper_campaign_with_failed_runs_gets_its_report_with_exit_1_and_names_the_excluded_cell(tmp_path, default_reference):
+    root, out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=_fail_one), tsplib_ids=True)
     assert run.status == "failed" and run.rows_failed >= 1
     assert cr.main([str(out), *_paper_args(root)]) == 1
     data = json.loads((out / "paper_report.json").read_text("utf-8"))
     assert data["banner"]["failed_runs"] == run.rows_failed
     assert verify_campaign(out) == []
+    excluded = [
+        (s["comparison_cell"]["budget_level_index"], e["algorithm_id"], e["failed_runs"])
+        for s in data["inference"] for e in s["exclusions"] if e["dataset_identity"] is not None
+    ]
+    assert excluded == [(0, svc.ALGS[0], 1)]  # the failed cell reached the statistics service and is named as an exclusion
+    assert "excluded from inference" in (out / "paper_report.txt").read_text("utf-8")
+
+
+def test_a_failed_run_with_a_dataset_id_that_is_not_in_the_tsplib_form_is_refused_with_exit_2(tmp_path, default_reference, capsys):
+    root, out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=_fail_one))  # the fixture's dataset id is "tiny10"
+    assert run.status == "failed"
+    assert cr.main([str(out), *_paper_args(root)]) == 2
+    err = capsys.readouterr().err
+    assert "REFUSED" in err and "dataset id 'tiny10'" in err and "tsplib-" in err
+    assert not any((out / name).exists() for name in PAPER_FILES)
+
+
+# ------------------------------------------------------------------------------------------------ _paper_analyses with the Bildiri-shaped fixtures
+draft_plans, draft, active = stats_fx.draft_plans, stats_fx.draft, stats_fx.active  # the module fixtures of the statistics tests
+
+
+def _stub(items):
+    """What ``_paper_analyses`` reads of a verified campaign: its run index and the sha256 of ``run_index.json``."""
+    return SimpleNamespace(index=stats_fx.index_for(items, "paper"), index_sha256=stats_fx.INDEX_SHA256)
+
+
+def _analyses(items, plan):
+    return cr._paper_analyses(items, study=stats_fx.study_for(items, plan), plan=plan, campaign=_stub(items))
+
+
+def test_a_cross_instance_family_is_analysed_once_per_protocol_and_level_and_the_per_instance_family_once_per_instance(active):
+    items = []
+    for level in (0, 1):  # two budget levels of the same six instances and three algorithms
+        for i, problem in enumerate(stats_fx.CROSS_INSTANCES):
+            for a, algorithm in enumerate(stats_fx.ALGORITHMS):
+                for r, offset in enumerate((-0.1, 0.0, 0.1)):
+                    items.append(stats_fx.make_item(problem, algorithm, r, float(i + a) + offset, level=level))
+    analyses, cells, notes = _analyses(items, active)
+    across = [(a, c) for a, c in zip(analyses, cells) if a.family_id == stats_fx.ACROSS]
+    per_instance = [(a, c) for a, c in zip(analyses, cells) if a.family_id == stats_fx.PER_INSTANCE]
+    assert [c["budget_level_index"] for _, c in across] == [0, 1]  # one analysis per level, never one per instance
+    assert all(c["pooling_group"] == "fixed_budget" and c["dataset_identity"] is None for _, c in across)
+    for analysis, _cell in across:
+        assert analysis.inference is not None and analysis.inference.omnibus.test == "friedman"
+        assert {cell.dataset_identity for cell in analysis.cells} == {"berlin52", "eil51", "st70", "kroa100", "rd100", "eil76"}
+    assert len(per_instance) == 12  # six instances at two levels
+    assert {c["dataset_identity"] for _, c in per_instance} == {"berlin52", "eil51", "st70", "kroa100", "rd100", "eil76"}
+    assert all(a.inference.omnibus.test == "kruskal_wallis" for a, _ in per_instance)
+    assert len(analyses) == len(cells) == 14 and notes == []
+
+
+def test_a_failed_cell_reaches_the_statistics_service_and_is_excluded_not_counted_as_a_small_sample(active):
+    samples = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [6, 7, 8, 9], "Core-GWO-TSP-Pure": [11, 12, 13, 14, 15]}
+    items = stats_fx.per_instance_items(samples)
+    items.append(stats_fx.failed_item("eil51", "Core-PSO-TSP", 4))  # PSO's fifth replicate failed
+    analyses, cells, notes = _analyses(items, active)
+    per_instance = [a for a in analyses if a.family_id == stats_fx.PER_INSTANCE]
+    assert len(per_instance) == 1
+    analysis = per_instance[0]
+    assert [(e["algorithm_id"], e["dataset_identity"], e["failed_runs"]) for e in analysis.exclusions] == [("Core-PSO-TSP", "eil51", 1)]
+    assert "excluded from inference" in analysis.text
+    assert analysis.inference_refused == ()  # not "insufficient sample": GA and GWO are compared, PSO's cell is excluded
+    assert analysis.inference is not None
+    assert {cell.algorithm_id for cell in analysis.cells} == {"Core-GA-TSP", "Core-GWO-TSP-Pure"}
+    assert notes == []
+
+
+def test_a_failed_run_whose_dataset_id_is_not_a_tsplib_id_is_refused_by_name(active):
+    items = stats_fx.per_instance_items(stats_fx.SEPARATED)
+    row, manifest = stats_fx.failed_item("eil51", "Core-PSO-TSP", 9, dataset_id="tiny10")
+    with pytest.raises(cr.CampaignReportError, match="dataset id 'tiny10'.*tsplib-"):
+        _analyses([*items, (row, manifest)], active)
 
 
 # ------------------------------------------------------------------------------------------------ the run service prints the command
@@ -239,10 +391,14 @@ def test_the_run_service_prints_the_exact_command_that_builds_the_paper_report_a
     assert argv[:3] == ["python", "-m", "academic_benchmark.analysis.campaign_report"] and argv[3:] == [str(out), "--paper"]
 
 
-def test_a_campaign_with_failed_runs_does_not_print_the_paper_report_command(tmp_path):
-    _root, _out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=lambda k: k["run_idx"] == 1))
+def test_a_campaign_with_failed_runs_prints_the_command_too_and_says_the_failed_cells_are_excluded_and_the_exit_is_1(tmp_path):
+    _root, out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=lambda k: k["run_idx"] == 1))
     assert run.status == "failed"
-    assert "--paper" not in run.text
+    command = f"python -m academic_benchmark.analysis.campaign_report {out} --paper"
+    lines = run.text.splitlines()
+    assert command in lines and command in (out / "run_report.txt").read_text("utf-8").splitlines()
+    assert any("failed" in line and "excluded" in line and "exits 1" in line for line in lines)
+    assert not any((out / name).exists() for name in PAPER_FILES)  # still no analysis in the run itself
 
 
 # ------------------------------------------------------------------------------------------------ A20 L7
@@ -253,4 +409,14 @@ def test_analyse_family_requires_the_index_sha256_keyword():
     with pytest.raises(TypeError, match="index_sha256"):
         analyse_family(  # noqa: the call is the test: no index_sha256
             items, study=stats_fx.study_for(items), plan=None, family_id=stats_fx.PER_INSTANCE, run_index=stats_fx.index_for(items, "paper"),
+        )
+
+
+@pytest.mark.parametrize("value", [None, "", "e" * 63, "e" * 65, "E" * 64, "g" * 64, 5, b"e" * 64])
+def test_analyse_family_refuses_an_index_sha256_that_is_not_64_lower_case_hex(active, value):
+    items = stats_fx.per_instance_items(stats_fx.SEPARATED)
+    with pytest.raises(StatisticsRefusal, match="index_sha256"):
+        analyse_family(
+            items, study=stats_fx.study_for(items, active), plan=active, family_id=stats_fx.PER_INSTANCE,
+            run_index=stats_fx.index_for(items, "paper"), index_sha256=value,
         )

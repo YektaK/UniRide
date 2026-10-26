@@ -137,6 +137,11 @@ LEGACY_KEY_ENFORCEMENT = {
     "time_limit": "legacy key, mapped to sota_config.deadline_seconds (wall-clock safety deadline)",
     "ls_time_limit": "legacy key, ignored: SOTA local search is bounded by iteration limits only",
 }
+# When the caller sends both clock keys, split_legacy_sota_keys keeps deadline_seconds and drops
+# time_limit, so the legacy value is never applied; the metadata must not say it was mapped.
+SUPERSEDED_LEGACY_TIME_LIMIT = (
+    "legacy key, superseded by sota_config.deadline_seconds (both were sent; the new key wins)"
+)
 
 BUDGET_KEYS = ITERATION_KEYS | ALLOCATION_KEYS | STRUCTURAL_KEYS | {
     "deadline_seconds"
@@ -445,12 +450,16 @@ def apply_compute_policy(request, resolution, strategy, policy: ComputePolicy):
             else:
                 continue
             merged[key] = value
+            if key == "time_limit" and "deadline_seconds" in caller:
+                enforcement = SUPERSEDED_LEGACY_TIME_LIMIT
+            else:
+                enforcement = LEGACY_KEY_ENFORCEMENT.get(
+                    key, f"request-local {selected_field}.{key}"
+                )
             limits[key] = AppliedPolicyLimitInfo(
                 value=value,
                 source=source,
-                enforcement=LEGACY_KEY_ENFORCEMENT.get(
-                    key, f"request-local {selected_field}.{key}"
-                ),
+                enforcement=enforcement,
             )
 
         relation_view = {

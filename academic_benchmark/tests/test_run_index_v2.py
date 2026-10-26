@@ -21,6 +21,7 @@ import test_study_smoke_composite as comp
 from academic_benchmark.analysis.manifests import (
     ManifestError,
     file_sha256,
+    home_relative,
     load_verified_campaign,
     verify_campaign_detailed,
     write_json_with_sidecar,
@@ -123,6 +124,8 @@ def test_a_v1_index_is_not_a_valid_v2_index(paper):
     (lambda d: d["analysis_plan"].update(sha256=None), "a paper index needs the plan file hash"),
     (lambda d: d["analysis_plan"].update(path=None), "a paper index needs the plan file path"),
     (lambda d: d["output_location"].update(path="relative/out"), "the output folder is recorded as an absolute path"),
+    (lambda d: d["output_location"].update(path="~other/out"), "only the own home folder is written as a tilde"),
+    (lambda d: d["output_location"].update(path="~\\out"), "the tilde form is ~ or ~/<rest>"),
     (lambda d: d["output_location"]["outside_repository_check"].update(result="inside_repository"), "only a passed check can be recorded"),
     (lambda d: d["output_location"]["outside_repository_check"].update(checked_against=[]), "the check names what it checked against"),
     (lambda d: d["planned"].update(runs=0), "a campaign plans at least one run"),
@@ -161,7 +164,7 @@ def test_the_paper_index_records_profile_plan_counts_and_output_location(paper):
     assert index.analysis_plan.sha256 == _sha(root / "studies" / "analysis_plan.json")
     assert index.planned.runs == 12 and index.planned.runs_per_cell == 2 and len(index.runs) == 12
     assert index.failed_runs == []
-    assert index.output_location.path == str(out.resolve())
+    assert index.output_location.path == home_relative(out.resolve())  # the home prefix is written as ~ (A20 L8)
     check = index.output_location.outside_repository_check
     assert check.result == "outside_repository" and str(root.resolve()) in check.checked_against
 
@@ -326,7 +329,7 @@ def test_a_smoke_index_fills_the_same_fields_and_verifies(smoke):
     assert index.profile.path == "studies/study.json" and index.profile.sha256 == _sha(root / "studies" / "study.json")
     assert index.analysis_plan.analysis_plan_id == "fixture-plan-v1" and index.analysis_plan.sha256 == _sha(root / "studies" / "analysis_plan.json")
     assert index.planned.runs == len(index.runs) == len(comp.COMPOSITES) * 2 and index.planned.runs_per_cell == 1
-    assert index.output_location.path == str(out.resolve())
+    assert index.output_location.path == home_relative(out.resolve())  # the home prefix is written as ~ (A20 L8)
     assert index.output_location.outside_repository_check.result == "outside_repository"
     assert verify_campaign_detailed(out).ok
 

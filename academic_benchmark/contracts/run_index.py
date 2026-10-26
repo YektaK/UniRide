@@ -74,7 +74,9 @@ class OutsideRepositoryCheckV1(StrictContract):
 
 
 class OutputLocationV1(StrictContract):
-    """The campaign folder as an absolute path (paths elsewhere in the index are relative to it)."""
+    """The campaign folder as an absolute path (paths elsewhere in the index are relative to it). The user-home prefix is written as
+    ``~`` (``~`` or ``~/<rest>``, A20 L8) so that the index does not carry the user name; indexes written before that keep their
+    absolute path and stay valid."""
 
     path: str = Field(min_length=1)
     outside_repository_check: OutsideRepositoryCheckV1
@@ -82,8 +84,10 @@ class OutputLocationV1(StrictContract):
     @field_validator("path")
     @classmethod
     def path_is_absolute(cls, value: str) -> str:
+        if value == "~" or value.startswith("~/"):
+            return value
         if not (PureWindowsPath(value).is_absolute() or PurePosixPath(value).is_absolute()):
-            raise ValueError("the output folder is recorded as an absolute path")
+            raise ValueError("the output folder is recorded as an absolute path (or as ~/<path> under the user-home folder)")
         return value
 
 

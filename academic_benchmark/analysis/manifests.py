@@ -343,11 +343,33 @@ def failed_run_entries(records: Iterable[Mapping[str, Any]]) -> list[FailedRunV1
     return entries
 
 
+def home_relative(path: Path) -> str:
+    """``path`` with a leading user-home prefix written as ``~`` (``~`` or ``~/<rest>``, forward slashes); any other path as ``str(path)``.
+    Only a whole leading path component sequence counts (``/home/bobby`` is not under ``/home/bob``); the comparison ignores case on Windows."""
+    path = Path(path)
+    try:
+        home = Path.home().resolve()
+    except (RuntimeError, OSError):  # no home folder known
+        return str(path)
+    parts, home_parts = path.parts, home.parts
+    if len(parts) < len(home_parts) or [os.path.normcase(p) for p in parts[: len(home_parts)]] != [os.path.normcase(p) for p in home_parts]:
+        return str(path)
+    rest = parts[len(home_parts):]
+    return "/".join(("~", *rest))
+
+
+def expand_home(text: str) -> Path:
+    """The inverse of ``home_relative``: ``~`` and ``~/<rest>`` under the current user's home folder; anything else as a ``Path``."""
+    if text == "~" or text.startswith("~/"):
+        return Path.home().joinpath(*[part for part in text[2:].split("/") if part])
+    return Path(text)
+
+
 def outside_location(output: Path, checked_against: Sequence[Path]) -> dict[str, Any]:
     """The ``output_location`` record of a campaign that passed the outside-the-repository check against ``checked_against``
-    (G6): the output folder as an absolute path and the trees it was checked against."""
+    (G6): the output folder (the user-home prefix written as ``~``, A20 L8) and the trees it was checked against."""
     return {
-        "path": str(Path(output).resolve()),
+        "path": home_relative(Path(output).resolve()),
         "outside_repository_check": {"result": "outside_repository", "checked_against": [str(Path(p)) for p in checked_against]},
     }
 
@@ -761,7 +783,7 @@ def _check_campaign_fields(
         expected = (PurePosixPath(index.profile.path).parent / ANALYSIS_PLAN_FILE_NAME).as_posix()
         if index.analysis_plan.path != expected:
             errors.append(f"{INDEX_FILE}: the analysis plan path {index.analysis_plan.path} is not {expected} (next to the profile)")
-    if Path(index.output_location.path).resolve() != root.resolve():
+    if expand_home(index.output_location.path).resolve() != root.resolve():  # "~" (A20 L8) is expanded first; old absolute paths as before
         result.notes.append(
             f"the campaign folder {root} is not the recorded output location {index.output_location.path} (moved or copied)"
         )
@@ -825,6 +847,6 @@ def verify_campaign(directory: Path | str) -> list[str]:
 __all__ = [
     "DESCRIPTIVE_REPORT_FILES", "FAILED_FILE", "VerifiedCampaign", "load_verified_campaign", "INDEX_FILE", "MANIFEST_DIR", "ManifestError", "NATIVE_LEVELS", "REPORT_FILES", "RESULT_FILES", "SIDECAR_SUFFIX", "STATISTICS_LIBRARY_NONE",
     "ANALYSIS_PLAN_FILE_NAME", "INDEX_SCHEMA", "REFUSED_INDEX_SCHEMA", "VerificationResult", "build_run_manifest", "failed_run_entries", "canonical_json_bytes", "collect_environment", "comparable_manifest_view",
-    "file_sha256", "make_run_id", "outside_location", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
+    "expand_home", "file_sha256", "home_relative", "make_run_id", "outside_location", "verify_campaign", "verify_campaign_detailed", "write_json_with_sidecar",
     "write_run_campaign",
 ]

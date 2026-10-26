@@ -223,7 +223,7 @@
     },
     "OutputLocationV1": {
       "additionalProperties": false,
-      "description": "The campaign folder as an absolute path (paths elsewhere in the index are relative to it).",
+      "description": "The campaign folder as an absolute path (paths elsewhere in the index are relative to it). The user-home prefix is written as\n``~`` (``~`` or ``~/<rest>``, A20 L8) so that the index does not carry the user name; indexes written before that keep their\nabsolute path and stay valid.",
       "properties": {
         "outside_repository_check": {
           "$ref": "#/$defs/OutsideRepositoryCheckV1"

@@ -49,7 +49,8 @@ from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.obsolete_results import CURRENT_EVIDENCE, evidence_refusal
 from academic_benchmark.studies.smoke import StudySmokeError, assert_no_ranking_words
 
-REPORT_SCHEMA = "uniride-descriptive-report/v1"
+REPORT_SCHEMA = "uniride-descriptive-report/v1"  # the descriptive (smoke) report
+PAPER_REPORT_SCHEMA = "uniride-paper-report/v1"  # the paper report has its own schema name (A20 L13)
 REPORT_TEXT_FILE = "descriptive_report.txt"
 REPORT_JSON_FILE = "descriptive_report.json"
 PAPER_REPORT_TEXT_FILE, PAPER_REPORT_JSON_FILE = PAPER_REPORT_FILES  # the paper report (A20 L12): the same report plus the inferential section
@@ -476,7 +477,7 @@ def build_report(
         "sd_convention": spec.sd_convention, "quantile_method": spec.quantile_method,
     }
     head = [
-        f"UniRide descriptive report ({mode} mode)",
+        "UniRide paper report" if mode == "paper" else f"UniRide descriptive report ({mode} mode)",
         f"Mode: {mode}",
         f"Commit: {banner['commit']}",
         f"Working tree dirty: {'YES' if banner['dirty'] else 'no'}",
@@ -525,7 +526,7 @@ def build_report(
             parts.append(analysis.text)
     text = "\n".join(parts) + "\n"
     data = {
-        "schema_version": REPORT_SCHEMA, "mode": mode, "banner": banner, "descriptive_spec": descriptive_spec,
+        "schema_version": PAPER_REPORT_SCHEMA if mode == "paper" else REPORT_SCHEMA, "mode": mode, "banner": banner, "descriptive_spec": descriptive_spec,
         "tables": tables, "failed_only_cells": failed_only_cells, "notes": list(notes),
         "inference": [
             _inference_section(analysis, inference_cells[position] if inference_cells else None)
@@ -572,6 +573,6 @@ def write_report(
 
 
 __all__ = [
-    "DescriptiveReport", "PAPER_REPORT_JSON_FILE", "PAPER_REPORT_TEXT_FILE", "REPORT_JSON_FILE", "REPORT_SCHEMA", "REPORT_TEXT_FILE", "ReportError", "build_descriptive_table",
+    "DescriptiveReport", "PAPER_REPORT_JSON_FILE", "PAPER_REPORT_SCHEMA", "PAPER_REPORT_TEXT_FILE", "REPORT_JSON_FILE", "REPORT_SCHEMA", "REPORT_TEXT_FILE", "ReportError", "build_descriptive_table",
     "build_report", "write_report",
 ]

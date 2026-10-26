@@ -30,7 +30,8 @@ an active analysis plan read at the campaign commit; a plan whose committed byte
 comparison family the plan declares it makes one ``analyse_family`` call per comparison cell (each protocol, each fixed-budget level,
 and for a per-instance family each instance, so fixed-budget and native rows are never pooled), passing the run index, its sha256 and
 through it the campaign commit, and writes ``paper_report.txt/json`` (the descriptive tables plus the inferential section, each analysis
-labelled with its comparison cell) next to the campaign. Exit codes as above: 0 written, 1 written for a campaign with failed runs, 2
+labelled with its comparison cell) next to the campaign. The paper report JSON carries its own schema name ``uniride-paper-report/v1``
+and the title "UniRide paper report"; the descriptive report keeps ``uniride-descriptive-report/v1`` (DECISION_LOG A20 L13). Exit codes as above: 0 written, 1 written for a campaign with failed runs, 2
 refused (not a paper campaign, integrity, identity or plan mismatch, a refusal of the statistics service). Rows that belong to no declared
 family and failed runs of a cell with no completed run are listed in the report notes; a failed run whose recorded dataset id is not
 ``tsplib-<normalised problem name>`` is refused. A folder inside the repository is refused first and nothing in it is touched; for a campaign folder outside the repository an old ``paper_report.*`` is removed once the folder checks pass, so a later refusal leaves none behind. The paper run service prints

@@ -472,6 +472,22 @@ def test_smoke_replicate_cap_is_unchanged():
     assert SMOKE_MAX_REPLICATES == 3
 
 
+def test_a_smoke_run_without_an_explicit_replicate_count_uses_the_smoke_default_of_three(tmp_path):
+    """D-03 polish: ``replicates=None`` means the smoke default (``SMOKE_MAX_REPLICATES``), not one and not the profile's run count."""
+    root = _paper_repo(tmp_path, study_active=False, plan_status="draft")
+    path = root / STUDY
+    payload = json.loads(path.read_text("utf-8"))
+    payload["run_count"] = 5  # more than the smoke default, so the default and not the profile decides
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    out = tmp_path / "out"
+    report = run_study(STUDY, out, mode="smoke", repository_root=root, problem_loader=comp._loader(), git_provider=CLEAN)
+    assert report.status == "passed", report.text
+    rows = _read(out / "fixed_runs.jsonl")
+    assert {row["replicate"] for row in rows} == set(range(SMOKE_MAX_REPLICATES)) == {0, 1, 2}
+    cells = {(row["algorithm_id"], row["problem"], row["evaluation_budget"]) for row in rows}
+    assert len(rows) == 3 * len(cells)  # three replicates in every cell
+
+
 # ------------------------------------------------------------------------------------------- review polish (D-03)
 def test_paper_mode_refuses_output_inside_the_main_checkout_when_run_from_a_linked_worktree(tmp_path):
     main = _paper_repo(tmp_path)  # worktrees of this project live inside the main checkout

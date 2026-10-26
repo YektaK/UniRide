@@ -601,10 +601,12 @@ def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
         # Build config object
         import dataclasses
         valid_fields = {f.name for f in dataclasses.fields(cfg_cls)}
+        # Unknown keys, including the old time_limit / ls_time_limit (MT6-03), are dropped silently;
+        # harmless because SOTA is refused in protocol mode (see above).
         cfg_kwargs = {k: v for k, v in params.items() if k in valid_fields}
         cfg_kwargs["seed"] = seed
         config = cfg_cls(**cfg_kwargs)
-        
+
         solver = cls(config=config)
         
         start_time = time.perf_counter()

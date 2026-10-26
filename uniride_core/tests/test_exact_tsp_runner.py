@@ -29,6 +29,34 @@ DATA_DIR = Path(os.environ.get("UNIRIDE_TSPLIB_DATA_DIR", REPO / "academic_bench
 DB_PATH = DATA_DIR / "tsplib.db"
 
 
+def _real_db_skip_reason(db_path: Path):
+    """None when the real TSPLIB database can be used, else the reason a test must skip.
+
+    Never writes or creates anything: it checks ``is_file()`` first, then opens the file read-only and
+    immutable (as the runner does: no -wal/-shm file is created) and reads ``sqlite_master`` only.
+    """
+    if not db_path.is_file():
+        return "tsplib.db not present in this checkout (git-ignored)"
+    try:
+        conn = sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro&immutable=1", uri=True)
+        try:
+            tables = {row[0] for row in conn.execute("select name from sqlite_master where type = 'table'")}
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:
+        return f"tsplib.db is not a readable SQLite database ({exc})"
+    missing = sorted({"problems", "coordinates"} - tables)
+    if missing:
+        return f"tsplib.db has no {' / '.join(missing)} table (empty or placeholder database)"
+    return None
+
+
+def _skip_without_real_db():
+    reason = _real_db_skip_reason(DB_PATH)
+    if reason:
+        pytest.skip(reason)
+
+
 def _load_script():
     spec = importlib.util.spec_from_file_location("run_exact_tsp_reference", SCRIPT)
     module = importlib.util.module_from_spec(spec)
@@ -152,8 +180,7 @@ def test_real_ft53_matrix_arcs_equal_the_file_tokens():
 
 @pytest.mark.parametrize("name,ewt", [("berlin52", "EUC_2D"), ("att48", "ATT"), ("burma14", "GEO"), ("gr96", "GEO")])
 def test_real_instances_follow_the_convention(name, ewt):
-    if not DB_PATH.is_file():
-        pytest.skip("tsplib.db not present in this checkout (git-ignored)")
+    _skip_without_real_db()
     runner = _load_script()
     conn = runner.open_db_readonly(DB_PATH)
     try:
@@ -194,6 +221,34 @@ def _listing(directory: Path):
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_real_db_guard_skips_for_a_missing_empty_or_placeholder_database_and_writes_nothing(tmp_path):
+    missing = tmp_path / "tsplib.db"
+    assert "not present" in _real_db_skip_reason(missing)
+    assert _listing(tmp_path) == [], "the guard must not create the missing file"
+
+    empty = tmp_path / "empty.db"
+    sqlite3.connect(empty).close()  # a valid but empty SQLite file: no problems/coordinates table
+    assert "no coordinates / problems table" in _real_db_skip_reason(empty)
+
+    only_problems = tmp_path / "only_problems.db"
+    conn = sqlite3.connect(only_problems)
+    conn.execute("create table problems (name text)")
+    conn.commit()
+    conn.close()
+    assert "no coordinates table" in _real_db_skip_reason(only_problems)
+
+    junk = tmp_path / "junk.db"
+    junk.write_bytes(b"this is not a database" * 10)
+    assert "not a readable SQLite database" in _real_db_skip_reason(junk)
+
+    good = tmp_path / "good.db"
+    _make_wal_db(good)
+    before = {p.name: (p.stat().st_size, _sha(p)) for p in tmp_path.iterdir()}
+    assert _real_db_skip_reason(good) is None
+    after = {p.name: (p.stat().st_size, _sha(p)) for p in tmp_path.iterdir()}
+    assert after == before, "the guard must not change, create or checkpoint any file"
 
 
 def test_open_db_readonly_refuses_writes_and_leaves_no_file_behind(runner, tmp_path):
@@ -241,8 +296,7 @@ def test_read_instance_set_keeps_tsp_up_to_100_nodes_with_a_published_optimum_pl
 
 
 def test_the_real_instance_set_is_the_16_tsp_plus_ft53():
-    if not DB_PATH.is_file():
-        pytest.skip("tsplib.db not present in this checkout (git-ignored)")
+    _skip_without_real_db()
     runner = _load_script()
     conn = runner.open_db_readonly(DB_PATH)
     try:
@@ -273,8 +327,7 @@ def test_cross_check_of_published_optima_reports_every_discrepancy(runner):
 
 
 def test_the_repo_parser_table_agrees_with_the_database_for_the_verification_set():
-    if not DB_PATH.is_file():
-        pytest.skip("tsplib.db not present in this checkout (git-ignored)")
+    _skip_without_real_db()
     runner = _load_script()
     conn = runner.open_db_readonly(DB_PATH)
     try:
@@ -504,6 +557,7 @@ def _run_cli(*args, env_extra=None):
 
 
 def test_without_ampl_the_runner_exits_with_code_3_and_writes_nothing(tmp_path):
+    _skip_without_real_db()  # the runner reads the default data directory: no database means exit 2, not 3
     out = REPO / "docs" / "paper" / "results" / "tsplib-exact-reference" / "_test_no_ampl_exit3"
     res = _run_cli("--allow-dirty", "--out", str(out), env_extra={"UNIRIDE_AMPL_DIR": str(tmp_path)})
     assert res.returncode == 3, (res.stdout[-400:], res.stderr[-400:])

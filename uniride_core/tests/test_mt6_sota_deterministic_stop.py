@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from uniride_core.algorithms.sota_tsp import ls_engine
+from uniride_core.algorithms.sota_tsp.deadline import WallClockDeadline
 from uniride_core.algorithms.sota_tsp.cgo_tsp import CGO_TSP, CGOConfig
 from uniride_core.algorithms.sota_tsp.e2bso_tsp import (
     E2BSO_TSP,
@@ -34,13 +35,18 @@ SOTA_DIR = Path(ls_engine.__file__).resolve().parent
 SOLVER_FILES = ["e2bso_tsp.py", "r2dma_tsp.py", "paoea_tsp.py", "cgo_tsp.py", "run_tsp.py"]
 CLOCK_NAMES = {"monotonic", "perf_counter", "time", "process_time"}
 
-N = 12
-MAX_ITER = 4
+# N and MAX_ITER are large enough that the local search matters in every solver.
+# With N=12 (and still with N=30) E2BSO, E2BSO-CPSO and R2DMA reached the same result
+# without any local search, so a per-layer clock check in ls_engine (mutation M1 of the
+# MT6 polish review) changed nothing the test could see. R2DMA only calls the local
+# search for resonant pairs, hence theta_base=0.0.
+N = 60
+MAX_ITER = 6
 
 SOLVERS = [
     ("E2BSO", E2BSO_TSP, E2BSOTSPConfig, {"population_size": 6}),
     ("E2BSO-CPSO", E2BSO_TSP_CPSO, E2BSOCPSPConfig, {"population_size": 6}),
-    ("R2DMA", R2DMA_TSP, R2DMATSPConfig, {"population_size": 6, "tournament_k": 2}),
+    ("R2DMA", R2DMA_TSP, R2DMATSPConfig, {"population_size": 6, "tournament_k": 2, "theta_base": 0.0}),
     ("P-AOEA", PAOEA_TSP, PAOEAConfig, {"population_size": 6, "genome_population_size": 2}),
     ("CGO", CGO_TSP, CGOConfig, {"population_size": 6}),
     ("RUN", RUN_TSP, RUNConfig, {"population_size": 6}),
@@ -170,7 +176,43 @@ def test_deadline_that_is_hit_is_reported_and_marks_result_non_reproducible(
     assert sorted(result.tour) == list(range(N))
 
 
-@pytest.mark.parametrize(("name", "solver_type", "config_type", "extra"), [r for r in SOLVERS if r[0] in {"E2BSO", "E2BSO-CPSO", "R2DMA", "P-AOEA"}], ids=lambda v: v if isinstance(v, str) else None)
+GUARDED_SOLVERS = [r for r in SOLVERS if r[0] in {"E2BSO", "E2BSO-CPSO", "R2DMA", "P-AOEA"}]
+
+
+@pytest.mark.parametrize(("name", "solver_type", "config_type", "extra"), GUARDED_SOLVERS, ids=lambda v: v if isinstance(v, str) else None)
+def test_deadline_passing_in_the_last_iteration_is_still_iteration_limit(
+    monkeypatch, name, solver_type, config_type, extra
+):
+    """M6: the deadline check is skipped in the last iteration (``t < max_iterations``).
+
+    The clock stands still until the check that would run in the last iteration
+    (call number ``MAX_ITER``) and jumps past the deadline there. A solver that
+    still makes that check reports a deadline hit for a run that did all of its
+    iterations; the right answer is ``iteration_limit`` and ``reproducible``.
+    """
+    now = {"t": 0.0}
+    monkeypatch.setattr(time, "monotonic", lambda: now["t"])
+    monkeypatch.setattr(time, "perf_counter", lambda: now["t"])
+    calls = {"n": 0}
+    original = WallClockDeadline.expired
+
+    def expired(self):
+        calls["n"] += 1
+        if calls["n"] >= MAX_ITER:  # the check of the last iteration, if it were made
+            now["t"] += 100.0
+        return original(self)
+
+    monkeypatch.setattr(WallClockDeadline, "expired", expired)
+
+    result = _solve(solver_type, _config(config_type, extra, deadline_seconds=5.0))
+
+    assert calls["n"] == MAX_ITER - 1  # iterations 1..MAX_ITER-1 check, the last one does not
+    assert result.iterations == MAX_ITER
+    assert result.extra_stats["termination_reason"] == "iteration_limit"
+    assert result.extra_stats["reproducible"] is True
+
+
+@pytest.mark.parametrize(("name", "solver_type", "config_type", "extra"), GUARDED_SOLVERS, ids=lambda v: v if isinstance(v, str) else None)
 def test_final_polish_still_runs_after_the_deadline_is_hit(
     monkeypatch, name, solver_type, config_type, extra
 ):
@@ -213,6 +255,200 @@ def test_no_clock_comparison_outside_the_deadline_helper(filename):
         if isinstance(node, ast.Compare) and list(_clock_calls_in(node))
     ]
     assert offenders == [], f"{filename}: clock compared at lines {offenders}"
+
+
+# (3b) every clock reading is an elapsed-time measurement and nothing else ---------------------
+#
+# The rule checked below (a clock reading can reach stats and nothing else):
+#   * a ``time.monotonic()/perf_counter()/...`` call is either the whole right-hand side of an
+#     assignment to one name (``t_start = time.monotonic()``) or the left operand of
+#     ``<call> - <such a name>``;
+#   * that subtraction, scaled only by constant ``*`` or ``/`` (seconds to ms), goes straight into
+#     an ``elapsed*`` name, an ``elapsed*=`` keyword argument, a dict value or a
+#     ``stats["...time/elapsed..."]`` slot, never into a comparison, ``min``/``max``, ``range``,
+#     ``int`` or other arithmetic;
+#   * a start name is only ever read as the right operand of such a subtraction;
+#   * an ``elapsed*`` name is only ever read as a keyword argument, a dict value or the whole
+#     right-hand side of a ``stats[...]`` assignment.
+# ``deadline.py`` is the one module allowed to compare the clock and is not checked here.
+
+
+def _is_clock_call(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "time"
+        and node.func.attr in CLOCK_NAMES
+    )
+
+
+def _stats_slot(target: ast.AST) -> bool:
+    return (
+        isinstance(target, ast.Subscript)
+        and isinstance(target.slice, ast.Constant)
+        and isinstance(target.slice.value, str)
+        and ("time" in target.slice.value or "elapsed" in target.slice.value)
+    )
+
+
+def _elapsed_sink(sub: ast.BinOp, parents: dict):
+    """Follow ``sub`` through constant ``*`` / ``/`` to its sink. Returns (ok, elapsed_name or None)."""
+    node = sub
+    parent = parents.get(node)
+    while (
+        isinstance(parent, ast.BinOp)
+        and isinstance(parent.op, (ast.Mult, ast.Div))
+        and isinstance(parent.right if parent.left is node else parent.left, ast.Constant)
+    ):
+        node = parent
+        parent = parents.get(node)
+    if isinstance(parent, ast.Assign) and parent.value is node and len(parent.targets) == 1:
+        target = parent.targets[0]
+        if isinstance(target, ast.Name) and target.id.startswith("elapsed"):
+            return True, target.id
+        if _stats_slot(target):
+            return True, None
+    if isinstance(parent, ast.keyword) and parent.arg and parent.arg.startswith("elapsed"):
+        return True, None
+    if isinstance(parent, ast.Dict) and node in parent.values:
+        return True, None
+    return False, None
+
+
+def clock_misuse_in(source: str) -> list:
+    """Lines where a clock reading is used for anything but an elapsed-time report."""
+    tree = ast.parse(source)
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    problems = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "time":
+            problems.append((node.lineno, "from time import ..."))
+        if isinstance(node, ast.Import) and any(a.name == "time" and a.asname for a in node.names):
+            problems.append((node.lineno, "import time as ..."))
+
+    start_names = set()
+    clock_calls = [n for n in ast.walk(tree) if _is_clock_call(n)]
+    for call in clock_calls:
+        parent = parents.get(call)
+        if (
+            isinstance(parent, ast.Assign)
+            and parent.value is call
+            and len(parent.targets) == 1
+            and isinstance(parent.targets[0], ast.Name)
+        ):
+            start_names.add(parent.targets[0].id)
+
+    elapsed_names = set()
+    for call in clock_calls:
+        parent = parents.get(call)
+        if isinstance(parent, ast.Assign) and parent.value is call:
+            continue
+        if (
+            isinstance(parent, ast.BinOp)
+            and isinstance(parent.op, ast.Sub)
+            and parent.left is call
+            and isinstance(parent.right, ast.Name)
+            and parent.right.id in start_names
+        ):
+            ok, name = _elapsed_sink(parent, parents)
+            if ok:
+                if name:
+                    elapsed_names.add(name)
+                continue
+        problems.append((call.lineno, "clock reading used for more than an elapsed-time report"))
+
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)):
+            continue
+        parent = parents.get(node)
+        if node.id in start_names:
+            if not (
+                isinstance(parent, ast.BinOp)
+                and isinstance(parent.op, ast.Sub)
+                and parent.right is node
+                and _is_clock_call(parent.left)
+            ):
+                problems.append((node.lineno, f"clock start {node.id!r} read outside `clock() - start`"))
+        elif node.id in elapsed_names:
+            allowed = (
+                (isinstance(parent, ast.keyword) and parent.arg is not None)
+                or (isinstance(parent, ast.Dict) and node in parent.values)
+                or (isinstance(parent, ast.Assign) and parent.value is node and _stats_slot(parent.targets[0]))
+            )
+            if not allowed:
+                problems.append((node.lineno, f"elapsed value {node.id!r} used for more than reporting"))
+    return sorted(problems)
+
+
+@pytest.mark.parametrize("filename", SOLVER_FILES + ["ls_engine.py"])
+def test_clock_readings_only_feed_elapsed_time_reports(filename):
+    problems = clock_misuse_in((SOTA_DIR / filename).read_text(encoding="utf-8"))
+    assert problems == [], f"{filename}: {problems}"
+
+
+_OK_SNIPPET = """
+import time
+def solve(stats):
+    t_start = time.monotonic()
+    work()
+    elapsed_ms = (time.monotonic() - t_start) * 1000
+    stats["total_time_ms"] = elapsed_ms
+    return Result(elapsed_ms=elapsed_ms, extra={"t": (time.perf_counter() - t_start) / 1.0})
+"""
+
+_BAD_SNIPPETS = {
+    "M1 local-search layer clock check": """
+import time
+def improve(layers):
+    t0 = time.monotonic()
+    for layer in layers:
+        _now = time.monotonic()
+        if _now - t0 > 0.5:
+            break
+""",
+    "M2 time-derived polish budget": """
+import time
+def solve(improve, gbest):
+    t_start = time.monotonic()
+    return improve(gbest, int(500 * min(1, max(0, 30 - (time.monotonic() - t_start)))))
+""",
+    "inline comparison": """
+import time
+def f():
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < 1.0:
+        pass
+""",
+    "elapsed name compared": """
+import time
+def f():
+    t0 = time.monotonic()
+    elapsed = time.monotonic() - t0
+    return elapsed > 0.5
+""",
+    "start name compared": """
+import time
+def f():
+    t0 = time.monotonic()
+    return t0 > 5
+""",
+    "aliased import": """
+from time import monotonic
+def f():
+    return monotonic()
+""",
+}
+
+
+def test_clock_misuse_checker_accepts_the_elapsed_report_pattern():
+    assert clock_misuse_in(_OK_SNIPPET) == []
+
+
+@pytest.mark.parametrize("label", sorted(_BAD_SNIPPETS))
+def test_clock_misuse_checker_flags_known_bad_patterns(label):
+    assert clock_misuse_in(_BAD_SNIPPETS[label]) != []
 
 
 @pytest.mark.parametrize("filename", SOLVER_FILES + ["ls_engine.py"])

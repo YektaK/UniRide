@@ -7,6 +7,11 @@ clock call at all). When the deadline is reached the solver stops early and the
 result says so: ``termination_reason == "wall_clock_deadline"`` and
 ``reproducible is False`` (both in ``TSPResult.extra_stats``).
 
+The deadline is soft. It is checked once per iteration (the iterative solvers skip the
+check after the last iteration, which is the iteration limit anyway) and never inside
+the local search, so a run can overrun it by one full iteration plus the whole final
+polish, which always runs with its iteration limit. It is a safety net against runaway runs, not a precise time budget.
+
 This module is the only place in ``sota_tsp`` where the clock is compared with a
 limit (``test_mt6_sota_deterministic_stop.py`` enforces that).
 """

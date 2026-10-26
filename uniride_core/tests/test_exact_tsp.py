@@ -627,6 +627,19 @@ def test_highs_proves_pr76_in_spite_of_a_noisy_objective(session):
     db = data / "tsplib.db"
     if not db.is_file():
         pytest.skip("tsplib.db (git-ignored) not present: pr76 coordinates unavailable")
+    # Read-only and immutable (no -wal/-shm is created); sqlite_master is the only thing read here.
+    import sqlite3
+
+    try:
+        probe = sqlite3.connect(db.resolve().as_uri() + "?mode=ro&immutable=1", uri=True)
+        try:
+            tables = {row[0] for row in probe.execute("select name from sqlite_master where type = 'table'")}
+        finally:
+            probe.close()
+    except sqlite3.Error as exc:
+        pytest.skip(f"tsplib.db is not a readable SQLite database ({exc})")
+    if not {"problems", "coordinates"} <= tables:
+        pytest.skip("tsplib.db has no problems/coordinates table (empty or placeholder database): pr76 coordinates unavailable")
     if session.settings.solver != "highs":
         pytest.skip("regression for the HiGHS objective noise; Gurobi is covered by the other tests")
     import importlib.util

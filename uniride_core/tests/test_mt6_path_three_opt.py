@@ -1,7 +1,9 @@
 """MT6-04 (audit M14): path 3-opt for the production hybrid local search.
 
-The production hybrid costs an open sequence with a caller's black-box
-objective (for example a Split-decoded chromosome).  The path neighbourhood in
+The production hybrid costs an open sequence between two fixed depot ends with a
+caller's black-box objective (for example the ``ga_split`` giant-tour cost: depot
+to depot, depot outside the sequence; rotating the sequence changes the cost).
+The path neighbourhood in
 ``uniride_core.algorithms.three_opt`` is tested here against an independent
 brute-force enumerator written in this module.  The enumerator does not import
 or call the generator under test (CANONICAL_THREE_OPT_DESIGN.md, verification
@@ -65,6 +67,45 @@ def _ref_neighbours(route: Sequence, i: int, j: int, k: int) -> Set[Tuple]:
         found.add(tuple(route[p] for p in order))
     found.discard(tuple(route))
     return found
+
+
+# Hard-coded scan order of the arrangements of one cut, written down here and not read from
+# the code under test: (segment C first, reverse B, reverse C).
+_REF_ORDER_TABLE = [
+    (False, True, True),   # B'C'
+    (False, True, False),  # B'C
+    (False, False, True),  # BC'
+    (True, False, False),  # CB
+    (True, False, True),   # C'B
+    (True, True, False),   # CB'
+    (True, True, True),    # C'B'
+]
+
+
+def _ref_ordered_neighbours(route: Sequence, i: int, j: int, k: int) -> List[Tuple]:
+    """The distinct non-identity sequences of one cut in the documented scan order."""
+    n = len(route)
+    positions = list(range(n))
+    prefix = positions[: i + 1]
+    seg_b = positions[i + 1: j + 1]
+    seg_c = positions[j + 1: k + 1]
+    suffix = positions[k + 1:]
+    out: List[Tuple] = []
+    for c_first, rev_b, rev_c in _REF_ORDER_TABLE:
+        b = seg_b[::-1] if rev_b else seg_b
+        c = seg_c[::-1] if rev_c else seg_c
+        order = prefix + ((c + b) if c_first else (b + c)) + suffix
+        candidate = tuple(route[p] for p in order)
+        if candidate != tuple(route) and candidate not in out:
+            out.append(candidate)
+    return out
+
+
+def _ref_scan(route: Sequence, window: Optional[int]) -> List[Tuple[Tuple[int, int, int], Tuple]]:
+    """Every (cut, candidate) in scan order: cuts lexicographic, then the order table."""
+    cuts = _ref_cuts(len(route), window)
+    assert cuts == sorted(cuts)
+    return [(cut, cand) for cut in cuts for cand in _ref_ordered_neighbours(route, *cut)]
 
 
 def _ref_all_neighbours(route: Sequence, window: Optional[int]) -> Set[Tuple]:
@@ -329,17 +370,96 @@ def test_first_improvement_takes_a_strict_improvement_in_scan_order():
     assert tuple(out) in _ref_all_neighbours(route, window=None)
 
     # The documented scan order is (i, j, k) lexicographic, candidates in table
-    # order; the first strict improvement in that order must be returned.
-    expected = None
-    for i, j, k in _ref_cuts(len(route), None):
-        produced = core_three_opt.generate_path_three_opt_candidates(route, i, j, k)
-        for cand in produced:
-            if objective(cand) < start:
-                expected = cand
-                break
-        if expected is not None:
-            break
-    assert out == expected
+    # order; the first strict improvement in that order must be returned. The
+    # expectation comes from the reference scan above, not from the generator.
+    expected = next(
+        cand for _, cand in _ref_scan(route, None) if objective(list(cand)) < start
+    )
+    assert tuple(out) == expected
+
+
+# One cut with several improving candidates: route 0..5, cut (0, 2, 4):
+# A = [0], B = [1, 2], C = [3, 4], D = [5]. Written out by hand in table order:
+_CUT_ROUTE = [0, 1, 2, 3, 4, 5]
+_CUT = (0, 2, 4)
+_CUT_CANDIDATES = [
+    (0, 2, 1, 4, 3, 5),  # B'C'
+    (0, 2, 1, 3, 4, 5),  # B'C   (also made by the earlier cut (0, 1, 2))
+    (0, 1, 2, 4, 3, 5),  # BC'
+    (0, 3, 4, 1, 2, 5),  # CB
+    (0, 4, 3, 1, 2, 5),  # C'B
+    (0, 3, 4, 2, 1, 5),  # CB'
+    (0, 4, 3, 2, 1, 5),  # C'B'
+]
+
+
+def _objective_from_table(table: Dict[Tuple, float], default: float = 100.0):
+    return lambda r: table.get(tuple(r), default)
+
+
+def test_reference_cut_fixture_matches_the_reference_enumerator():
+    assert _ref_ordered_neighbours(_CUT_ROUTE, *_CUT) == _CUT_CANDIDATES
+    earlier = {cand for cut, cand in _ref_scan(_CUT_ROUTE, None) if cut < _CUT}
+    # CB (index 3), C'B (4) and CB' (5) are first made by this very cut; B'C, BC' and C'B' are
+    # also made by earlier cuts, so they must not be used as "first" or "best" below.
+    assert all(_CUT_CANDIDATES[idx] not in earlier for idx in (3, 4, 5))
+
+
+def test_first_improvement_stops_at_the_first_improving_candidate_of_a_cut():
+    """The first improving candidate of a cut (CB, 90) is not the cut's best (CB', 80).
+
+    ``first_improvement=True`` returns CB. Without the inner ``break`` the scan would run on
+    through the same cut and return CB'.
+    """
+    first, best = _CUT_CANDIDATES[3], _CUT_CANDIDATES[5]
+    objective = _objective_from_table({first: 90.0, best: 80.0})
+    scan = _ref_scan(_CUT_ROUTE, None)
+    expected = next(cand for _, cand in scan if objective(list(cand)) < 100.0)
+    assert expected == first == (0, 3, 4, 1, 2, 5)  # hard-coded as well
+
+    quick = core_three_opt.improve_path_three_opt(
+        _CUT_ROUTE, objective, max_iterations=1, first_improvement=True, window=None
+    )
+    assert tuple(quick.route) == (0, 3, 4, 1, 2, 5)
+    assert quick.cost == 90.0
+
+    thorough = core_three_opt.improve_path_three_opt(
+        _CUT_ROUTE, objective, max_iterations=1, first_improvement=False, window=None
+    )
+    assert tuple(thorough.route) == (0, 3, 4, 2, 1, 5)  # CB'
+    assert thorough.cost == 80.0
+
+
+@pytest.mark.parametrize(
+    ("label", "first_index", "second_index"),
+    [("same cut", 3, 5), ("same cut, adjacent arrangements", 3, 4)],
+)
+def test_equal_cost_improvements_in_one_cut_first_in_scan_order_wins(label, first_index, second_index):
+    first, second = _CUT_CANDIDATES[first_index], _CUT_CANDIDATES[second_index]
+    objective = _objective_from_table({first: 90.0, second: 90.0})
+    expected = next(cand for _, cand in _ref_scan(_CUT_ROUTE, None) if objective(list(cand)) < 100.0)
+    assert expected == first
+
+    result = core_three_opt.improve_path_three_opt(
+        _CUT_ROUTE, objective, max_iterations=1, first_improvement=False, window=None
+    )
+    assert tuple(result.route) == first
+    assert result.cost == 90.0
+
+
+def test_equal_cost_improvements_in_different_cuts_first_in_scan_order_wins():
+    # Swapping positions (1, 2) is first made by cut (0, 1, 2); swapping (3, 4) is first made by
+    # cut (0, 2, 4) (BC'). (0, 1, 2) < (0, 2, 4), so the first swap comes first in the scan.
+    early, late = (0, 2, 1, 3, 4, 5), (0, 1, 2, 4, 3, 5)
+    objective = _objective_from_table({early: 90.0, late: 90.0})
+    scan = _ref_scan(_CUT_ROUTE, None)
+    expected = next(cand for _, cand in scan if objective(list(cand)) < 100.0)
+    assert expected == early
+
+    result = core_three_opt.improve_path_three_opt(
+        _CUT_ROUTE, objective, max_iterations=1, first_improvement=False, window=None
+    )
+    assert tuple(result.route) == early
 
 
 def test_local_search_improves_to_a_local_optimum_and_returns_exact_cost():

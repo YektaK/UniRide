@@ -1,5 +1,23 @@
 import json
 import os
+import re
+
+_BUILD_COMMIT_TOKEN = re.compile(r"[A-Za-z0-9_.+\-]{1,64}")
+
+
+def solver_code_version(env=None) -> "str | None":
+    """Build identifier stamped on every optimizer response (DECISION_LOG A20 L2).
+
+    Read from ``UNIRIDE_BUILD_COMMIT``, which the build or deploy sets; never derived from
+    git at runtime. Returned only when the value is a short plain token
+    (``[A-Za-z0-9_.+-]{1,64}``); unset, empty or malformed values give ``None`` and the
+    response omits the field.
+    """
+    source = os.environ if env is None else env
+    value = source.get("UNIRIDE_BUILD_COMMIT")
+    if value is None or _BUILD_COMMIT_TOKEN.fullmatch(value) is None:
+        return None
+    return value
 
 
 def optimizer_host() -> str:

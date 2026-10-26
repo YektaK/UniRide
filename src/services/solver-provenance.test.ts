@@ -13,6 +13,8 @@ describe("solverProvenanceSchema (what a client may store)", () => {
       fallback_reason: "solver_error",
       effective_config_source: "promoted+request",
       effective_seed: 42,
+      termination_reason: "wall_clock_deadline",
+      solver_code_version: "3f2a9c1",
     };
     expect(solverProvenanceSchema.parse(value)).toEqual(value);
   });
@@ -38,6 +40,11 @@ describe("solverProvenanceSchema (what a client may store)", () => {
     ["empty string", { algorithm_requested: "" }],
     ["markup in a string", { effective_config_source: "<script>alert(1)</script>" }],
     ["nested object", { algorithm_used: { a: 1 } }],
+    ["overlong termination reason", { termination_reason: "t".repeat(65) }],
+    ["markup in a termination reason", { termination_reason: "<b>x</b>" }],
+    ["overlong code version", { solver_code_version: "v".repeat(65) }],
+    ["space in a code version", { solver_code_version: "abc def" }],
+    ["empty code version", { solver_code_version: "" }],
   ])("rejects %s", (_label, value) => {
     expect(solverProvenanceSchema.safeParse(value).success).toBe(false);
   });
@@ -49,6 +56,8 @@ describe("solverProvenanceSchema (what a client may store)", () => {
       "effective_config_source",
       "effective_seed",
       "fallback_reason",
+      "solver_code_version",
+      "termination_reason",
     ]);
   });
 });
@@ -122,6 +131,40 @@ describe("buildSolverProvenance", () => {
       "ga_split",
     );
     expect(value).toEqual({ algorithm_used: "ga_split", effective_config_source: "default" });
+  });
+
+  it("reads the termination reason and the solver code version from the BFF meta", () => {
+    expect(
+      buildSolverProvenance(
+        { meta: { terminationReason: "wall_clock_deadline", solverCodeVersion: "3f2a9c1", effectiveSeed: 42 } },
+        "e2bso",
+      ),
+    ).toEqual({
+      algorithm_used: "e2bso",
+      effective_seed: 42,
+      termination_reason: "wall_clock_deadline",
+      solver_code_version: "3f2a9c1",
+    });
+  });
+
+  it("reads the raw optimizer fields termination_reason and solver_code_version too", () => {
+    expect(
+      buildSolverProvenance({ termination_reason: "wall_clock_deadline", solver_code_version: "abc.1" }, "e2bso"),
+    ).toEqual({ algorithm_used: "e2bso", termination_reason: "wall_clock_deadline", solver_code_version: "abc.1" });
+  });
+
+  it("drops a malformed code version or termination reason", () => {
+    const value = buildSolverProvenance(
+      { meta: { solverCodeVersion: "not a token", terminationReason: "x".repeat(80), effectiveSeed: 1 } },
+      "e2bso",
+    );
+    expect(value).toEqual({ algorithm_used: "e2bso", effective_seed: 1 });
+  });
+
+  it("never invents the new keys when the optimizer did not report them", () => {
+    const value = buildSolverProvenance({ meta: { effectiveSeed: 3 } }, "ga_split");
+    expect(value).not.toHaveProperty("termination_reason");
+    expect(value).not.toHaveProperty("solver_code_version");
   });
 
   it("is null when every reported field is malformed", () => {

@@ -636,7 +636,8 @@
         "studentLoadError": "Öğrenciler Yüklenemedi",
         "saveError": "Kaydetme Hatası",
         "solverProvenance": {
-          "fallback": "İstenen çözücü çalışmadı; yerine {used} kullanıldı (neden: {reason})."
+          "fallback": "İstenen çözücü çalışmadı; yerine {used} kullanıldı (neden: {reason}).",
+          "deadline": "Çözücü süre sınırında durdu; bu plan tohumundan yeniden üretilemeyebilir."
         }
       },
       "compare": {

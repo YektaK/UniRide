@@ -8,6 +8,7 @@ from models.schemas import OptimizationResponse, RouteStep, VehicleRoute
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.adapters.demand_builder import student_occurrence_keys
 from uniride_core.adapters.sota_tsp_strategy_adapter import GREEDY_FALLBACK_ALGORITHM
+from uniride_core.algorithms.sota_tsp.deadline import TERMINATION_WALL_CLOCK_DEADLINE
 
 DistanceLookup = Callable[[str, str], float]
 DurationLookup = Callable[[str, str], float]
@@ -97,8 +98,13 @@ def build_single_route_response(
     distance_lookup: DistanceLookup,
     execution_time_seconds: float,
     fallback_reason: Optional[str] = None,
+    termination_reason: Optional[str] = None,
 ) -> OptimizationResponse:
     """Convert a SOTA student order into the current UniRide API response.
+
+    ``termination_reason`` is carried only when the solver hit its wall-clock
+    deadline (A20 L3); a normal iteration-limit stop leaves the field unset so
+    it is omitted from the JSON, like ``fallback_reason``.
 
     ``fallback_reason`` is set when the SOTA solver did not run and a fallback
     order was served: the response then says so (``algorithm_used`` is
@@ -167,6 +173,11 @@ def build_single_route_response(
         total_duration_minutes=round(total_duration, 2),
         execution_time_seconds=round(execution_time_seconds, 4),
         fallback_reason=fallback_reason,
+        termination_reason=(
+            termination_reason
+            if termination_reason == TERMINATION_WALL_CLOCK_DEADLINE
+            else None
+        ),
     )
 
 

@@ -16,7 +16,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from compute_policy import HARD_CEILINGS, apply_compute_policy
+from compute_policy import HARD_CEILINGS, apply_compute_policy, load_compute_policy
 from models import schemas
 from routers import optimization
 from certifier_matrix_support import stub_arc_capture  # noqa: F401 - fixture
@@ -77,6 +77,56 @@ def test_legacy_time_limit_in_the_request_beats_the_injected_default(cls, name):
     effective, metadata = apply_compute_policy(request, resolution, strategy, HARD_CEILINGS)
     assert merge_sota_config(strategy._config, effective.sota_config).deadline_seconds == 9
     assert "deadline_seconds" not in metadata.limits
+
+
+@pytest.mark.parametrize("cls,name", CLASSES)
+def test_both_deadline_and_legacy_time_limit_sent_new_key_wins(cls, name):
+    request = schemas.OptimizationRequest(
+        algorithm=name, students=truth._students(), depot=truth.DEPOT,
+        sota_config={"deadline_seconds": 5, "time_limit": 9},
+    )
+    resolution = resolve_strategy(name)
+    strategy = resolution.create()
+    effective, metadata = apply_compute_policy(request, resolution, strategy, HARD_CEILINGS)
+
+    # The solver config the strategy builds uses the new key, not the legacy value.
+    assert merge_sota_config(strategy._config, effective.sota_config).deadline_seconds == 5
+    # Metadata: the new key is reported as the caller's value ...
+    assert metadata.limits["deadline_seconds"].value == 5
+    assert metadata.limits["deadline_seconds"].source.value == "caller"
+    # ... and the legacy key must not claim it was mapped (it was superseded).
+    legacy = metadata.limits["time_limit"].enforcement
+    assert "superseded by" in legacy and "deadline_seconds" in legacy
+    assert "mapped" not in legacy
+
+
+@pytest.mark.parametrize("cls,name", CLASSES)
+def test_legacy_time_limit_alone_is_still_described_as_mapped(cls, name):
+    request = schemas.OptimizationRequest(
+        algorithm=name, students=truth._students(), depot=truth.DEPOT,
+        sota_config={"time_limit": 9},
+    )
+    resolution = resolve_strategy(name)
+    _effective, metadata = apply_compute_policy(request, resolution, resolution.create(), HARD_CEILINGS)
+    assert "mapped to sota_config.deadline_seconds" in metadata.limits["time_limit"].enforcement
+
+
+@pytest.mark.parametrize("cls,name", CLASSES)
+@pytest.mark.parametrize("ceiling", [30, 59])
+def test_server_ceiling_below_60_caps_the_default_deadline(cls, name, ceiling):
+    # UNIRIDE_COMPUTE_SOLVER_SECONDS below the 60 s default, no caller value: the effective
+    # deadline is the server ceiling and is labelled server_override, not strategy_default.
+    policy = load_compute_policy({"UNIRIDE_COMPUTE_SOLVER_SECONDS": str(ceiling)})
+    request = schemas.OptimizationRequest(
+        algorithm=name, students=truth._students(), depot=truth.DEPOT
+    )
+    resolution = resolve_strategy(name)
+    strategy = resolution.create()
+    effective, metadata = apply_compute_policy(request, resolution, strategy, policy)
+    assert effective.sota_config["deadline_seconds"] == ceiling
+    assert metadata.limits["deadline_seconds"].value == ceiling
+    assert metadata.limits["deadline_seconds"].source.value == "server_override"
+    assert merge_sota_config(strategy._config, effective.sota_config).deadline_seconds == ceiling
 
 
 def test_core_and_academic_defaults_stay_unbounded():

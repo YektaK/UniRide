@@ -105,7 +105,9 @@ def _build_sota_config(algo_name: str, params: Dict[str, Any], seed: int):
     valid_fields = {f.name for f in dataclasses.fields(cfg_cls)}
     # Unknown keys are dropped silently, including the old time_limit / ls_time_limit (MT6-03 renamed
     # the former to deadline_seconds). Harmless: SOTA is refused in protocol mode, so no
-    # fixed-budget or native evidence can depend on a clock key.
+    # fixed-budget or native evidence can depend on a clock key. The refusal lives in
+    # academic_benchmark/core/registry_setup.py, _make_sota_executor (the ``algo != "ALNS-TSP"``
+    # check on fair_comparison / native_comparison).
     cfg_kwargs = {k: v for k, v in params.items() if k in valid_fields}
     cfg_kwargs["seed"] = seed
     return cfg_cls(**cfg_kwargs)

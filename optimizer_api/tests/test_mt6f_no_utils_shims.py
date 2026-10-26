@@ -188,6 +188,14 @@ def test_shim_module_is_not_importable(prefix, name):
 
 def test_core_modules_the_shims_pointed_at_still_import():
     """Callers moved to the core path; make sure those targets are real."""
-    for name in SHIM_MODULES:
+    # scheduling -> route_scheduling, split_decoder -> string_split_decoder,
+    # haversine -> distance; the clustering shim also re-exported
+    # vehicle_assignment.VehicleCalculator.
+    renamed = {
+        "scheduling": "route_scheduling",
+        "split_decoder": "string_split_decoder",
+        "haversine": "distance",
+    }
+    for name in (*(renamed.get(n, n) for n in SHIM_MODULES), "vehicle_assignment"):
         assert importlib.util.find_spec(f"uniride_core.algorithms.{name}") is not None, name
     assert importlib.util.find_spec("uniride_core.algorithms.clustering_strategies") is not None

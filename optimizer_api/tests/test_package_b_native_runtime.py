@@ -191,17 +191,6 @@ SOTA_FINAL_LS_VARIANTS = (
 )
 
 
-class _Clock:
-    def __init__(self, values):
-        self.values = list(values)
-        self.index = 0
-
-    def __call__(self):
-        value = self.values[min(self.index, len(self.values) - 1)]
-        self.index += 1
-        return value
-
-
 def _small_sota_config(config_type, **overrides):
     common = {"population_size": 4, "max_iterations": 1}
     if config_type is PAOEAConfig:
@@ -210,24 +199,21 @@ def _small_sota_config(config_type, **overrides):
     return replace(config_type(), **common)
 
 
-def _run_sota_and_capture_final_ls(
-    monkeypatch, module, solver_type, config, clock_values
-):
+def _run_sota_and_capture_final_ls(monkeypatch, module, solver_type, config):
     calls = []
 
-    def fake_improve(tour, dm, dm_np, intensity, max_iterations, time_limit, window):
-        calls.append((intensity, max_iterations, time_limit))
+    def fake_improve(tour, dm, dm_np, intensity, max_iterations, window):
+        calls.append((intensity, max_iterations))
         cost = sum(dm[tour[i]][tour[(i + 1) % len(tour)]] for i in range(len(tour)))
         return list(tour), cost, {}
 
-    monkeypatch.setattr(module, "time", SimpleNamespace(monotonic=_Clock(clock_values)))
     monkeypatch.setattr(module, "MultiLayerLS", SimpleNamespace(improve=fake_improve))
     matrix = [
         [0.0 if i == j else float(abs(i - j) + 1) for j in range(6)]
         for i in range(6)
     ]
     solver_type(config).solve_with_matrix(matrix)
-    return [limit for intensity, iterations, limit in calls if intensity == "full" and iterations == 500]
+    return [limit for intensity, limit in calls if intensity == "full" and limit == 500]
 
 
 @pytest.mark.parametrize(
@@ -235,54 +221,15 @@ def _run_sota_and_capture_final_ls(
     SOTA_FINAL_LS_VARIANTS,
     ids=lambda value: value if isinstance(value, str) else None,
 )
-def test_every_sota_final_local_search_uses_configured_default_budget(
+def test_every_sota_final_local_search_always_runs_with_its_iteration_limit(
     monkeypatch, name, module, solver_type, config_type
 ):
-    config = _small_sota_config(config_type, time_limit=10.0)
+    """MT6-03 (H11): the final polish has no time-derived budget and is never skipped."""
+    config = _small_sota_config(config_type)
 
-    calls = _run_sota_and_capture_final_ls(
-        monkeypatch, module, solver_type, config, [0.0]
-    )
+    calls = _run_sota_and_capture_final_ls(monkeypatch, module, solver_type, config)
 
-    assert calls == [config.ls_time_limit]
-
-
-@pytest.mark.parametrize(
-    ("name", "module", "solver_type", "config_type"),
-    SOTA_FINAL_LS_VARIANTS,
-    ids=lambda value: value if isinstance(value, str) else None,
-)
-def test_sota_final_local_search_never_exceeds_remaining_overall_budget(
-    monkeypatch, name, module, solver_type, config_type
-):
-    config = _small_sota_config(
-        config_type, ls_time_limit=0.8, time_limit=1.0
-    )
-
-    calls = _run_sota_and_capture_final_ls(
-        monkeypatch, module, solver_type, config, [0.0, 0.75]
-    )
-
-    assert calls == [pytest.approx(0.25)]
-
-
-@pytest.mark.parametrize(
-    ("name", "module", "solver_type", "config_type"),
-    SOTA_FINAL_LS_VARIANTS,
-    ids=lambda value: value if isinstance(value, str) else None,
-)
-def test_sota_skips_final_local_search_when_overall_budget_is_exhausted(
-    monkeypatch, name, module, solver_type, config_type
-):
-    config = _small_sota_config(
-        config_type, ls_time_limit=0.8, time_limit=1.0
-    )
-
-    calls = _run_sota_and_capture_final_ls(
-        monkeypatch, module, solver_type, config, [0.0, 1.1]
-    )
-
-    assert calls == []
+    assert calls == [500]
 
 
 @pytest.mark.parametrize(
@@ -293,9 +240,10 @@ def test_sota_skips_final_local_search_when_overall_budget_is_exhausted(
         ("paoea", paoea_tsp, PAOEA_TSP),
     ],
 )
-def test_sota_policy_metadata_matches_final_local_search_enforcement(
+def test_sota_policy_metadata_labels_legacy_clock_keys(
     monkeypatch, canonical, module, solver_type
 ):
+    """Old request keys: ``time_limit`` -> deadline_seconds, ``ls_time_limit`` accepted and ignored."""
     caller = {
         "population_size": 4,
         "max_iterations": 1,
@@ -315,11 +263,14 @@ def test_sota_policy_metadata_matches_final_local_search_enforcement(
     )
     config = merge_sota_config(registered, effective.sota_config)
 
-    calls = _run_sota_and_capture_final_ls(
-        monkeypatch, module, solver_type, config, [0.0]
-    )
+    calls = _run_sota_and_capture_final_ls(monkeypatch, module, solver_type, config)
 
-    assert calls == [metadata.limits["ls_time_limit"].value]
+    assert config.deadline_seconds == 1.0
+    assert calls == [500]
+    assert metadata.limits["time_limit"].source is PolicyValueSource.CALLER
+    assert "deadline_seconds" in metadata.limits["time_limit"].enforcement
     assert metadata.limits["ls_time_limit"].source is PolicyValueSource.CALLER
+    assert "ignored" in metadata.limits["ls_time_limit"].enforcement
+    assert "deadline_seconds" not in metadata.limits  # nothing registered, nothing claimed
     assert strategy._config is registered
-    assert strategy._config.ls_time_limit == 0.5
+    assert strategy._config.deadline_seconds is None

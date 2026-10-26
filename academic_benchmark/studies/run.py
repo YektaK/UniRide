@@ -380,7 +380,7 @@ def _paper_report_text(
         if status != "passed":
             lines.append(
                 "This campaign has failed runs: the command still builds the report, the failed cells are excluded from inference and "
-                "named in it, and the command exits 1 (not 0)."
+                "named in it, and the command exits 1 when the report is written (2 if it is refused)."
             )
     return "\n".join(lines) + "\n"
 

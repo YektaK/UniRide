@@ -96,6 +96,7 @@ def test_a_verified_paper_campaign_gets_a_paper_report_with_the_inferential_sect
     text = (out / "paper_report.txt").read_text("utf-8")
     data = json.loads((out / "paper_report.json").read_text("utf-8"))
     assert "Inferential results (D-05" in text and "Mode: paper" in text and index_sha in text
+    assert data["schema_version"] == "uniride-paper-report/v1" and text.splitlines()[0] == "UniRide paper report"  # A20 L13
     assert data["mode"] == "paper" and data["banner"]["manifest_index_sha256"] == index_sha and data["banner"]["commit"] == head
     sections = data["inference"]
     # one analysis per comparison cell of the plan's one family: two fixed-budget levels and the native protocol, never pooled
@@ -398,7 +399,10 @@ def test_a_campaign_with_failed_runs_prints_the_command_too_and_says_the_failed_
     command = f"python -m academic_benchmark.analysis.campaign_report {out} --paper"
     lines = run.text.splitlines()
     assert command in lines and command in (out / "run_report.txt").read_text("utf-8").splitlines()
-    assert any("failed" in line and "excluded" in line and "exits 1" in line for line in lines)
+    assert any(
+        "failed" in line and "excluded" in line and "exits 1 when the report is written (2 if it is refused)" in line for line in lines
+    )
+    assert not any("exits 1 (not 0)" in line for line in lines)
     assert not any((out / name).exists() for name in PAPER_FILES)  # still no analysis in the run itself
 
 

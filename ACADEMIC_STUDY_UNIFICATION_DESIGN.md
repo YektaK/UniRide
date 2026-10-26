@@ -18,6 +18,7 @@ The remediation must:
 - support future TSP, ATSP, CVRP, CVRPTW, and UniRide studies without coupling the production application to academic configuration;
 - stop after code, tests, manifests, and small smoke/pilot validation;
 - publish the completed remediation on a branch and draft pull request without modifying `WIP` directly.
+  - Superseded 2026-10-23 by DECISION_LOG A18 (OQ-13 a): publish the completed remediation by pushing `WIP` and opening a draft pull request `WIP -> main` that states that paper-scale verification on the stronger computer is pending.
 
 ## Approved Decisions
 
@@ -28,6 +29,7 @@ The remediation must:
 5. Use fixed evaluation budgets for the primary paper comparison and native termination for secondary analysis.
 6. Generate only deterministic tests and small smoke/pilot evidence during remediation. Full paper experiments will run later on a more powerful computer.
 7. Preserve the current rescue checkout and perform work on `codex/reconcile-native-protocol`.
+   - Superseded 2026-10-23 by DECISION_LOG A18 (OQ-13 a): leave the preserved rescue head (`archive/local-rescue-20260721`, `e0824b4`) untouched. Each work item runs in its own worktree and branch from `WIP`. The lead merges reviewed items into `WIP` with `--no-ff`.
 
 ## Non-Goals
 
@@ -130,6 +132,8 @@ The following target IDs and values are normative for this remediation. `exact-f
 | `Core-GWO-TSP-Memetic-ALNS` | `GWO-ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
 | `Core-HHO-TSP-Memetic-ALNS` | `HHO-ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
 
+Design addition (DECISION_LOG A17, C-16c): `Core-GA-TSP-Memetic-2opt`, study label `GA-2opt`, a counted memetic GA with initial and final 2-opt. It is VERIFIED for TSP and ATSP, fixed and native. The live catalog holds the 14 IDs above plus this addition: 15 VERIFIED IDs, no candidate or planned ID.
+
 The active production strategy registry is a separate CVRP/CVRPTW/UniRide surface. This remediation snapshots every currently exposed production strategy key and preserves it. No existing API strategy is removed or made unavailable merely because academic TSP IDs default to `production_ready=false`. The production-readiness gate initially marks the existing API inventory as grandfathered `true`, subject to its current optional-dependency availability, and requires an explicit reviewed decision for any new strategy. Snapshot tests prevent accidental exposure changes.
 
 ### ID migration rules
@@ -143,11 +147,15 @@ The active production strategy registry is a separate CVRP/CVRPTW/UniRide surfac
 | `Numba-PSO` | `Core-PSO-TSP` | deprecated input alias with warning |
 | `GWO` | `Core-GWO-TSP-Pure` | unqualified active study label means the pure variant |
 | `HHO` | `Core-HHO-TSP-Pure` | unqualified active study label means the pure variant |
-| `Numba-GWO`, `Core-GWO-TSP` | `Core-GWO-TSP-Memetic-2opt` | backward-compatible alias preserving current semantics |
-| `Numba-HHO`, `Core-HHO-TSP` | `Core-HHO-TSP-Memetic-2opt` | backward-compatible alias preserving current semantics |
-| `SOTA-ALNS-TSP` | `ALNS-TSP` | backward-compatible alias; manifests emit `ALNS-TSP` |
+| `Numba-GWO`, `Core-GWO-TSP` | `Core-GWO-TSP-Memetic-2opt` | deprecated input alias with warning (CLI only); a manifest that names it is refused |
+| `Numba-HHO`, `Core-HHO-TSP` | `Core-HHO-TSP-Memetic-2opt` | deprecated input alias with warning (CLI only); a manifest that names it is refused |
+| `SOTA-ALNS-TSP` | `ALNS-TSP` | deprecated input alias with warning (CLI only); a manifest that names it is refused; manifests emit `ALNS-TSP` |
 | `GWO-LKH` | `Core-GWO-TSP-Memetic-3opt` | hard error identifying the truthful replacement; no executable alias |
 | `HHO-LKH` | `Core-HHO-TSP-Memetic-3opt` | hard error identifying the truthful replacement; no executable alias |
+
+These names have no registry entry of their own. Their raw registry entries are removed: `Numba-GA`/`Numba-PSO` in C-14, and `Core-GWO-TSP`, `Core-HHO-TSP`, `Numba-2-opt`, `Numba-3-opt-bounded`, `Numba-Or-opt`, `Numba-GWO`, `Numba-HHO`, `SOTA-ALNS-TSP` in the routing-refusal follow-up `58f77d66`. `B-GA` and `B-PSO` are refused like `GWO-LKH`/`HHO-LKH` and name `Core-GA-TSP` / `Core-PSO-TSP`.
+
+The names of the matrix engines (`Matrix-*-legacy`), the legacy `CVRP-*` / `CVRPTW-*` routing names and the routing refusals are listed only in the migration table of `CURRENT_ARCHITECTURE.md` (section 8, Gate D item D-11), not in this table; the routing contract is under Algorithm contracts.
 
 Stored manifests and new reports always emit canonical IDs, never compatibility aliases.
 
@@ -168,9 +176,12 @@ The unified TSP/ATSP catalog exposes:
 - GWO-3opt;
 - HHO-3opt;
 - GWO-ALNS;
-- HHO-ALNS.
+- HHO-ALNS;
+- GA-2opt (memetic GA, the design addition below the capability table).
 
 `GWO-3opt` and `HHO-3opt` are explicit bounded-3-opt compositions. They must not cite or imply Helsgaun LKH.
+
+The catalog uses the kinds `pure`, `memetic_2opt`, `local_search`, `global_then_final_3opt` and `global_then_final_alns`; the enum also declares `population_based`, which no claim uses today. The four hybrid IDs keep their names; their kinds are `global_then_final_3opt` / `global_then_final_alns` and their labels say '(final polish once)'.
 
 Hybrid algorithms are compositions of registered canonical stages rather than copied paper-specific classes. Global search and polishing share one injected budget counter and one result/audit contract.
 
@@ -212,12 +223,12 @@ Study profiles use UTF-8 JSON validated against `academic_benchmark/schemas/stud
 - `primary_protocol` and optional `secondary_protocol`;
 - fixed-budget levels, run count, base seed, and seed-protocol version;
 - problem families permitted by the study;
-- an analysis-plan ID;
+- an analysis-plan ID that resolves to `academic_benchmark/studies/<study>/analysis_plan.json` (schema `uniride-analysis-plan/v1`). Paper mode refuses a plan that does not resolve or is not `active`. The exact-reference link lives in the analysis plan; `study.json` stays unlinked;
 - output policy and paper metadata.
 
 References resolve only through the canonical registry and repository-relative dataset manifests; absolute paths and path traversal are rejected. Unknown IDs, compatibility aliases, capability mismatches, missing required values, and unsupported schema versions fail before execution.
 
-Dataset manifests use `uniride-dataset/v1` and require ID, source, checksum, problem type, dimension, matrix/distance semantics, and optimum/BKS provenance. Run manifests use `uniride-run/v1` and contain the reproducibility fields defined below. Schema migrations create a new version; active files are never interpreted heuristically.
+Dataset manifests use `uniride-dataset/v1` and require ID, source, checksum, problem type, dimension, matrix/distance semantics, and optimum/BKS provenance. Run manifests use `uniride-run/v1` (one per run) and contain the reproducibility fields defined below. A campaign index uses `uniride-run-index/v1`. Analysis plans use `uniride-analysis-plan/v1`. Schema migrations create a new version; active files are never interpreted heuristically.
 
 ## Bildiri 2026 Migration
 
@@ -284,7 +295,9 @@ One evaluation is one complete closed-solution objective calculation for one can
 
 Initialization, global search, local search, and hybrid polishing consume the same declared cap. An atomic phase starts only when its proven upper bound fits in the remaining budget. Results record configured and consumed evaluations.
 
-Because one budget level may favor some algorithm families, study manifests may predeclare multiple budget levels. Results at different levels remain separate and are not pooled.
+On fixed-budget paths every stopping key is written explicitly: `max_no_improvement` and `max_iterations` for GWO/HHO (flat IDs and the composite global stage; the ALNS polish stage also needs `max_no_improvement`), and `max_iterations` for 2-opt, 3-opt and Or-opt. A missing or non-positive key is refused before any evaluation, so no registry default can end a fixed-budget run early. Native Or-opt also requires `max_iterations`.
+
+Because one budget level may favor some algorithm families, study manifests may predeclare multiple budget levels. Results at different levels remain separate and are not pooled. Levels may scale with the instance (`scaled_fixed_budget_levels`; Bildiri 2026: 50x and 250x n(n-1)/2). Rows are grouped by the budget level index within the dataset's own level list, never by raw budget across instances.
 
 ### Secondary protocol
 
@@ -295,6 +308,10 @@ Native termination is reported separately with explicit stopping conditions, run
 Seeds are derived deterministically from protocol version, base seed, normalized problem identity, and replicate index. Python's randomized `hash()` is prohibited.
 
 The manifest records the complete schedule. Equal numeric seeds are not by themselves treated as proof of statistical pairing across unrelated algorithms.
+
+### Comparison identity
+
+`assert_single_pooling_group` keeps fixed-budget, native and exact rows apart and nothing more; it maps fair v1 and fair v2 rows to one pooling group. Analysis also requires equal comparison-cell keys (`academic_benchmark/analysis/identity.py`): exact `protocol_version` (fair v1 and v2 never share a cell), study, dataset, budget level index, algorithm, configuration hash (including `termination_policy`, excluding timing fields), backend policy and profile, seed protocol and base seed, evidence class, commit and tree state. A family may vary only the algorithm and/or the dataset.
 
 ## Result Validation
 
@@ -332,11 +349,11 @@ For genuinely matched cross-instance comparisons:
 - use paired post-hoc tests only over the same experimental units;
 - report assumptions, corrections, effect sizes, and exclusions.
 
-The implementation uses a proven statistical library under a pinned scientific environment. Smoke pilots produce descriptive summaries only and cannot emit superiority, causality, or proof language.
+The implementation uses a proven statistical library under a pinned scientific environment. SciPy 1.18.1 and statsmodels 0.15.0, with their dependencies, are pinned in `requirements-analysis.txt` for academic analysis only, not as an operational dependency. NumPy 2.4.6, llvmlite 0.48.0 and Numba 0.66.0 stay pinned by `academic_benchmark/jit-benchmark-constraints.txt`. Effect sizes these libraries do not provide (epsilon-squared, matched-pairs rank-biserial, Kendall's W) are local code in `academic_benchmark/analysis/statistics.py` (Gate D item D-05, merged `d8259753`); Kendall's W is tested against a published worked example (Zar, example 12.6) and a tie-corrected Friedman statistic computed on the data of Demšar (2006) (value from the SciPy test, checked there with MATLAB and R); epsilon-squared and the matched-pairs rank-biserial correlation are tested against independent hand computations. Each study's tests, alpha and effect sizes are predeclared in its analysis plan. Smoke pilots produce descriptive summaries only and cannot emit superiority, causality, or proof language.
 
 ## Reproducibility Manifest
 
-Each pilot or experiment records:
+Each run (algorithm x dataset x budget level x replicate) writes one `RunManifestV1` that records:
 
 - schema and protocol versions;
 - Git commit and dirty-tree state;
@@ -349,7 +366,7 @@ Each pilot or experiment records:
 - independent validation result;
 - output file checksums, excluding the run manifest itself.
 
-A detached `<manifest>.sha256` file contains the run manifest's checksum. This prevents self-referential hashing while still making the manifest independently verifiable.
+A detached `<manifest>.sha256` file contains the run manifest's checksum. This prevents self-referential hashing while still making the manifest independently verifiable. A campaign index (`run_index.json`, `uniride-run-index/v1`) lists every run manifest with its checksum and holds the seed protocol version; it has its own detached `.sha256`. Files are written atomically, each sidecar after its file and the index last, so a crash never verifies. Paper mode of the study run service passes `statistics_library_identifier()` (`scipy==1.18.1+statsmodels==0.15.0`) into the `statistics_library` field of every run manifest (`academic_benchmark/studies/run.py:473`); the statistics service records the same identifier in its report (`academic_benchmark/analysis/statistics.py:835`). Smoke mode and any caller that passes nothing keep the literal `none`.
 
 Paper-scale mode requires a clean tree. Smoke mode may run on a dirty tree only when the manifest and report label that state prominently.
 
@@ -368,7 +385,7 @@ Manifests and result files use atomic write/replace behavior so interrupted expe
 - `uniride_core` cannot import `academic_benchmark` or study profiles.
 - production code cannot import study profiles or archives.
 - active code cannot import legacy Bildiri or YAEM paths.
-- packaging smoke tests prove archives are excluded and study profiles are included.
+- packaging smoke tests prove that archives, `*_legacy` packages and `tsplib.db` files are excluded, and that both study profiles, their analysis plans and the dataset manifests they reference are included, with nothing else under `studies/` or `datasets/`.
 
 ### Relocation parity
 
@@ -380,7 +397,7 @@ Manifests and result files use atomic write/replace behavior so interrupted expe
 
 - every TSP and ATSP result is a complete permutation;
 - directed costs are independently preserved;
-- unsupported CVRP/CVRPTW requests fail clearly;
+- unsupported CVRP/CVRPTW requests fail clearly: every `Core-*` catalog ID, `ALNS-TSP`, `Numba-Swap`, `Numba-Hybrid`, `SOTA-E2BSO-TSP`, `SOTA-R2DMA-TSP`, `SOTA-P-AOEA-TSP`, `SOTA-CGO-TSP`, `SOTA-RUN-TSP` and `FCM-GA/PSO/GWO/HHO-TSP` refuse CVRP/CVRPTW on every path; legacy routing engines run only under the `CVRP-*` / `CVRPTW-*` names;
 - truthful names are enforced and legacy LKH names are rejected.
 
 ### Fairness and composition
@@ -417,7 +434,7 @@ No full TSPLIB/CVRPLIB experiment is generated during remediation.
 
 ## Delivery Plan
 
-Work remains on `codex/reconcile-native-protocol` and is decomposed into four separately planned and gated work packages. A later package cannot begin until the prior package's acceptance gate passes.
+Work is merged into `WIP` package by package and is decomposed into four separately planned and gated work packages. A later package cannot begin until the prior package's acceptance gate passes.
 
 ### Package A: YAEM quarantine and contract foundation
 
@@ -454,16 +471,16 @@ Gate C: all capability, accounting, hybrid-boundary, TSP/ATSP, schema, and smoke
 - add reproducibility manifests and descriptive smoke reports;
 - synchronize master documentation and migration tables;
 - run proportionate automated suites and packaging checks;
-- fetch and inspect remote divergence;
-- push the branch and open a draft pull request.
+- fetch and inspect divergence of `origin/WIP`;
+- with the owner's explicit permission, push `WIP` and open a draft pull request `WIP -> main`.
 
-Gate D: no invalid evidence is reachable from active reporting, local checks are recorded exactly, documentation is consistent, the integration worktree is clean, and the draft PR explicitly awaits powerful-computer verification.
+Gate D: no invalid evidence is reachable from active reporting, local checks are recorded exactly, documentation is consistent, `git status --short` prints nothing after the suites and the integration worktree is clean, and the draft PR `WIP -> main` explicitly awaits powerful-computer verification.
 
 Each package receives its own implementation plan and reviewable commits. Bildiri archival can never precede Gate B's relocation parity and zero-import checks.
 
-Before publication, fetch the remote, inspect divergence, and reconcile only in the integration worktree. Never pull directly into the rescue checkout.
+Before publication, fetch the remote, inspect divergence, and reconcile only in the integration worktree. Never pull directly into the preserved rescue head. If the remote has new commits, the Gate D checks are rerun on the reconciled commit before anything is pushed.
 
-After proportionate local checks pass, push the branch and open a draft pull request. The draft remains unmerged until the user returns the powerful-computer full-suite and pilot results.
+After proportionate local checks pass, push `WIP` at the commit the checks ran on and open a draft pull request `WIP -> main`. Its text states that paper-scale runs and full-suite verification on the stronger computer are pending. The draft remains unmerged until the user returns the powerful-computer full-suite and pilot results.
 
 ## Expected Risks and Required Mitigations
 
@@ -495,4 +512,4 @@ The remediation is complete when:
 7. Small TSP/ATSP smoke pilots produce complete, independently verified results and reproducibility manifests without scientific superiority claims.
 8. Proportionate local suites pass, with external environment blockers identified precisely.
 9. Master documentation describes the verified architecture and quarantined evidence truthfully.
-10. The branch is pushed and a draft pull request is opened for powerful-computer verification.
+10. `WIP` is pushed and a draft pull request `WIP -> main` is opened for powerful-computer verification.

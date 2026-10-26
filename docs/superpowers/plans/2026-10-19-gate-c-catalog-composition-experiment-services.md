@@ -267,7 +267,7 @@ Model and review guidance per CLAUDE.md: Lane A items are small (one developer, 
 
 ### C-12: Study smoke runner (fixed/native separated, validated)
 
-- [x] **Goal:** run an expanded plan in smoke mode through `execute_preflighted`, validate each result with the independent Hamiltonian validator, write fixed and native rows to separate files under a caller-provided directory outside the repository (reuse `fair_pilot._prepare_output_dir` rules, `fair_pilot.py:283-300`), and refuse to write a file whose rows fail `assert_single_pooling_group` or mix budget levels.
+- [x] **Goal:** run an expanded plan in smoke mode through `execute_preflighted`, validate each result with the independent Hamiltonian validator, write fixed and native rows to separate files under a caller-provided directory outside the repository (reuse `fair_pilot._prepare_output_dir` rules), and refuse to write a file whose rows fail `assert_single_pooling_group` or mix budget levels.
 - **Files:** `academic_benchmark/studies/smoke.py` (new); reuse `fair_pilot.py`/`native_pilot.py` record builders rather than copying them; tests `academic_benchmark/tests/test_study_smoke.py`.
 - **Red test first:** runner on the Bildiri profile, `ft53`, budget 100, 1 replicate, into `tmp_path`: two files, all rows valid; a forced invalid tour from a stub executor stops aggregation and records a failed-run row (design `:360`); smoke report text contains no ranking words (reuse the A15 wording check).
 - **Acceptance:** red tests green; no file appears in `git status`.
@@ -400,7 +400,7 @@ Model and review guidance per CLAUDE.md: Lane A items are small (one developer, 
 | Catalog merge conflicts | The lead merges `capabilities.py` changes one at a time in Lane C order (C-08, C-09, C-10, C-16a, C-16b, C-16c) |
 | Pinned profile tests and the E12 `study.json` LF pin | C-04 and C-19 update them with lead-reviewed notes |
 | Golden tables change (`test_fixed_budget_tables_unchanged.py`) | Only C-02 may touch labels; any golden update needs a lead-reviewed note in the commit message |
-| Smoke output leaking into the repo or into active reporting | Output directory rules of `fair_pilot.py:283-300`; `git status` check in C-12 and C-15 |
+| Smoke output leaking into the repo or into active reporting | Output directory rules of `fair_pilot._prepare_output_dir`; `git status` check in C-12 and C-15 |
 | Results that change across a fix being pooled | Each result-changing item names its affected rows and adds the A14-style note to its tracker row |
 | A test run in a fresh worktree creates an empty `tsplib.db`, which turns a skip into a failure | C-01 hardens the skip guard; never copy or reuse the worktree's empty file; the lead removes it with the worktree |
 | Python REPL runaway (13.9 GB incident) and process kills | Global constraints at the top of every brief; PID-only kills |

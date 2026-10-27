@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   blockedResponse,
   emptyDayResponse,
+  fleetShortageResponse,
   indeterminateResponse,
   peakWaveResponse,
   readyResponse,
@@ -209,6 +210,44 @@ describe("DailyPlanPage", () => {
     expect(screen.queryByText(/Fazladan/)).toBeNull();
   });
 
+  // MT1-10 (M1, O09 OQ-MT1-8 a): honest fleet-shortage wording.
+  it("states a proven shortage when the wave's capacity floor exceeds the live fleet", async () => {
+    await generate(fleetShortageResponse(2, 2));
+
+    const block = screen.getByTestId("fleet-shortage");
+    expect(screen.getByTestId("fleet-shortage-needs").textContent).toBe(
+      "Hesaplanan plan, 08:45 varış dalgası için 2 araç gerektiriyor; mevcut filoda 1 araç var.",
+    );
+    const verdict = screen.getByTestId("fleet-shortage-verdict").textContent ?? "";
+    expect(verdict).toContain("Kanıtlandı");
+    expect(verdict).toContain("en az 2 araç");
+    expect(block.textContent).not.toMatch(/imkans|imkân/i);
+  });
+
+  it("does not call the shortage proven when the floor is not above the live fleet", async () => {
+    await generate(fleetShortageResponse(1, 2));
+
+    expect(screen.getByTestId("fleet-shortage-needs").textContent).toBe(
+      "Hesaplanan plan, 08:45 varış dalgası için 2 araç gerektiriyor; mevcut filoda 1 araç var.",
+    );
+    const verdict = screen.getByTestId("fleet-shortage-verdict").textContent ?? "";
+    expect(verdict).toContain("Eksiklik kanıtlanmadı");
+    expect(verdict).toContain("başka biçimde");
+    expect(verdict).not.toContain("Kanıtlandı");
+  });
+
+  it("shows the English copy for the same evidence", async () => {
+    testLocale = "en";
+    mocks.run.mockResolvedValue(fleetShortageResponse(2, 2));
+    render(<DailyPlanPage />);
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
+    await screen.findByTestId("preview-banner");
+
+    expect(screen.getByTestId("fleet-shortage-needs").textContent).toContain("08:45 arrival wave");
+    expect(screen.getByTestId("fleet-shortage-verdict").textContent).toContain("Proven");
+  });
+
   it("hides the explanation when the vehicles are fewer than the capacity floor", async () => {
     await generate(peakWaveResponse(1));
 
@@ -345,9 +384,30 @@ describe("DailyPlanPage", () => {
     const needed = screen.getByTestId("card-needed-vehicles");
     expect(within(needed).getByTestId("needed-vehicles-value").textContent).toBe("—");
     expect(within(needed).getByText("Bu rotalar için en az 2 araç gerekir.")).toBeTruthy();
-    expect(screen.getByText(/Bu sonuç farklı rotalarla çözüm olmadığını/)).toBeTruthy();
+    expect(screen.getByText(/Eksiklik yalnızca bir dalganın koltuk kapasitesi alt sınırı mevcut filoyu aştığında kanıtlanmış sayılır/)).toBeTruthy();
+    // No wave evidence in this response (older producer): nothing is called proven.
+    expect(screen.queryByTestId("fleet-shortage")).toBeNull();
     expect(screen.getByText(/Bu sonuçta araç ataması yok/)).toBeTruthy();
     expect(screen.queryAllByTestId("vehicle-row")).toHaveLength(0);
+  });
+
+  it("says plainly that no plan was computed when the live fleet has no active vehicle", async () => {
+    await generate(blockedResponse(["NO_ACTIVE_VEHICLES"]));
+
+    const notes = screen.getByTestId("status-notes").textContent ?? "";
+    expect(notes).toContain("Canlı filoda aktif araç yok; plan hesaplanmadı.");
+    expect(notes).not.toContain("hesaplanan rotalara");
+    expect(screen.queryByTestId("fleet-shortage")).toBeNull();
+  });
+
+  it("shows the English no-active-vehicle text", async () => {
+    testLocale = "en";
+    mocks.run.mockResolvedValue(blockedResponse(["NO_ACTIVE_VEHICLES"]));
+    render(<DailyPlanPage />);
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
+    await screen.findByTestId("preview-banner");
+    expect(screen.getByTestId("status-notes").textContent).toContain("The live fleet has no active vehicle; no plan was computed.");
   });
 
   it("shows blocked data with plain Turkish reasons and no waves", async () => {

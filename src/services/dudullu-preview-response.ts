@@ -108,6 +108,24 @@ export const dudulluPreviewResponseSchema = z.object({
     minimumFeasibleRideMinutes: count.nullable(),
   }),
   vehicleSummary: vehicleSummarySchema.nullable(),
+  /**
+   * Evidence of a live-fleet shortage (MT1-10): the wave that did not fit, how many vehicles the
+   * computed plan used, the live fleet size and the wave's capacity-only floor (null when it
+   * cannot be computed). Present only when FLEET_SHORTAGE came from a wave; older responses omit it.
+   */
+  fleetShortage: z.object({
+    direction,
+    anchorMinutes: finite,
+    plannedVehicles: count,
+    liveFleet: count,
+    capacityFloor: z.object({
+      vehicles: count,
+      swCount: count,
+      soCount: count,
+      swCapacity: count,
+      soCapacity: count,
+    }).nullable(),
+  }).optional(),
   jobs: z.array(jobSchema),
   routeIntervals: z.array(routeIntervalSchema),
   assignments: z.array(assignmentSchema),

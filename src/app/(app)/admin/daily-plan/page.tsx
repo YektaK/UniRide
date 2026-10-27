@@ -174,6 +174,35 @@ function WhyVehicles({ plan }: { plan: DailyPlanView }) {
   );
 }
 
+/**
+ * Live-fleet shortage (MT1-10, R4): what the computed plan needed against the live fleet, and
+ * "proven" only when the wave's seat-capacity floor alone exceeds that fleet.
+ */
+function FleetShortageNote({ plan }: { plan: DailyPlanView }) {
+  const t = useTranslations("page.admin.dailyPlan.shortage");
+  const shortage = plan.summary.fleetShortage;
+  if (!shortage) return null;
+  const floor = shortage.capacityFloor;
+  const floorValues = floor ? { n: floor.vehicles, swCap: floor.swCapacity, soCap: floor.soCapacity } : null;
+  const needsValues = { time: shortage.anchorLabel, n: shortage.plannedVehicles, m: shortage.liveFleet };
+  const needsKey = shortage.direction === "pickup" ? "needsPickup" : "needsDropoff";
+  return (
+    <Card data-testid="fleet-shortage" className="border-red-300 dark:border-red-800">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">{t("title")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-1 text-sm text-muted-foreground">
+        <p data-testid="fleet-shortage-needs">{t(needsKey, needsValues)}</p>
+        <p data-testid="fleet-shortage-verdict">
+          {shortage.proven && floorValues
+            ? t("proven", floorValues)
+            : floorValues ? t("notProven", floorValues) : t("notProvenNoFloor")}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function SummaryCards({ plan }: { plan: DailyPlanView }) {
   const t = useTranslations("page.admin.dailyPlan.cards");
   const { summary } = plan;
@@ -472,6 +501,7 @@ function PlanBody({ plan, t }: { plan: DailyPlanView; t: Translate }) {
       ) : (
         <>
           <SummaryCards plan={plan} />
+          <FleetShortageNote plan={plan} />
           {plan.sections.map((section) => (
             <section key={section.direction} className="space-y-3" aria-label={t(`sections.${section.direction}`)}>
               <h2 className="text-xl font-semibold">{t(`sections.${section.direction}`)}</h2>

@@ -1,6 +1,6 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-27 (MT6 takip planı kapanışı). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L13) ve **A21** (MT6 takip planı, OQ-F1..F8); her biri seçenekler, artı/eksi, seçim, geri alma yolu ile.
+Son güncelleme: 2026-10-27 (MT1 planı onaylandı). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L13) ve **A21** (MT6 takip planı, OQ-F1..F8); her biri seçenekler, artı/eksi, seçim, geri alma yolu ile.
 
 ## Durum
 
@@ -10,6 +10,8 @@ Son güncelleme: 2026-10-27 (MT6 takip planı kapanışı). Kararlar `docs/DECIS
 | MT6 | **KAPANDI** (MT6-07; A19). |
 | MT6 takip planı (sota_common arşivi, shim'ler, denetim L3 ve L10, RUN 3-opt hamlesi) | **KAPANDI** (MT6F-09, `e8851f34`; kanıt `docs/superpowers/plans/2026-10-27-mt6-followup-close-evidence.md`; A21). Yalnız `SOTA-RUN-TSP` sonuçları değişti; Bildiri/YAEM değişmedi. |
 | Makale raporu komutu, üretim çözücü kaydı, analiz cilası 1–2, birikmiş işler 1 | BİRLEŞTİ (A20 L2, L3, L7, L10, L12, L13). |
+| CI: analiz testleri akademik ek paket olmadan toplanıyor | BİRLEŞTİ `13819af5` (D-04a eki; PR #27 kapatıldı). Gece işindeki `UNIRIDE_REQUIRE_ANALYSIS_EXTRA=1` ilk gece koşusunda kontrol edilecek. |
+| MT1 (zaman pencereleri, okula dönüş, dürüst araç sayısı) | PLAN ONAYLANDI 2026-10-27 (O09; plan `docs/superpowers/plans/2026-10-27-mt1-time-window-unification.md`). Şimdi: MT1-01 → 02 → 03 → 04 (sıralı) ve 07, 08, 10 (paralel) + H16 pano notu. Kampanyadan sonra: 05, 06, 09, 11, 12 (çalışma yolunun içe aktardığı modüller). |
 
 ## Makale ölçeğinde koşudan önce zorunlu
 

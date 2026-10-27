@@ -152,6 +152,7 @@ class TestOptimizationRequest:
             depot=LocationNode(id="D.Kampus", lat=0, lng=0),
             direction=Direction.PICKUP,
             use_time_windows=True,
+            target_time="09:00",  # MT1-08: windowed requests must carry target_time
             time_window_size=30,
             offset_minutes=10
         )
@@ -179,15 +180,16 @@ class TestOptimizationRequest:
             ],
             depot=LocationNode(id="D.Kampus", lat=0, lng=0),
             direction=Direction.PICKUP,
-            use_time_windows=True
+            use_time_windows=True,
+            target_time="09:00"  # MT1-08: windowed requests must carry target_time
         )
-        
+
         time_windows = request.get_time_windows()
         assert "Sw1" in time_windows
         assert "So1" in time_windows
-    
+
     def test_global_target_time(self):
-        """Test using global target time for students without specific times"""
+        """MT1-08 (OQ-MT1-14): target_time no longer creates a window for students without a time"""
         request = OptimizationRequest(
             algorithm="ga_split",
             students=[
@@ -200,7 +202,8 @@ class TestOptimizationRequest:
         )
         
         time_windows = request.get_time_windows()
-        assert len(time_windows) == 2
+        # pinned the defect: the implicit (target - 30, target) window; now none
+        assert len(time_windows) == 0
 
 
 class TestTimeWindowExtractor:

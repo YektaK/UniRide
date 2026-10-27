@@ -11,7 +11,7 @@ Bu klasör UniRide CVRPTW sistemi için Python optimizasyon API'sini içerir.
 pip install pytest pandas openpyxl pydantic
 
 # Dış solver'lar (opsiyonel ama önerilir)
-pip install ortools pyvrp
+pip install ortools "pyvrp>=0.9.0,<0.14"
 
 # VROOM (C++ binary - ayrı kurulum gerekir)
 # Ubuntu/Debian: sudo apt-get install vroom
@@ -114,7 +114,7 @@ pip install ortools
 
 ### PyVRP (HGS-CVRP)
 ```bash
-pip install pyvrp
+pip install "pyvrp>=0.9.0,<0.14"
 ```
 - Hybrid Genetic Search
 - DIMACS 2021 yarışma kazananı

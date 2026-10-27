@@ -15,7 +15,7 @@ Gereksinimler:
     pip install pytest pandas openpyxl
 
 Dış Solver Kurulumu (Opsiyonel):
-    pip install ortools pyvrp
+    pip install ortools "pyvrp>=0.9.0,<0.14"
 """
 
 import sys

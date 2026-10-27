@@ -26,6 +26,9 @@ def _request(direction: Direction) -> OptimizationRequest:
         ],
         direction=direction,
         use_time_windows=True,
+        # MT1-08: a windowed request must carry target_time (422 otherwise); every
+        # student has a time of their own, so the schedule below does not use it.
+        target_time="09:00" if direction == Direction.PICKUP else "17:00",
         offset_minutes=10,
     )
 

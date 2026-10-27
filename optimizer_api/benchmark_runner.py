@@ -36,6 +36,16 @@ from utils.matrix_repository import academic_coordinate_scope
 from verification.response_certifier import certify_benchmark_response
 
 
+class CvrptwRefusedError(ValueError):
+    """CVRPTW rows are refused until MT1-11 (audit H16).
+
+    A windowed request needs target_time (MT1-08, OQ-MT1-14) and a Solomon row has
+    none; the runner must not silently drop the windows either.
+    """
+
+    REASON_CODE = "cvrptw_refused_h16_mt1_11"
+
+
 @dataclass
 class AlgorithmConfig:
     """Configuration for an algorithm run"""
@@ -227,11 +237,14 @@ class BenchmarkRunner:
         KEY (D-1): For TSP problems, capacity is set to problem.dimension so ALL nodes
         fit in a single vehicle — producing a single tour comparable to TSPLIB optimal.
         """
+        if problem.problem_type == "cvrptw" and problem.time_windows is not None:
+            raise CvrptwRefusedError("CVRPTW rows are refused until MT1-11 (audit H16)")
+
         from models.schemas import (
             OptimizationRequest, OptimizationMode, TripDirection,
             LocationNode, StudentNode
         )
-        
+
         # Step 1: Create depot
         depot_coord = problem.coordinates[problem.depot_index]
         depot = LocationNode(
@@ -477,6 +490,13 @@ class BenchmarkRunner:
                     total_dist = sum(r.total_distance_km for r in response.routes)
                     tour_length = total_dist if total_dist > 0 else float('nan')
         
+        except CvrptwRefusedError as e:
+            # MT1-08 follow-up: explicit early refusal; the strategy was never called.
+            error_reason = CvrptwRefusedError.REASON_CODE
+            logger.warning(f"{e}: {algorithm.algorithm_id} on {problem.name}")
+            execution_failed = True
+            tour_length = float('nan')
+
         except Exception as e:
             logger.warning(
                 f"Strategy execution failed for {algorithm.algorithm_id} on {problem.name}: "

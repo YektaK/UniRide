@@ -34,6 +34,9 @@ class LocalSearchType(str, Enum):
     HYBRID = "hybrid"
 
 
+TARGET_TIME_REQUIRED_MESSAGE = "use_time_windows requires target_time"
+
+
 def _parse_hhmm(time_str: str) -> int:
     """Parse HH:MM into minutes after midnight."""
     parts = str(time_str).strip().split(":")
@@ -407,6 +410,13 @@ class OptimizationRequest(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_target_time_for_windows(self) -> "OptimizationRequest":
+        """MT1-08 (OQ-MT1-14): a windowed request must say when the trip is anchored."""
+        if self.use_time_windows and not self.target_time:
+            raise ValueError(TARGET_TIME_REQUIRED_MESSAGE)
+        return self
+
+    @model_validator(mode="after")
     def validate_compute_admission(self) -> "OptimizationRequest":
         try:
             from optimizer_api.compute_policy import (
@@ -466,13 +476,10 @@ class OptimizationRequest(BaseModel):
                 time_str = student.pickup_time
             elif self.direction == TripDirection.DROPOFF and student.dropoff_time:
                 time_str = student.dropoff_time
-            elif student.pickup_time:
-                time_str = student.pickup_time
-            elif student.dropoff_time:
-                time_str = student.dropoff_time
-            elif self.use_time_windows and self.target_time:
-                time_str = self.target_time
-            
+            # MT1-08 (audit M2, OQ-MT1-14): no cross-direction fallback and no
+            # implicit target_time window; a student without a time of the
+            # request direction has no window of their own.
+
             if time_str and isinstance(time_str, str) and ":" in time_str:
                 try:
                     total_minutes = _parse_hhmm(time_str)
@@ -643,7 +650,17 @@ class CompareRequest(BaseModel):
     so_capacity: int = 5
     direction: TripDirection = TripDirection.PICKUP
     use_time_windows: bool = False
+    target_time: Optional[str] = None
     algorithms: Optional[List[str]] = None
+
+    @model_validator(mode="after")
+    def validate_target_time_for_windows(self) -> "CompareRequest":
+        """MT1-08 (OQ-MT1-14): same refusal as /optimize, before any solve."""
+        if self.target_time is not None:
+            _parse_hhmm(self.target_time)
+        if self.use_time_windows and not self.target_time:
+            raise ValueError(TARGET_TIME_REQUIRED_MESSAGE)
+        return self
 
     @model_validator(mode="after")
     def validate_compute_admission(self) -> "CompareRequest":

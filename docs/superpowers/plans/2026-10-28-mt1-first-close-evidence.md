@@ -71,5 +71,5 @@ Rule slip reported by the replay author: two read-only `python -c` one-liners an
 ## 5. H16 dashboard note: red/green and checks
 
 - Check: `academic_benchmark/dashboard.py` is launched only as a Streamlit script (`cli_engine.py:2526`, `smart_benchmark.py:1338`, `__main__.py:16`); no module under `academic_benchmark/studies`, `fair_pilot.py` or the study run imports it.
-- Red commit `6b520c72` (test only, 1 failed, 1 passed); fix commit follows it on the branch.
+- Red commit `6b520c72` (test only, 1 failed, 1 passed); fix commit `9e6a208d`.
 - Result after the fix: `test_h16_dashboard_cvrptw_note.py` 2 passed. With the fix reverted in the working tree the shown-note test fails again (1 failed, 1 passed). Dashboard tests (`test_h16_dashboard_cvrptw_note`, `test_c5_dashboard_no_inference`, `test_c5f1_descriptive_labels`, `test_cx02_dashboard_obsolete_csv`, `test_dashboard_utils`, `test_gate_d_reporting_sweep`) plus `test_production_registry_snapshot.py`: 69 passed, 3 skipped (the three skips are the `test_cx02_dashboard_obsolete_csv.py` cases that need `streamlit`).

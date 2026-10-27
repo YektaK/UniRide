@@ -11,11 +11,13 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-
-from academic_benchmark.archive_manifest import EvidenceClass, load_manifest, main as archive_main
 
 REPO = Path(__file__).resolve().parents[2]
 MANIFEST = "archive/uniride_core/sota_common_legacy/manifest.json"
@@ -83,9 +85,16 @@ def test_no_active_python_file_imports_sota_common():
 
 def test_archive_manifest_verifies_and_is_reference_only():
     assert (REPO / MANIFEST).is_file()
-    assert archive_main(["verify", "--repo-root", str(REPO), "--manifest", MANIFEST]) == 0
-    manifest = load_manifest(REPO / MANIFEST)
-    assert manifest.archive_id == "sota_common_legacy"
-    assert manifest.source_root == "uniride_core/algorithms/sota_common"
-    assert manifest.entries
-    assert {entry.classification for entry in manifest.entries} == {EvidenceClass.REFERENCE_ONLY}
+    # uniride_core tests must not import academic_benchmark (test_architecture_boundaries), so the
+    # tool runs as a subprocess, exactly as an operator would run it
+    env = {**os.environ, "PYTHONPATH": str(REPO)}
+    result = subprocess.run(
+        [sys.executable, "-m", "academic_benchmark.archive_manifest", "verify", "--repo-root", str(REPO), "--manifest", MANIFEST],
+        cwd=REPO, env=env, capture_output=True, text=True, timeout=300,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    manifest = json.loads((REPO / MANIFEST).read_text(encoding="utf-8"))
+    assert manifest["archive_id"] == "sota_common_legacy"
+    assert manifest["source_root"] == "uniride_core/algorithms/sota_common"
+    assert manifest["entries"]
+    assert {entry["classification"] for entry in manifest["entries"]} == {"REFERENCE_ONLY"}

@@ -10,7 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 from academic_benchmark.contracts import DatasetManifestV1, StudyManifestV1
-from academic_benchmark.native_protocol import APPROVED_NATIVE_ALGORITHMS, NATIVE_PROTOCOL
+from academic_benchmark.native_protocol import NATIVE_PROTOCOL
 from uniride_core.algorithms.tsplib_parser import parse_atsp_text
 
 
@@ -60,7 +60,11 @@ GA_C16A_DEFAULTS = {
     "max_iterations": LARGEST_LEVEL, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2,
     "tournament_size": 3, "max_no_improvement": LARGEST_LEVEL,
 }
-SECONDARY_ALGORITHM_IDS = ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"]
+SECONDARY_ALGORITHM_IDS = [  # all ten study algorithms (A18 OQ-4 a)
+    "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Core-OrOpt-TSP", "Core-GA-TSP", "Core-PSO-TSP",
+    "Core-GA-TSP-Memetic-2opt", "Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt",
+]
 
 
 @pytest.fixture(scope="module")
@@ -128,7 +132,7 @@ class TestStudyManifest:
         assert study_manifest.study_id == "bildiri2026"
         assert study_manifest.status == "draft"
         assert study_manifest.problem_families == ["TSP", "ATSP"]
-        assert study_manifest.run_count == 3  # smoke placeholder; the paper's 30 runs are paper-scale
+        assert study_manifest.run_count == 30  # A18 OQ-1 a (owner 2026-10-26); smoke caps replicates at 3 (SMOKE_MAX_REPLICATES)
         assert study_manifest.seed_protocol_version == "sha256-seed-v1"
         assert study_manifest.output_policy.repository_outputs == "smoke_only"
 
@@ -179,13 +183,13 @@ class TestStudyManifest:
         secondary = study_manifest.secondary_protocol
         assert secondary is not None
         assert secondary.protocol_version == NATIVE_PROTOCOL
-        assert secondary.algorithm_ids == SECONDARY_ALGORITHM_IDS
-        # C-19 keeps the native protocol unchanged (GWO/HHO pure); 2-opt, 3-opt and Or-opt are
-        # native-approved too but were not added (no owner decision for the native slice).
-        assert set(secondary.algorithm_ids) <= (
-            set(study_manifest.algorithm_ids) & APPROVED_NATIVE_ALGORITHMS
-        )
-        assert set(secondary.algorithm_ids) <= APPROVED_NATIVE_ALGORITHMS
+        # A18 OQ-4 a (owner 2026-10-26): every study algorithm runs natively, in the order of algorithm_ids,
+        # with the single safety limit max_iterations 1000 (pre-approval values commit).
+        assert secondary.algorithm_ids == SECONDARY_ALGORITHM_IDS == study_manifest.algorithm_ids
+        assert secondary.termination == {"max_iterations": 1000}
+        # APPROVED_NATIVE_ALGORITHMS is the legacy native-pilot set (GWO/HHO pure, 2-opt, 3-opt, Or-opt, ALNS) and
+        # no longer bounds the study profile: native admission of all ten IDs is proven by
+        # test_study_native_all_ids.py (A18 branch fix/native-admission-all-study-ids).
 
     def test_verified_ids_are_canonical_manifest_declarations(
         self, study_manifest: StudyManifestV1

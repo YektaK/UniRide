@@ -1,14 +1,13 @@
 /**
  * Sandbox API Route
  * Handles sandbox mode operations for IE fine-tuning
- * POST /api/sandbox/reoptimize - Re-optimize with custom vehicle config
- * POST /api/sandbox/save-scenario - Save sandbox scenario
- * GET /api/sandbox/scenarios - Get saved scenarios
- * DELETE /api/sandbox/scenarios - Delete scenario
+ * POST /api/sandbox - Re-optimize with custom vehicle config.
+ * Scenario persistence lives in the browser (localStorage) in the sandbox page;
+ * the former GET/PUT/DELETE scenario handlers were unused and were removed
+ * (audit L3-c, MT6F-08).
  */
 
 import { NextRequest } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
     requireAdmin,
     createErrorResponse,
@@ -22,7 +21,6 @@ import {
     MATRIX_ERROR_MESSAGES,
     readOptimizerErrorDetail,
 } from "@/services/optimizer-matrix-errors";
-import type { Database } from "@/lib/supabase";
 import type { IERawData, IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 import { isClusteringAlgorithmName } from "@/lib/clustering-algorithms";
@@ -45,13 +43,6 @@ interface ReoptimizeRequest {
     allowTimeShift?: boolean;
     strategy?: string;
     clusteringAlgorithm?: string;
-}
-
-interface SaveScenarioRequest {
-    name: string;
-    vehicles: VehicleConfig[];
-    studentIds: string[];
-    timeWindowMinutes: number;
 }
 
 /**
@@ -233,109 +224,3 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// GET /api/sandbox/scenarios - Get saved scenarios
-export async function GET(request: NextRequest) {
-    try {
-        await requireAdmin(request);
-
-        const { searchParams } = new URL(request.url);
-        const scenarioId = searchParams.get("id");
-
-        const adminClient = getSupabaseAdmin();
-
-        if (scenarioId) {
-            const { data, error } = await adminClient
-                .from("sandbox_scenarios")
-                .select("*")
-                .eq("id", scenarioId)
-                .single();
-
-            if (error) {
-                return createErrorResponse(error.message, 500);
-            }
-
-            return createSuccessResponse(data);
-        }
-
-        const { data, error } = await adminClient
-            .from("sandbox_scenarios")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-        if (error) {
-            return createErrorResponse(error.message, 500);
-        }
-
-        return createSuccessResponse(data);
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-// POST /api/sandbox/scenarios - Save scenario
-export async function PUT(request: NextRequest) {
-    try {
-        const adminUser = await requireAdmin(request);
-
-        const body = await request.json() as SaveScenarioRequest;
-        const { name, vehicles, studentIds, timeWindowMinutes } = body;
-
-        if (!name) {
-            return createErrorResponse("Senaryo adı gerekli", 400);
-        }
-
-        const adminClient = getSupabaseAdmin();
-
-        const insertPayload: Database["public"]["Tables"]["sandbox_scenarios"]["Insert"] = {
-            name,
-            vehicles: JSON.stringify(vehicles),
-            student_ids: studentIds,
-            time_window_minutes: timeWindowMinutes,
-            created_by: adminUser.id,
-            updated_at: null,
-        };
-
-        const { data, error } = await adminClient
-            .schema("public")
-            .from("sandbox_scenarios")
-            .insert(insertPayload)
-            .select()
-            .single();
-
-        if (error) {
-            return createErrorResponse(error.message, 500);
-        }
-
-        return createSuccessResponse(data, 201);
-    } catch (error) {
-        return handleApiError(error);
-    }
-}
-
-// DELETE /api/sandbox/scenarios - Delete scenario
-export async function DELETE(request: NextRequest) {
-    try {
-        await requireAdmin(request);
-
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get("id");
-
-        if (!id) {
-            return createErrorResponse("Senaryo ID gerekli", 400);
-        }
-
-        const adminClient = getSupabaseAdmin();
-        const { error } = await adminClient
-            .from("sandbox_scenarios")
-            .delete()
-            .eq("id", id);
-
-        if (error) {
-            return createErrorResponse(error.message, 500);
-        }
-
-        return createSuccessResponse({ message: "Senaryo silindi" });
-    } catch (error) {
-        return handleApiError(error);
-    }
-}

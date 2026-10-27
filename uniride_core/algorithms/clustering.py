@@ -6,8 +6,6 @@ import random
 from dataclasses import dataclass
 from typing import Dict, List, Mapping, Tuple
 
-from uniride_core.algorithms.distance import haversine_distance
-
 # Seed used when a caller supplies no generator. Clustering never touches the
 # process-global ``random`` state (audit H12): a missing rng becomes a local,
 # deterministic ``random.Random(DEFAULT_CLUSTERING_SEED)``.
@@ -72,106 +70,8 @@ def calculate_centroid(points: List[Point]) -> Tuple[float, float]:
     )
 
 
-def initialize_centroids_kmeans_plus_plus(
-    points: List[Point], k: int, rng: random.Random | None = None
-) -> List[Tuple[float, float]]:
-    if k <= 0 or not points:
-        return []
-
-    rng = resolve_rng(rng)
-    centroids = []
-    first_idx = rng.randint(0, len(points) - 1)
-    centroids.append((points[first_idx].lat, points[first_idx].lng))
-
-    while len(centroids) < k:
-        distances = []
-        for point in points:
-            min_dist = min(
-                haversine_distance(point.lat, point.lng, centroid[0], centroid[1]) ** 2
-                for centroid in centroids
-            )
-            distances.append(min_dist)
-
-        total_dist = sum(distances)
-        if total_dist == 0:
-            break
-
-        threshold = rng.random() * total_dist
-        cumulative = 0.0
-        for idx, distance in enumerate(distances):
-            cumulative += distance
-            if cumulative >= threshold:
-                centroids.append((points[idx].lat, points[idx].lng))
-                break
-
-    return centroids
-
-
-def kmeans_clustering(
-    points: List[Point], k: int, max_iterations: int = 100, rng: random.Random | None = None
-) -> List[Cluster]:
-    if not points or k <= 0:
-        return []
-    rng = resolve_rng(rng)
-
-    if k >= len(points):
-        return [
-            Cluster(
-                centroid=(point.lat, point.lng),
-                points=[point],
-                sw_count=1 if point.disability_type == "Sw" else 0,
-                so_count=1 if point.disability_type == "So" else 0,
-            )
-            for point in points
-        ]
-
-    centroids = initialize_centroids_kmeans_plus_plus(points, k, rng)
-    prev_assignments = [-1] * len(points)
-
-    for _ in range(max_iterations):
-        assignments = []
-        for point in points:
-            min_idx = 0
-            min_dist = float("inf")
-            for idx, centroid in enumerate(centroids):
-                dist = haversine_distance(point.lat, point.lng, centroid[0], centroid[1])
-                if dist < min_dist:
-                    min_dist = dist
-                    min_idx = idx
-            assignments.append(min_idx)
-
-        if assignments == prev_assignments:
-            break
-        prev_assignments = assignments
-
-        for idx in range(k):
-            cluster_points = [points[p_idx] for p_idx in range(len(points)) if assignments[p_idx] == idx]
-            if cluster_points:
-                centroids[idx] = calculate_centroid(cluster_points)
-
-    clusters = []
-    for idx in range(k):
-        cluster_points = [points[p_idx] for p_idx in range(len(points)) if prev_assignments[p_idx] == idx]
-        if cluster_points:
-            clusters.append(
-                Cluster(
-                    centroid=centroids[idx],
-                    points=cluster_points,
-                    sw_count=sum(1 for point in cluster_points if point.disability_type == "Sw"),
-                    so_count=sum(1 for point in cluster_points if point.disability_type == "So"),
-                )
-            )
-    return clusters
-
-
 def validate_cluster_capacity(cluster: Cluster, sw_capacity: int, so_capacity: int) -> bool:
     return cluster.sw_count <= sw_capacity and cluster.so_count <= so_capacity
-
-
-def split_cluster(cluster: Cluster, rng: random.Random | None = None) -> List[Cluster]:
-    if len(cluster.points) <= 1:
-        return [cluster]
-    return kmeans_clustering(cluster.points, 2, rng=rng)
 
 
 __all__ = [
@@ -182,8 +82,5 @@ __all__ = [
     "Point",
     "Cluster",
     "calculate_centroid",
-    "initialize_centroids_kmeans_plus_plus",
-    "kmeans_clustering",
     "validate_cluster_capacity",
-    "split_cluster",
 ]

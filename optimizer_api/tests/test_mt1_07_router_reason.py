@@ -74,3 +74,67 @@ def test_certificate_json_error_message_is_not_duplicated_as_strategy_error():
         exclude_none=True
     )
     assert json.loads(optimization._failure_json(cert, "boom"))["strategy_error"] == "boom"
+
+
+# -- only fixed reason codes are forwarded (no internal-error leakage, M5/A16) ---
+
+SECRET = r"VROOM optimization failed: secret path C:\x"
+
+
+def _failing_stub(monkeypatch, message):
+    from test_production_feasibility_boundary import (
+        _StubStrategy,
+        _install_strategy,
+        _response,
+    )
+
+    _install_loader(monkeypatch, _star_arcs(2))
+    _install_strategy(
+        monkeypatch,
+        "stub",
+        _StubStrategy(lambda request: _response([], success=False, error_message=message)),
+    )
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        SECRET,
+        r"PyVRP optimization failed: secret path C:\x",
+        r"No module named 'vroom'; pip install secret path C:\x",
+    ],
+)
+def test_optimize_does_not_forward_raw_engine_error_text(monkeypatch, message):
+    _failing_stub(monkeypatch, message)
+
+    result = optimization.optimize_route(_request(2, algorithm="stub"))
+
+    assert result.success is False
+    assert "strategy_error" not in json.loads(result.error_message)
+    assert "secret path" not in result.model_dump_json()
+
+
+def test_compare_does_not_forward_raw_engine_error_text(monkeypatch):
+    _failing_stub(monkeypatch, SECRET)
+    base = _request(2, algorithm="stub").model_dump()
+    compare = CompareRequest.model_validate(
+        {k: v for k, v in base.items() if k in CompareRequest.model_fields}
+        | {"algorithms": ["stub"]}
+    )
+
+    response = optimization.compare_algorithms(compare)
+
+    assert response.results[0].success is False
+    assert "strategy_error" not in json.loads(response.results[0].error_message)
+    assert "secret path" not in response.model_dump_json()
+
+
+def test_only_known_reason_codes_are_forwarded():
+    cert = optimization.FeasibilityCertificateInfo.model_validate(
+        {"is_feasible": False, "violation_count": 0, "violations": [], "certify_error": "x"}
+    )
+    assert "strategy_error" not in json.loads(optimization._failure_json(cert, SECRET))
+    forwarded = json.loads(
+        optimization._failure_json(cert, "no_feasible_split: fixed text")
+    )
+    assert forwarded["strategy_error"].startswith("no_feasible_split")

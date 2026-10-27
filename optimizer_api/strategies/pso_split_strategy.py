@@ -276,9 +276,13 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         # Calculate total time window violations
         total_tw_violations = final_result.get('time_window_violations', 0)
         
+        # MT1-07 (N1-a): a one-route-per-student fallback is not a plan.
+        failure_reason = self._split_failure_reason(final_result)
+
         return OptimizationResponse(
             algorithm_used=self.name,
-            success=True,
+            success=failure_reason is None,
+            error_message=failure_reason,
             routes=routes,
             total_vehicles=len(routes),
             total_duration_minutes=sum(r.total_duration_minutes for r in routes),

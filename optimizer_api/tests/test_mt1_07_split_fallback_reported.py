@@ -92,8 +92,9 @@ def test_singleton_trip_over_tour_limit_is_reported_as_no_feasible_split(name):
     assert result.success is False
     assert result.error_message is not None
     assert "no_feasible_split" in result.error_message
-    assert result.routes == []
-    assert result.total_vehicles == 0
+    # The routes stay as diagnostics (the router's certificate names the
+    # violated limit from them); they are the one-route-per-student fallback.
+    assert [len(r.student_ids) for r in result.routes] == [1, 1]
 
 
 @pytest.mark.parametrize("name", sorted(TINY_CONFIGS))

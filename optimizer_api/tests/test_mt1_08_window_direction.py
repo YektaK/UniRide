@@ -28,6 +28,9 @@ def _request(students, **overrides):
 
 def _client(monkeypatch):
     monkeypatch.setenv("UNIRIDE_DISABLE_AUTH", "1")
+    # the per-IP limiter is process-wide; earlier tests in a full run can exhaust it (429)
+    from optimizer_api import rate_limit
+    rate_limit._buckets.clear()
     app = FastAPI()
     app.include_router(optimization.router)
     return TestClient(app)

@@ -133,18 +133,29 @@ def _is_certificate_json(message: str) -> bool:
     return isinstance(parsed, dict) and "is_feasible" in parsed
 
 
+# MT1-07 (R3): fixed strategy reason codes that may reach the HTTP caller.
+# Engines also put raw exception text in error_message; that must never be
+# forwarded (audit M5, DECISION_LOG A16), so this is an allow-list.
+KNOWN_STRATEGY_REASONS = ("no_feasible_split",)
+
+
 def _failure_json(
     certificate: FeasibilityCertificateInfo,
     strategy_message: str | None = None,
 ) -> str:
     """Certificate JSON for a failed response.
 
-    The certificate part is unchanged. MT1-07 (R3): the strategy's own reason
-    (for example ``no_feasible_split``) is added as ``strategy_error`` unless
-    it is already certificate JSON, so it is not lost to the caller.
+    The certificate part is unchanged. MT1-07 (R3): the strategy's reason is
+    added as ``strategy_error`` only when it starts with a known fixed reason
+    code (``KNOWN_STRATEGY_REASONS``) and is not already certificate JSON.
+    Any other strategy text is dropped, as before this change.
     """
     payload = certificate.model_dump(exclude_none=True)
-    if strategy_message and not _is_certificate_json(strategy_message):
+    if (
+        strategy_message
+        and strategy_message.startswith(KNOWN_STRATEGY_REASONS)
+        and not _is_certificate_json(strategy_message)
+    ):
         payload["strategy_error"] = strategy_message
     return json.dumps(payload)
 

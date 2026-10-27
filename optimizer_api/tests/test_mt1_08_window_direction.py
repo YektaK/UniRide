@@ -128,3 +128,64 @@ def test_requests_without_time_windows_are_unchanged():
     # a student's own pickup_time still yields its window; the target never made one
     assert plain.get_time_windows() == {"L1": TimeWindow(earliest=420, latest=450)}
     assert with_target.get_time_windows() == plain.get_time_windows()
+
+
+# --- DUZELT r1: drop-off direction, bad target_time, validator order -----------
+
+def test_dropoff_windowed_request_without_target_time_is_rejected_by_model():
+    with pytest.raises(ValidationError, match=REFUSAL):
+        _request([_student("s1", "L1", dropoff_time="17:00")], direction="dropoff", use_time_windows=True)
+
+
+def test_optimize_dropoff_windowed_without_target_time_is_http_422(monkeypatch):
+    payload = {
+        "algorithm": "ga_split",
+        "students": [_student("s1", "L1", dropoff_time="17:00")],
+        "depot": DEPOT,
+        "direction": "dropoff",
+        "use_time_windows": True,
+    }
+    response = _client(monkeypatch).post("/api/v1/optimize", json=payload)
+    assert response.status_code == 422
+    assert REFUSAL in response.text
+
+
+def test_compare_dropoff_windowed_without_target_time_is_http_422(monkeypatch):
+    payload = {
+        "students": [_student("s1", "L1", dropoff_time="17:00")],
+        "depot": DEPOT,
+        "direction": "dropoff",
+        "use_time_windows": True,
+        "algorithms": ["ga_split"],
+    }
+    response = _client(monkeypatch).post("/api/v1/compare", json=payload)
+    assert response.status_code == 422
+    assert REFUSAL in response.text
+
+
+def test_compare_invalid_target_time_is_http_422(monkeypatch):
+    payload = {
+        "students": [_student("s1", "L1", pickup_time="07:30")],
+        "depot": DEPOT,
+        "target_time": "25:99",
+        "algorithms": ["ga_split"],
+    }
+    response = _client(monkeypatch).post("/api/v1/compare", json=payload)
+    assert response.status_code == 422
+    assert "Invalid time" in response.text
+
+
+def test_heterogeneous_fleet_message_wins_over_target_time_refusal():
+    payload = {
+        "algorithm": "ga_split_hf",
+        "students": [],
+        "depot": DEPOT,
+        "vehicle_types": [{"type_id": "large", "sw_capacity": 4, "so_capacity": 5}],
+        "minimize_type": "large",
+        "use_time_windows": True,
+    }
+    with pytest.raises(ValidationError) as excinfo:
+        OptimizationRequest.model_validate(payload)
+    text = str(excinfo.value)
+    assert "vehicle_types does not support use_time_windows" in text
+    assert REFUSAL not in text

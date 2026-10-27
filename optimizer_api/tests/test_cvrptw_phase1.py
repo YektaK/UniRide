@@ -188,7 +188,7 @@ class TestOptimizationRequest:
         assert "Sw1" in time_windows
         assert "So1" in time_windows
 
-    def test_global_target_time(self):
+    def test_target_time_creates_no_implicit_window(self):
         """MT1-08 (OQ-MT1-14): target_time no longer creates a window for students without a time"""
         request = OptimizationRequest(
             algorithm="ga_split",

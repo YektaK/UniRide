@@ -54,7 +54,6 @@ from models.schemas import (
     AppliedComputePolicyInfo, MatrixProvenanceInfo,
 )
 from uniride_core.algorithms.resource_profiler import ResourceProfiler
-from uniride_core.algorithms.route_scheduling import calculate_scheduled_times
 from utils.data_loader import DataLoader
 from utils.matrix_repository import IncompleteTravelMatrixError, MatrixSnapshotError
 from uniride_core.algorithms.clustering import MissingTravelTimeError
@@ -64,6 +63,7 @@ from verification.authoritative_arcs import (
     matrix_provenance_of,
 )
 from verification.response_certifier import certify_optimization_response
+from verification.route_timing import attach_route_schedules
 
 router = APIRouter(
     prefix="/api/v1",
@@ -326,14 +326,10 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
         result.direction = request.direction
         result.time_windows_used = request.use_time_windows and len(time_windows) > 0
         
-        if request.use_time_windows and result.success:
-            distance_matrix = {}
-            for route in result.routes:
-                for step in route.route_details:
-                    if step.location1 not in distance_matrix:
-                        distance_matrix[step.location1] = {}
-                    distance_matrix[step.location1][step.location2] = step.duration
-            result.routes = calculate_scheduled_times(result.routes, request, distance_matrix)
+        if result.success:
+            # MT1-03 (audit H3): the returned schedule is the simulator's schedule on
+            # the captured authoritative arcs, never built from reported step durations
+            attach_route_schedules(request, result.routes, arc_lookup)
 
         typed_certificate = _typed_certificate(
             certify_optimization_response(
@@ -494,6 +490,9 @@ def _run_single_algorithm(
             return _algorithm_failure(resolution, applied_policy, execution_time)
         response = OptimizationResponse.model_validate(response.model_dump())
         original_success = response.success
+        if original_success:
+            # MT1-03: same schedule function as /optimize, before the certificate
+            attach_route_schedules(effective_request, response.routes, arc_lookup)
         typed_certificate = _typed_certificate(
             certify_optimization_response(
                 effective_request,

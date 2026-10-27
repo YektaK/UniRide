@@ -44,6 +44,15 @@ OLD_ROUTE_KEYS = {
 NEW_ROUTE_KEYS = {"schedule_start_minutes", "schedule_end_minutes", "arrival_minutes"}
 
 
+# a response that claims success while its certificate has any violation also gets the
+# core ``hard_violation`` rejection; the mismatch must be the only substantive one
+ONLY_MISMATCH = {"schedule_mismatch", "hard_violation"}
+
+
+def _types(certificate):
+    return {v["type"] for v in certificate["violations"]}
+
+
 def _lookup(arcs):
     def lookup(origin, destination):
         if origin == destination:
@@ -237,8 +246,7 @@ def test_edited_arrival_minutes_is_a_schedule_mismatch():
 
     edited = certify_optimization_response(request, response(483.0), arc_lookup=_lookup(arcs))
     assert edited["is_feasible"] is False
-    types = [v["type"] for v in edited["violations"]]
-    assert types == ["schedule_mismatch"]
+    assert _types(edited) == ONLY_MISMATCH
 
 
 @pytest.mark.parametrize(
@@ -263,7 +271,7 @@ def test_edited_start_or_end_is_a_schedule_mismatch(field, value):
 
     certificate = certify_optimization_response(request, response, arc_lookup=_lookup(H3_ARCS))
 
-    assert [v["type"] for v in certificate["violations"]] == ["schedule_mismatch"]
+    assert _types(certificate) == ONLY_MISMATCH
 
 
 def test_missing_or_extra_arrival_key_is_a_schedule_mismatch():
@@ -284,7 +292,7 @@ def test_missing_or_extra_arrival_key_is_a_schedule_mismatch():
         certificate = certify_optimization_response(
             request, response, arc_lookup=_lookup(H3_ARCS)
         )
-        assert [v["type"] for v in certificate["violations"]] == ["schedule_mismatch"]
+        assert _types(certificate) == ONLY_MISMATCH
 
 
 def test_exact_fields_without_a_target_time_are_a_schedule_mismatch():
@@ -300,7 +308,7 @@ def test_exact_fields_without_a_target_time_are_a_schedule_mismatch():
 
     certificate = certify_optimization_response(request, response, arc_lookup=_lookup(arcs))
 
-    assert [v["type"] for v in certificate["violations"]] == ["schedule_mismatch"]
+    assert _types(certificate) == ONLY_MISMATCH
 
 
 # -- equality over every route of a seeded multi-route response ---------------

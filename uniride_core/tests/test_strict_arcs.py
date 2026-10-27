@@ -1,13 +1,10 @@
 """Missing arcs fail closed: no 15-minute default in core split helpers."""
 
-from types import SimpleNamespace
-
 import pytest
 
 from uniride_core.algorithms.ga_split_engine import GAIndividual, educate_individual
 from uniride_core.algorithms.meta_split_common import giant_tour_cost, local_search_improve
 from uniride_core.algorithms.route_metrics import TravelTimeUnavailableError, strict_arc
-from uniride_core.algorithms.route_scheduling import calculate_scheduled_times
 
 FULL = {
     "D": {"A": 5.0, "B": 6.0},
@@ -47,31 +44,11 @@ def test_educate_individual_missing_arc_raises_instead_of_default_cost():
         educate_individual(individual, "D", MISSING)
 
 
-def _route(first, second):
-    step = SimpleNamespace(location1=first, location2=second)
-    return SimpleNamespace(route_details=[step], arrival_times={}, departure_time=None)
-
-
-def _request(direction):
-    return SimpleNamespace(
-        use_time_windows=True,
-        direction=direction,
-        get_time_windows=lambda: {},
-        target_time="09:00",
-        offset_minutes=0,
-    )
-
-
-@pytest.mark.parametrize("direction", ["pickup", "dropoff"])
-def test_scheduling_missing_arc_raises(direction):
-    with pytest.raises(TravelTimeUnavailableError):
-        calculate_scheduled_times([_route("A", "B")], _request(direction), MISSING)
-
-
-@pytest.mark.parametrize("direction", ["pickup", "dropoff"])
-def test_scheduling_with_arc_does_not_raise(direction):
-    routes = calculate_scheduled_times([_route("A", "B")], _request(direction), FULL)
-    assert routes[0].arrival_times
+# MT1-03: the two calculate_scheduled_times missing-arc tests were removed with that
+# function (it read a reported-duration matrix and raised). The router's schedule
+# now leaves a route with an unanswered arc unscheduled and the certificate rejects
+# it: see test_unanswered_arc_leaves_the_route_unscheduled_and_rejected in
+# optimizer_api/tests/test_mt1_03_returned_schedule.py.
 
 
 def test_local_search_improve_missing_arc_raises_instead_of_returning_tour():

@@ -18,19 +18,12 @@ import dataclasses
 import math
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from uniride_core.adapters.demand_builder import (
-    student_capacity_demand,
-    student_occurrence_keys,
-)
 from uniride_core.algorithms.distance import tsplib_distance_by_type
 from uniride_core.algorithms.route_schedule import (
     DEADLINE,
     END_AFTER_DAY,
-    RouteSchedule,
     START_BEFORE_DAY,
     WINDOW,
-    simulate_school_dropoff,
-    simulate_school_pickup,
 )
 from uniride_core.algorithms.feasibility_certificate import (
     DURATION_VIOLATION,
@@ -51,9 +44,21 @@ from uniride_core.algorithms.feasibility_certificate import (
 from uniride_core.models import ProblemInstance, RoutingResult
 
 try:  # the API runs with optimizer_api on sys.path; tests/tools may import the package
-    from models.schemas import _parse_hhmm
+    from verification.route_timing import (
+        parse_anchor_minutes,
+        request_nodes,
+        simulate_route,
+        stop_arrivals_by_key,
+        timing_spec,
+    )
 except ModuleNotFoundError:  # pragma: no cover - package-style import
-    from optimizer_api.models.schemas import _parse_hhmm
+    from optimizer_api.verification.route_timing import (
+        parse_anchor_minutes,
+        request_nodes,
+        simulate_route,
+        stop_arrivals_by_key,
+        timing_spec,
+    )
 
 
 def _build_location_map(problem: ProblemInstance) -> Dict[str, int]:
@@ -178,31 +183,9 @@ def _route_duration_tolerance(num_steps: int) -> float:
     return _ROUNDING_TOLERANCE_STEP * (num_steps + 1)
 
 
-def _parse_anchor_minutes(target_time: Any) -> Optional[int]:
-    """``HH:MM`` (00:00-23:59, the API's own range check) -> minutes from midnight;
-    ``None`` when absent or malformed."""
-    if not target_time:
-        return None
-    try:
-        return _parse_hhmm(str(target_time))
-    except ValueError:
-        return None
+_parse_anchor_minutes = parse_anchor_minutes
 
-
-def _group_stops(route: List[int], node_codes: List[str]) -> List[List[int]]:
-    """Split a route into physical stops.
-
-    Students sharing a location are separate occurrence nodes joined by
-    zero-length arcs; a maximal run of consecutive nodes with the same location
-    code is one stop (one dwell, one wait, one ride time).
-    """
-    stops: List[List[int]] = []
-    for node in route:
-        if stops and node_codes[stops[-1][-1]] == node_codes[node]:
-            stops[-1].append(node)
-        else:
-            stops.append([node])
-    return stops
+SCHEDULE_MISMATCH = "schedule_mismatch"
 
 
 # Simulator violation kinds a typed (vehicle_types) request is held to.
@@ -213,15 +196,88 @@ def _fmt(minutes: float) -> str:
     return f"{minutes:.2f}"
 
 
+_EXACT_SCHEDULE_FIELDS = (
+    "schedule_start_minutes",
+    "schedule_end_minutes",
+    "arrival_minutes",
+)
+
+
+def _has_exact_schedule(route: Any) -> bool:
+    return any(getattr(route, name, None) is not None for name in _EXACT_SCHEDULE_FIELDS)
+
+
+def _differs(returned: Any, expected: float, tolerance: float) -> bool:
+    """True when ``returned`` is not a number within ``tolerance`` of ``expected``
+    (NaN and infinity differ)."""
+    try:
+        value = float(returned)
+    except (TypeError, ValueError):
+        return True
+    return not (abs(value - expected) <= tolerance)
+
+
+def _schedule_mismatch_violations(
+    idx: int, route: Any, timing: Any, nodes: Any
+) -> List[Violation]:
+    """MT1-03: the exact schedule a route returned must equal the re-simulation.
+
+    Checked only when the route carries any of the exact fields (they are omitted
+    when no schedule was computed). Then all three must be present, ``arrival_minutes``
+    must name exactly the occurrence keys of the route, and every value must agree
+    with the simulation within ``ARC_DURATION_TOLERANCE x (steps + 1)``.
+    """
+    if not _has_exact_schedule(route):
+        return []
+    tolerance = _route_duration_tolerance(len(getattr(route, "route_details", None) or []))
+    expected_arrivals = stop_arrivals_by_key(timing, nodes)
+    problems: List[str] = []
+    schedule = timing.schedule
+    for name, expected in (
+        ("schedule_start_minutes", schedule.start),
+        ("schedule_end_minutes", schedule.end),
+    ):
+        returned = getattr(route, name, None)
+        if returned is None:
+            problems.append(f"{name} is missing")
+        elif _differs(returned, expected, tolerance):
+            problems.append(f"{name} {returned} differs from the simulated {_fmt(expected)}")
+    returned_arrivals = getattr(route, "arrival_minutes", None)
+    if returned_arrivals is None:
+        problems.append("arrival_minutes is missing")
+    else:
+        missing = sorted(set(expected_arrivals) - set(returned_arrivals))
+        extra = sorted(set(returned_arrivals) - set(expected_arrivals))
+        if missing or extra:
+            problems.append(
+                f"arrival_minutes keys differ from the route's stops "
+                f"(missing {missing}, unexpected {extra})"
+            )
+        for key in sorted(set(expected_arrivals) & set(returned_arrivals)):
+            if _differs(returned_arrivals[key], expected_arrivals[key], tolerance):
+                problems.append(
+                    f"arrival_minutes[{key!r}] {returned_arrivals[key]} differs from the "
+                    f"simulated {_fmt(expected_arrivals[key])}"
+                )
+    if not problems:
+        return []
+    return [Violation(
+        type=SCHEDULE_MISMATCH,
+        severity="error",
+        details=f"Route {idx} returned schedule differs from the certified schedule: "
+        + "; ".join(problems),
+        route_index=idx,
+    )]
+
+
 def _schedule_violations(
     request: Any,
     routes: List[List[int]],
     matrix: Any,
     depot: int,
-    node_codes: List[str],
-    demands: List[List[int]],
-    occurrence_keys: List[str],
+    nodes: Any,
     anchor: int,
+    response_routes: List[Any],
     *,
     typed: bool,
     use_windows: bool,
@@ -252,19 +308,22 @@ def _schedule_violations(
     different codes.
 
     A direction other than ``pickup``/``dropoff`` is a violation, never a drop-off.
+
+    MT1-03 (audit H3): the exact schedule a response returned
+    (``schedule_start_minutes``, ``schedule_end_minutes``, ``arrival_minutes``) is
+    compared with this simulation; a difference above ``ARC_DURATION_TOLERANCE`` per
+    step is a ``schedule_mismatch``. The simulation is the same ``simulate_route``
+    the router uses to build the returned schedule.
     """
-    direction = str(getattr(request.direction, "value", request.direction)).strip().lower()
-    if direction not in ("pickup", "dropoff"):
+    spec = timing_spec(request, anchor)
+    if spec is None:
+        direction = str(getattr(request.direction, "value", request.direction)).strip().lower()
         return [Violation(
             type=TIME_WINDOW_VIOLATION,
             severity="error",
             details=f"Request direction {direction!r} is not pickup or dropoff",
         )]
-    pickup = direction == "pickup"
-    offset = getattr(request, "offset_minutes", 15)
-    offset = 15 if offset is None else offset
-    dwell = float(getattr(request, "stop_dwell_minutes", 0) or 0)
-    sw_boarding = float(getattr(request, "sw_boarding_minutes", 0) or 0)
+    pickup = spec.pickup
     tw_by_key = request.get_time_windows() if (use_windows and not typed) else {}
     max_travel = getattr(request, "max_travel_time", None)
     max_ride = getattr(request, "max_ride_time", None)
@@ -273,55 +332,26 @@ def _schedule_violations(
     for idx, route in enumerate(routes):
         if not route:
             continue
-        stops = _group_stops(route, node_codes)
-        ins = [depot] + [stop[0] for stop in stops]
-        outs = [depot] + [stop[-1] for stop in stops]
+        timing = simulate_route(
+            spec, route, lambda a, b: matrix[a][b], nodes, tw_by_key, depot
+        )
+        stops = timing.stops
+        schedule = timing.schedule
+        for node, earliest, latest in timing.disjoint_windows:
+            out.append(Violation(
+                type=TIME_WINDOW_VIOLATION,
+                severity="error",
+                details=(
+                    f"Route {idx} node {node} students sharing the stop have "
+                    f"disjoint time windows (opens {_fmt(earliest)}, closes {_fmt(latest)})"
+                ),
+                route_index=idx,
+                node=node,
+            ))
 
-        def arc(i: int, j: int, _ins=ins, _outs=outs) -> float:
-            return float(matrix[_outs[i]][_ins[j]])
-
-        windows: Dict[int, Tuple[float, float]] = {}
-        for position, stop in enumerate(stops, start=1):
-            found = [
-                tw_by_key[occurrence_keys[node - 1]]
-                for node in stop
-                if occurrence_keys[node - 1] in tw_by_key
-            ]
-            if not found:
-                continue
-            earliest = max(float(w.earliest) for w in found)
-            latest = min(float(w.latest) for w in found)
-            if earliest > latest:
-                out.append(Violation(
-                    type=TIME_WINDOW_VIOLATION,
-                    severity="error",
-                    details=(
-                        f"Route {idx} node {stop[0]} students sharing the stop have "
-                        f"disjoint time windows (opens {_fmt(earliest)}, closes {_fmt(latest)})"
-                    ),
-                    route_index=idx,
-                    node=stop[0],
-                ))
-                continue
-            windows[position] = (earliest, latest)
-        service = {position: dwell for position in range(1, len(stops) + 1)}
-        sw_counts = {
-            position: sum(1 for node in stop if demands[node][0] > 0)
-            for position, stop in enumerate(stops, start=1)
-        }
-
-        if pickup:
-            limit = float(anchor) - float(offset)
-            schedule: RouteSchedule = simulate_school_pickup(
-                list(range(1, len(stops) + 1)), arc, deadline=limit, windows=windows,
-                service=service, sw_boarding=sw_boarding, sw_counts=sw_counts,
-            )
-        else:
-            limit = float(anchor) + float(offset)
-            schedule = simulate_school_dropoff(
-                list(range(1, len(stops) + 1)), arc, ready=limit, windows=windows,
-                service=service, sw_boarding=sw_boarding, sw_counts=sw_counts,
-            )
+        out.extend(_schedule_mismatch_violations(
+            idx, response_routes[idx], timing, nodes,
+        ))
 
         for item in schedule.violations:
             if typed and item.kind not in _TYPED_SCHEDULE_KINDS:
@@ -588,18 +618,15 @@ def _certify_optimization_response(
     DataLoader repository. This bound certifies constraint satisfaction, not
     optimality.
     """
-    occurrence_keys = student_occurrence_keys(request.students)
-    node_keys = [request.depot.id] + occurrence_keys
-    loc_to_node = {key: idx for idx, key in enumerate(node_keys)}
-    dimension = len(node_keys)
+    nodes_of_request = request_nodes(request)
+    occurrence_keys = nodes_of_request.occurrence_keys
+    node_keys = nodes_of_request.node_keys
+    loc_to_node = nodes_of_request.loc_to_node
+    dimension = nodes_of_request.dimension
     depot = 0
 
-    node_codes = [str(request.depot.id)] + [
-        str(student.location_code) for student in request.students
-    ]
-    demands = [[0, 0]] + [
-        list(student_capacity_demand(student)) for student in request.students
-    ]
+    node_codes = nodes_of_request.node_codes
+    demands = nodes_of_request.demands
     student_by_key = {
         key: student for student, key in zip(request.students, occurrence_keys)
     }
@@ -920,8 +947,8 @@ def _certify_optimization_response(
         ))
     if anchor is not None:
         violations.extend(_schedule_violations(
-            request, routes, matrix, depot, node_codes, demands, occurrence_keys,
-            anchor,
+            request, routes, matrix, depot, nodes_of_request, anchor,
+            list(getattr(response, "routes", None) or []),
             typed=typed,
             use_windows=use_windows,
             core_duration_routes={
@@ -937,6 +964,20 @@ def _certify_optimization_response(
             getattr(request.direction, "value", request.direction),
             None, getattr(request, "offset_minutes", 15),
         ))
+    if anchor is None:
+        # MT1-03: an exact schedule is simulated against target_time; without one a
+        # returned schedule cannot be certified, so it is rejected, never trusted.
+        for route_index, route in enumerate(getattr(response, "routes", None) or []):
+            if _has_exact_schedule(route):
+                violations.append(Violation(
+                    type=SCHEDULE_MISMATCH,
+                    severity="error",
+                    details=(
+                        f"Route {route_index} returns an exact schedule but the request "
+                        "has no usable target_time to certify it against"
+                    ),
+                    route_index=route_index,
+                ))
     violations.extend(check_hard_violation_rejection(
         getattr(response, "success", None), violations
     ))

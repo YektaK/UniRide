@@ -11,7 +11,8 @@ Keeps shared request-mapping helpers while delegating critical logic to core:
 Inheriting strategies keep ONLY their algorithm-specific logic.
 """
 
-from typing import List, Dict
+import math
+from typing import Any, List, Dict, Optional
 
 from strategies.base_strategy import BaseRoutingStrategy
 from uniride_core.adapters.string_matrix_builder import build_string_distance_matrix
@@ -28,6 +29,28 @@ class HybridSplitBaseStrategy(BaseRoutingStrategy):
     # ── Shared helpers ────────────────────────────────────────────────────────
 
     # _get_duration is inherited from BaseRoutingStrategy
+
+    NO_FEASIBLE_SPLIT_MESSAGE = (
+        "no_feasible_split: the split decoder found no feasible partition of "
+        "the giant tour; the routes returned are the one-route-per-student "
+        "fallback and violate the capacity, tour-duration or time-window limits"
+    )
+
+    @classmethod
+    def _split_failure_reason(cls, final_result: Dict[str, Any]) -> Optional[str]:
+        """Rule R3 (MT1-07): reason text when the decoder fell back, else None.
+
+        ``string_split_decoder`` signals the fallback with an ``error`` entry
+        and ``total_cost = inf`` (one route per student, no feasible split).
+        The strategy must then answer ``success=False`` instead of presenting
+        the infeasible singleton routes as a plan.
+        """
+        total_cost = final_result.get("total_cost")
+        if final_result.get("error") or (
+            total_cost is not None and not math.isfinite(total_cost)
+        ):
+            return cls.NO_FEASIBLE_SPLIT_MESSAGE
+        return None
 
     def _build_distance_matrix(
         self,

@@ -125,8 +125,39 @@ def _typed_certificate(payload: dict | None) -> FeasibilityCertificateInfo:
         ),
     )
 
-def _failure_json(certificate: FeasibilityCertificateInfo) -> str:
-    return json.dumps(certificate.model_dump(exclude_none=True))
+def _is_certificate_json(message: str) -> bool:
+    try:
+        parsed = json.loads(message)
+    except (TypeError, ValueError):
+        return False
+    return isinstance(parsed, dict) and "is_feasible" in parsed
+
+
+# MT1-07 (R3): fixed strategy reason codes that may reach the HTTP caller.
+# Engines also put raw exception text in error_message; that must never be
+# forwarded (audit M5, DECISION_LOG A16), so this is an allow-list.
+KNOWN_STRATEGY_REASONS = ("no_feasible_split",)
+
+
+def _failure_json(
+    certificate: FeasibilityCertificateInfo,
+    strategy_message: str | None = None,
+) -> str:
+    """Certificate JSON for a failed response.
+
+    The certificate part is unchanged. MT1-07 (R3): the strategy's reason is
+    added as ``strategy_error`` only when it starts with a known fixed reason
+    code (``KNOWN_STRATEGY_REASONS``) and is not already certificate JSON.
+    Any other strategy text is dropped, as before this change.
+    """
+    payload = certificate.model_dump(exclude_none=True)
+    if (
+        strategy_message
+        and strategy_message.startswith(KNOWN_STRATEGY_REASONS)
+        and not _is_certificate_json(strategy_message)
+    ):
+        payload["strategy_error"] = strategy_message
+    return json.dumps(payload)
 
 
 def _optimization_failure(
@@ -317,8 +348,8 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
             result.matrix_provenance = MatrixProvenanceInfo.model_validate(provenance)
         result.success = bool(original_result_success and typed_certificate.is_feasible)
         if not result.success:
-            result.error_message = json.dumps(
-                typed_certificate.model_dump(exclude_none=True)
+            result.error_message = _failure_json(
+                typed_certificate, result.error_message
             )
 
         if result.success:
@@ -489,7 +520,7 @@ def _run_single_algorithm(
             error_message=(
                 response.error_message
                 if success
-                else _failure_json(typed_certificate)
+                else _failure_json(typed_certificate, response.error_message)
             ),
             feasibility_certificate=typed_certificate,
             matrix_provenance=matrix_provenance,

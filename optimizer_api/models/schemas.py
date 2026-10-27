@@ -35,6 +35,9 @@ class LocalSearchType(str, Enum):
 
 
 TARGET_TIME_REQUIRED_MESSAGE = "use_time_windows requires target_time"
+SERVICE_TIME_REQUIRES_TARGET_MESSAGE = (
+    "stop_dwell_minutes and sw_boarding_minutes require target_time"
+)
 
 
 def _parse_hhmm(time_str: str) -> int:
@@ -430,6 +433,14 @@ class OptimizationRequest(BaseModel):
         """MT1-08 (OQ-MT1-14): a windowed request must say when the trip is anchored."""
         if self.use_time_windows and not self.target_time:
             raise ValueError(TARGET_TIME_REQUIRED_MESSAGE)
+        return self
+
+    @model_validator(mode="after")
+    def validate_service_time_has_anchor(self) -> "OptimizationRequest":
+        """MT1-02: service minutes are simulated against target_time, so a request
+        with service time and no anchor is refused instead of silently ignored."""
+        if (self.stop_dwell_minutes > 0 or self.sw_boarding_minutes > 0) and not self.target_time:
+            raise ValueError(SERVICE_TIME_REQUIRES_TARGET_MESSAGE)
         return self
 
     @model_validator(mode="after")

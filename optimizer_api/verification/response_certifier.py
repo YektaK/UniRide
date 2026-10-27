@@ -50,6 +50,11 @@ from uniride_core.algorithms.feasibility_certificate import (
 )
 from uniride_core.models import ProblemInstance, RoutingResult
 
+try:  # the API runs with optimizer_api on sys.path; tests/tools may import the package
+    from models.schemas import _parse_hhmm
+except ModuleNotFoundError:  # pragma: no cover - package-style import
+    from optimizer_api.models.schemas import _parse_hhmm
+
 
 def _build_location_map(problem: ProblemInstance) -> Dict[str, int]:
     mapping: Dict[str, int] = {}
@@ -174,12 +179,12 @@ def _route_duration_tolerance(num_steps: int) -> float:
 
 
 def _parse_anchor_minutes(target_time: Any) -> Optional[int]:
-    """``HH:MM`` -> minutes from midnight; ``None`` when absent or malformed."""
+    """``HH:MM`` (00:00-23:59, the API's own range check) -> minutes from midnight;
+    ``None`` when absent or malformed."""
     if not target_time:
         return None
     try:
-        hours, minutes = str(target_time).split(":")
-        return int(hours) * 60 + int(minutes)
+        return _parse_hhmm(str(target_time))
     except ValueError:
         return None
 
@@ -229,9 +234,26 @@ def _schedule_violations(
     (tour including waits and service against ``max_travel_time``) and
     ``ride_time_violation`` (per stop, waits and service aboard included, against
     ``max_ride_time``). A route the core travel-only checks already flagged is not
-    reported a second time. Typed requests gain only the deadline check.
+    reported a second time.
+
+    Typed requests use the simulator only for the deadline: service time counts
+    toward it, but the typed tour and ride limits stay travel-only (plan MT1-02).
+
+    Intra-stop arcs are never read: consecutive students at one location code
+    form one stop (zero-length arcs by construction; every authoritative lookup
+    answers ``lookup(a, a) == 0.0``), and the simulator only uses the arc from
+    the last node of a stop to the first node of the next one, which are
+    different codes.
+
+    A direction other than ``pickup``/``dropoff`` is a violation, never a drop-off.
     """
-    direction = str(getattr(request.direction, "value", request.direction)).lower()
+    direction = str(getattr(request.direction, "value", request.direction)).strip().lower()
+    if direction not in ("pickup", "dropoff"):
+        return [Violation(
+            type=TIME_WINDOW_VIOLATION,
+            severity="error",
+            details=f"Request direction {direction!r} is not pickup or dropoff",
+        )]
     pickup = direction == "pickup"
     offset = getattr(request, "offset_minutes", 15)
     offset = 15 if offset is None else offset
@@ -298,7 +320,8 @@ def _schedule_violations(
         for item in schedule.violations:
             if typed and item.kind != DEADLINE:
                 continue
-            node = stops[item.position - 1][0] if item.position is not None else None
+            # simulator positions are 0-based indices into the route we passed
+            node = stops[item.position][0] if item.position is not None else None
             if item.kind == DEADLINE:
                 details = (
                     f"Route {idx} reaches the school at {_fmt(item.actual)}, after the "

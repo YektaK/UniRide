@@ -279,7 +279,6 @@ class OptimizationRequest(BaseModel):
     minimize_type: Optional[str] = None
     mode: OptimizationMode = OptimizationMode.BENCHMARK
     local_search_type: Optional[str] = "two_opt"
-    use_sota_engine: bool = False
     ga_config: Optional[Dict[str, Any]] = None
     pso_config: Optional[Dict[str, Any]] = None
     gwo_config: Optional[Dict[str, Any]] = None

@@ -1,16 +1,7 @@
 import pytest
 import math
-from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, kmeans_clustering
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
-
-@pytest.fixture
-def sample_points():
-    return [
-        Point(id="S1", lat=41.0, lng=29.0, disability_type="Sw"), # Group 1
-        Point(id="S2", lat=41.01, lng=29.01, disability_type="Sw"), # Group 1
-        Point(id="S3", lat=41.1, lng=29.1, disability_type="So"), # Group 2
-        Point(id="S4", lat=41.11, lng=29.11, disability_type="So") # Group 2
-    ]
 
 def test_calculate_centroid():
     pts = [Point("1", 10, 10, "Sw"), Point("2", 20, 20, "Sw")]
@@ -19,23 +10,6 @@ def test_calculate_centroid():
     assert lng == 15.0
     
     assert calculate_centroid([]) == (0.0, 0.0)
-
-def test_kmeans_basic(sample_points):
-    # Cluster into 2 groups
-    clusters = kmeans_clustering(sample_points, k=2)
-    assert len(clusters) == 2
-    # Check that nearby points are together
-    for c in clusters:
-        assert len(c.points) == 2
-        ids = [p.id for p in c.points]
-        if "S1" in ids:
-            assert "S2" in ids
-        if "S3" in ids:
-            assert "S4" in ids
-
-def test_kmeans_k_greater_than_points(sample_points):
-    clusters = kmeans_clustering(sample_points, k=10)
-    assert len(clusters) == len(sample_points)
 
 def test_estimate_vehicle_count():
     calc = VehicleCalculator(sw_capacity=2, so_capacity=5)

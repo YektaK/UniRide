@@ -8,7 +8,6 @@ import random
 
 import pytest
 
-from uniride_core.algorithms import clustering as legacy
 from uniride_core.algorithms.clustering import Cluster, Point
 from uniride_core.algorithms.clustering_strategies import (
     _CLUSTERING_STRATEGIES,
@@ -143,36 +142,8 @@ def test_hierarchical_without_rng_shares_one_generator_across_stages(monkeypatch
     assert len({id(rng) for rng in seen}) == 1
 
 
-# ---------------------------------------------------------------- (d) legacy primitives
-
-
-def test_legacy_kmeans_and_split_leave_global_random_untouched():
-    points = _points(30)
-    random.seed(4242)
-    before = random.getstate()
-    legacy.kmeans_clustering(points, 5)
-    legacy.split_cluster(Cluster(centroid=(40.95, 29.05), points=points, sw_count=6, so_count=24))
-    legacy.initialize_centroids_kmeans_plus_plus(points, 4)
-    assert random.getstate() == before
-
-
-def test_legacy_kmeans_is_seeded_by_the_given_rng_only():
-    points = _points(30)
-
-    def partition(seed):
-        return _partition(legacy.kmeans_clustering(points, 5, rng=random.Random(seed)))
-
-    random.seed(1)
-    first = partition(3)
-    random.seed(2)
-    assert partition(3) == first
-    assert len({partition(seed) for seed in range(8)}) > 1
-
-
-def test_legacy_split_cluster_uses_the_given_rng():
-    cluster = Cluster(centroid=(40.95, 29.05), points=_points(30), sw_count=6, so_count=24)
-    parts = {_partition(legacy.split_cluster(cluster, rng=random.Random(seed))) for seed in range(8)}
-    assert len(parts) > 1
+# Section (d) "legacy primitives" was removed in MT6F-03 together with the dead
+# kmeans_clustering / split_cluster / initialize_centroids_kmeans_plus_plus code (audit L3-f).
 
 
 # ---------------------------------------------------------------- polish (1): one source of truth

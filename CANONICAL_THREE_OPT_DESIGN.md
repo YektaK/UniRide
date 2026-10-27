@@ -94,7 +94,7 @@ The 3-opt wrapper in `uniride_core/algorithms/local_search_numba.py` delegates t
 
 ### Legacy accelerated implementation
 
-The old 3-opt kernel in `academic_benchmark/bildiri2026/core/numba_accel.py` and the old `_three_opt_improve_numba` path are marked non-canonical and removed from public execution. They may be re-enabled only after dedicated JIT parity tests pass in an environment where Numba imports successfully.
+The old 3-opt kernel in `academic_benchmark/bildiri2026/core/numba_accel.py` is marked non-canonical and removed from public execution; it stays in place but unreachable (OQ-MT6-1 a). The `_three_opt_improve_numba` / `_three_opt_cases_numba` copy in `uniride_core/algorithms/local_search_numba.py` had no caller and was deleted (audit L3, MT6F-03). The `numba_accel` kernel may be re-enabled only after dedicated JIT parity tests pass in an environment where Numba imports successfully.
 
 ## Path neighbourhood for production local search
 

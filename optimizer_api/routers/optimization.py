@@ -53,8 +53,8 @@ from models.schemas import (
     TimeShiftSuggestion, FeasibilityCertificateInfo,
     AppliedComputePolicyInfo, MatrixProvenanceInfo,
 )
-from utils.resource_profiler import ResourceProfiler
-from utils.scheduling import calculate_scheduled_times
+from uniride_core.algorithms.resource_profiler import ResourceProfiler
+from uniride_core.algorithms.route_scheduling import calculate_scheduled_times
 from utils.data_loader import DataLoader
 from utils.matrix_repository import IncompleteTravelMatrixError, MatrixSnapshotError
 from uniride_core.algorithms.clustering import MissingTravelTimeError

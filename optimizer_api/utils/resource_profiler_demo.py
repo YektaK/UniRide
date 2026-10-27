@@ -13,7 +13,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.resource_profiler import ResourceProfiler
+from uniride_core.algorithms.resource_profiler import ResourceProfiler
 from models.schemas import StudentNode, VehicleConfig
 from typing import List
 

@@ -13,7 +13,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.resource_profiler import (
+from uniride_core.algorithms.resource_profiler import (
     ResourceProfiler, ResourceBlock, HourlyDemand,
     Bottleneck, TimeShiftSuggestion,
     minutes_to_time_str, time_str_to_minutes

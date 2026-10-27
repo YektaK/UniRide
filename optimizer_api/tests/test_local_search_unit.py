@@ -1,5 +1,5 @@
 import pytest
-from utils.local_search import (
+from uniride_core.algorithms.local_search import (
     TwoOptLocalSearch, SwapLocalSearch, OrOptLocalSearch, 
     ThreeOptLocalSearch, LocalSearchType, TimeWindowAwareLocalSearch
 )

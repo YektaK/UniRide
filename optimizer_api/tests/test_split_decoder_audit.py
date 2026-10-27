@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from optimizer_api.utils.split_decoder import SplitDecoder, Direction, Trip
+from uniride_core.algorithms.string_split_decoder import SplitDecoder, Direction, Trip
 
 def test_fix01_negative_departure_skip():
     """FIX-01: Ensure that departure_time < 0 trips are marked infeasible/skipped."""

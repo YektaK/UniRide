@@ -16,7 +16,7 @@ from models.schemas import (
     StudentNode, Direction, TimeWindow, OptimizationRequest,
     OptimizationResponse, LocationNode, WeeklyScheduleEntry
 )
-from utils.time_window_extractor import (
+from uniride_core.algorithms.time_window_extractor import (
     TimeWindowExtractor, TimeWindow as TWExtractor,
     weekly_schedule_to_optimization_input
 )

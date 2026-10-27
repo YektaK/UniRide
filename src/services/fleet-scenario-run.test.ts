@@ -192,4 +192,66 @@ describe("R1: single-type scenario A equals runDailyPlan", () => {
     expect(dbA.tables).toContain("vehicles");
     expect(dbB.tables).not.toContain("vehicles");
   });
+});
+
+describe("MT1-04: one offset meaning and the server schedule cross-check", () => {
+  type StubRoute = { total_duration_minutes: number } & Record<string, unknown>;
+  // Decorates the scripted optimizer: `stamp` returns the schedule fields for a route of a request, or null for none.
+  const withSchedule = (
+    inner: ReturnType<typeof transport>,
+    stamp: (body: { direction: "pickup" | "dropoff"; target_time: string }, total: number) => Record<string, number> | null,
+  ) => {
+    const fetch = async (path: string, init?: RequestInit): Promise<Response> => {
+      const response = await inner.fetch(path, init);
+      if (!path.endsWith("/v1/optimize")) return response;
+      const body = JSON.parse(String(init!.body)) as { direction: "pickup" | "dropoff"; target_time: string };
+      const json = await response.json() as { routes: StubRoute[] };
+      json.routes = json.routes.map((r) => ({ ...r, ...(stamp(body, r.total_duration_minutes) ?? {}) }));
+      return Response.json(json);
+    };
+    return { fetch, calls: inner.calls };
+  };
+  const anchorOf = (targetTime: string) => Number(targetTime.slice(0, 2)) * 60 + Number(targetTime.slice(3, 5));
+  const exact = (body: { direction: "pickup" | "dropoff"; target_time: string }, total: number) => {
+    const anchor = anchorOf(body.target_time);
+    return body.direction === "pickup"
+      ? { schedule_start_minutes: anchor - total, schedule_end_minutes: anchor }
+      : { schedule_start_minutes: anchor, schedule_end_minutes: anchor + total };
+  };
+
+  it("sends offset_minutes 0 in every /optimize request (baseline ga_split and the ga_split_hf menu calls)", async () => {
+    const db = reader(rows());
+    const t = transport({ selection: pickSelection("q1", () => ["large", "car"]) });
+    await runFleetScenarioDay({ reader: db.client, optimizerFetch: t.fetch, clock }, params());
+    const optimizeBodies = t.calls.filter((c) => c.path.endsWith("/v1/optimize")).map((c) => c.body as Record<string, unknown>);
+    expect(optimizeBodies.some((b) => b.algorithm === "ga_split")).toBe(true);
+    expect(optimizeBodies.some((b) => b.algorithm === "ga_split_hf")).toBe(true);
+    for (const body of optimizeBodies) expect(body.offset_minutes).toBe(0);
+  });
+
+  it("accepts responses whose certified schedule equals the plan interval", async () => {
+    const db = reader(rows());
+    const t = withSchedule(transport({ selection: pickSelection("q1", () => ["large", "car"]) }), exact);
+    const day = await runFleetScenarioDay({ reader: db.client, optimizerFetch: t.fetch, clock }, params());
+    expect(day.status).toBe("ready");
+    expect(day.reasonCodes).not.toContain("SCHEDULE_MISMATCH");
+  });
+
+  it("blocks the day with SCHEDULE_MISMATCH when the baseline schedule is shifted", async () => {
+    const db = reader(rows());
+    const t = withSchedule(transport({ selection: pickSelection("q1", () => ["large", "car"]) }), (body, total) => {
+      const right = exact(body, total);
+      return { schedule_start_minutes: right.schedule_start_minutes - 15, schedule_end_minutes: right.schedule_end_minutes - 15 };
+    });
+    const day = await runFleetScenarioDay({ reader: db.client, optimizerFetch: t.fetch, clock }, params());
+    expect(day.status).toBe("blocked_data");
+    expect(day.reasonCodes).toContain("SCHEDULE_MISMATCH");
+  });
+
+  it("still accepts archived-shape responses without the exact schedule fields", async () => {
+    const db = reader(rows());
+    const t = transport({ selection: pickSelection("q1", () => ["large", "car"]) });
+    const day = await runFleetScenarioDay({ reader: db.client, optimizerFetch: t.fetch, clock }, params());
+    expect(day.status).toBe("ready");
+  });
 });

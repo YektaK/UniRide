@@ -976,3 +976,59 @@ describe("student ride time helpers", () => {
   });
 
 });
+
+// MT1-04: the plan's own interval is cross-checked against the optimizer's certified schedule.
+describe("buildDudulluPreview server schedule cross-check (MT1-04)", () => {
+  // normalRoute totals 11 minutes (5 + 6).
+  const withSchedule = (fields: Partial<Record<"schedule_start_minutes" | "schedule_end_minutes", number>>) =>
+    result([{ ...route(normalRoute("occ-1"), ["occ-1"]), ...fields } as PreviewRoute]);
+
+  it.each([
+    ["pickup", 600, { schedule_start_minutes: 589, schedule_end_minutes: 600 }],
+    ["dropoff", 600, { schedule_start_minutes: 600, schedule_end_minutes: 611 }],
+  ] as const)("accepts a %s schedule that equals the plan interval", (direction, anchor, fields) => {
+    const item = demand("occ-1", "H1", direction, anchor);
+    const preview = build([item], [job([item], normalRoute("occ-1"), { result: withSchedule(fields) })]);
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.reasonCodes).not.toContain("SCHEDULE_MISMATCH");
+  });
+
+  it("still accepts a response without the exact schedule fields (older optimizer)", () => {
+    const item = demand("occ-1");
+    const preview = build([item], [job([item], normalRoute("occ-1"))]);
+    expect(preview.status).toBe("preview_ready");
+  });
+
+  it.each([
+    ["pickup, whole schedule shifted by the old 15-minute buffer", "pickup", { schedule_start_minutes: 574, schedule_end_minutes: 585 }],
+    ["pickup, only the end shifted", "pickup", { schedule_start_minutes: 589, schedule_end_minutes: 585 }],
+    ["dropoff, whole schedule shifted", "dropoff", { schedule_start_minutes: 615, schedule_end_minutes: 626 }],
+    ["only the start is present and wrong", "pickup", { schedule_start_minutes: 588 }],
+  ] as const)("blocks the plan with SCHEDULE_MISMATCH: %s", (_label, direction, fields) => {
+    const item = demand("occ-1", "H1", direction, 600);
+    const preview = build([item], [job([item], normalRoute("occ-1"), { result: withSchedule(fields) })]);
+    expect(preview.status).toBe("blocked_data");
+    expect(preview.reasonCodes).toContain("SCHEDULE_MISMATCH");
+    expect(preview.jobs).toEqual([]);
+  });
+
+  it("tolerates float noise of 1e-9 minutes and refuses 1e-3", () => {
+    const item = demand("occ-1");
+    const ok = build([item], [job([item], normalRoute("occ-1"), {
+      result: withSchedule({ schedule_start_minutes: 589 + 1e-9, schedule_end_minutes: 600 - 1e-9 }),
+    })]);
+    const bad = build([item], [job([item], normalRoute("occ-1"), {
+      result: withSchedule({ schedule_start_minutes: 589 + 1e-3, schedule_end_minutes: 600 }),
+    })]);
+    expect(ok.status).toBe("preview_ready");
+    expect(bad.reasonCodes).toContain("SCHEDULE_MISMATCH");
+  });
+
+  it("treats a non-finite schedule value as a mismatch", () => {
+    const item = demand("occ-1");
+    const preview = build([item], [job([item], normalRoute("occ-1"), {
+      result: withSchedule({ schedule_start_minutes: Number.NaN, schedule_end_minutes: 600 }),
+    })]);
+    expect(preview.reasonCodes).toContain("SCHEDULE_MISMATCH");
+  });
+});

@@ -1716,3 +1716,48 @@ describe("POST /api/admin/dudullu-preview solver configuration provenance (H17)"
     expect(body.solverConfig ?? null).toBeNull();
   });
 });
+
+describe("POST /api/admin/dudullu-preview one offset meaning and schedule cross-check (MT1-04)", () => {
+  const withSchedule = (occurrenceId: string, start: number, end: number) => {
+    const base = solverResult(occurrenceId);
+    return { ...base, routes: base.routes.map((item) => ({ ...item, schedule_start_minutes: start, schedule_end_minutes: end })) };
+  };
+
+  it("sends offset_minutes 0 in every /optimize request", async () => {
+    setAdmin(admittedRows([onTimePickup, { ...onTimePickup, direction: "dropoff" }]));
+    mockTransport([solverResult("2026-09-30:pickup:student-1"), solverResult("2026-09-30:dropoff:student-1")]);
+    const { POST } = await import("./route");
+    await POST(post({ serviceDate: "2026-09-30" }));
+    const optimizeBodies = optimizerFetchMock.mock.calls
+      .filter(([path]) => path === "/api/v1/optimize")
+      .map(([, init]) => JSON.parse(init.body));
+    expect(optimizeBodies).toHaveLength(2);
+    for (const requestBody of optimizeBodies) expect(requestBody.offset_minutes).toBe(0);
+  });
+
+  it("accepts a response whose certified schedule equals the plan interval (anchor 525, total 11)", async () => {
+    setAdmin(admittedRows());
+    mockTransport([withSchedule("2026-09-30:pickup:student-1", 514, 525)]);
+    const { POST } = await import("./route");
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    expect(body.status).toBe("preview_ready");
+    expect(body.reasonCodes).not.toContain("SCHEDULE_MISMATCH");
+  });
+
+  it("refuses a response whose certified schedule is shifted (the old 15-minute buffer)", async () => {
+    setAdmin(admittedRows());
+    mockTransport([withSchedule("2026-09-30:pickup:student-1", 499, 510)]);
+    const { POST } = await import("./route");
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+    expect(body.reasonCodes).toContain("SCHEDULE_MISMATCH");
+  });
+
+  it("still accepts an archived-shape response without the exact schedule fields", async () => {
+    setAdmin(admittedRows());
+    mockTransport([solverResult("2026-09-30:pickup:student-1")]);
+    const { POST } = await import("./route");
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    expect(body.status).toBe("preview_ready");
+  });
+});

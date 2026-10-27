@@ -222,6 +222,8 @@ const routeSchema = z.object({
   total_duration_minutes: z.number(), total_distance_km: z.number().optional(),
   sw_count: z.number(), so_count: z.number(), student_ids: z.array(z.string()),
   vehicle_type: z.string().optional(),
+  // MT1-03: the exact certified schedule (absent on older optimizers; compared in the preview).
+  schedule_start_minutes: z.number().optional(), schedule_end_minutes: z.number().optional(),
 });
 const optimizeResultSchema = z.object({
   success: z.boolean(),
@@ -414,7 +416,8 @@ export async function runFleetScenarioDay(
     return {
       mode: "sandbox", service_date: serviceDate, direction: first.direction,
       target_time: exactClock(first.anchorMinutes), expected_matrix_sha256: matrix.sha256,
-      use_time_windows: false, is_asymmetric: true,
+      // MT1 (plan 3.1): the anchor already holds the W01 buffer, so the offset is 0.
+      use_time_windows: false, offset_minutes: 0, is_asymmetric: true,
       depot: DUDULLU_DEPOT,
       students: group.map((demand) => ({
         id: demand.occurrenceId, occurrence_id: demand.occurrenceId,
@@ -444,7 +447,7 @@ export async function runFleetScenarioDay(
       algorithm: "ga_split", mode: "sandbox", service_date: serviceDate,
       direction: first.direction, target_time: exactClock(first.anchorMinutes),
       expected_matrix_sha256: matrix.sha256, use_time_windows: false,
-      is_asymmetric: true,
+      offset_minutes: 0, is_asymmetric: true,
       max_travel_time: fixedType.tourLimit ?? maxTourMinutes, max_ride_time: fixedType.rideLimit ?? maxRideTimeMinutes,
       sw_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.swCapacity)),
       so_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.soCapacity)),

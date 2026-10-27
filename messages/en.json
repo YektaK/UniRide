@@ -398,6 +398,7 @@
           "ROUTE_LOAD_MISMATCH": "The Sw/So counts of a route do not match its student list.",
           "ROUTE_TOTAL_MISMATCH": "A route's total duration does not match the sum of its steps.",
           "SCHEDULE_DATA_INVALID": "Schedule or student record data is invalid.",
+          "SCHEDULE_MISMATCH": "The times the route solver certified differ from the times the plan calculated itself, so the plan is not shown.",
           "UNKNOWN_OCCURRENCE": "A route refers to a trip that is not in this plan.",
           "UNKNOWN_ROUTE_NODE": "A route contains an unrecognised stop.",
           "unknown": "Unknown status code. Report it to the technical team."

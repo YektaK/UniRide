@@ -138,7 +138,9 @@ type FleetShortageEvidence = NonNullable<DudulluPreviewResponse["fleetShortage"]
  * The wave's capacity floor is the existing `computeCapacityFloor` on the wave's Sw/So counts and the
  * live fleet's largest seat counts; only a floor above the fleet proves the shortage. The daily-plan
  * request sends no `total_capacity`, so there is no total-seat term. `plannedVehicles` is the route
- * count the solver returned, or null when it is not above the fleet (an unusable route list).
+ * count the solver returned. It always exceeds the live fleet here: the live path sends the whole
+ * live fleet as `vehicles`, and the certificate raises `fleet_size_violation` only when
+ * routes > vehicles (`response_certifier.py:186-195`), so no "unknown count" case exists.
  */
 function fleetShortageEvidence(
   group: readonly PreviewDemand[],
@@ -157,7 +159,7 @@ function fleetShortageEvidence(
   return {
     direction: first.direction,
     anchorMinutes: first.anchorMinutes,
-    plannedVehicles: returnedRoutes > liveFleet ? returnedRoutes : null,
+    plannedVehicles: returnedRoutes,
     liveFleet,
     capacityFloor: floor === null ? null : {
       vehicles: floor.vehicles,
@@ -609,7 +611,8 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
   fleetInfo.liveActiveFleetSize = liveVehicles.length;
   fleetInfo.activeVehicleIds = liveVehicles.map((vehicle) => vehicle.vehicleId);
   if (fleetMode === "live" && liveVehicles.length === 0) {
-    return finish(blockedPreview(serviceDate, admitted, null, "FLEET_SHORTAGE"));
+    // No vehicle and no route was computed: not the computed-routes FLEET_SHORTAGE.
+    return finish(blockedPreview(serviceDate, admitted, null, "NO_ACTIVE_VEHICLES"));
   }
   // K2 (owner decision, 2026-10-04): the virtual fleet is N identical copies of one template
   // vehicle, N = admitted legs of the day. Identical copies keep the assignment search provable.

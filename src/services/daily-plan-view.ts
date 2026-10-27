@@ -34,6 +34,7 @@ export const KNOWN_REASON_CODES = [
   "MATRIX_STALE",
   "MATRIX_UNAVAILABLE",
   "MISSING_OCCURRENCE_COVERAGE",
+  "NO_ACTIVE_VEHICLES",
   "NO_ADMITTED_DEMAND",
   "NO_ROUTE_STEPS",
   "OPTIMIZATION_NOT_SUCCESSFUL",
@@ -180,8 +181,8 @@ export interface CapacityFloor {
 export interface FleetShortageView {
   readonly direction: PlanDirection;
   readonly anchorLabel: string;
-  /** Vehicles the computed plan used in that wave; null when the solver returned no usable list. */
-  readonly plannedVehicles: number | null;
+  /** Vehicles the computed plan used in that wave (always above the live fleet). */
+  readonly plannedVehicles: number;
   readonly liveFleet: number;
   readonly capacityFloor: {
     readonly vehicles: number;

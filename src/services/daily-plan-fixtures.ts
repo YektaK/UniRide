@@ -210,7 +210,7 @@ export function shortageResponse(): Response {
  * the `fleetShortage` evidence of the failing wave (08:45 arrival). `floor` is the wave's capacity
  * floor; the live fleet has 1 vehicle and the computed plan used `plannedVehicles`.
  */
-export function fleetShortageResponse(floor: number | null, plannedVehicles: number | null = 2): Response {
+export function fleetShortageResponse(floor: number | null, plannedVehicles = 2): Response {
   const response = shortageResponse();
   return {
     ...response,

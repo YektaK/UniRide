@@ -326,7 +326,6 @@
           "title": "Live fleet shortage",
           "needsPickup": "The computed plan needs {n, plural, one {# vehicle} other {# vehicles}} for the {time} arrival wave; the live fleet has {m, plural, one {# vehicle} other {# vehicles}}.",
           "needsDropoff": "The computed plan needs {n, plural, one {# vehicle} other {# vehicles}} for the {time} departure wave; the live fleet has {m, plural, one {# vehicle} other {# vehicles}}.",
-          "needsUnknown": "The computed plan for the {time} wave did not fit the live fleet, which has {m, plural, one {# vehicle} other {# vehicles}}.",
           "proven": "Proven: seat capacity alone needs at least {n, plural, one {# vehicle} other {# vehicles}} in this wave (Sw: {swCap} seats, So: {soCap} seats), which is more than the live fleet has.",
           "notProven": "Shortage not proven: seat capacity alone needs at least {n, plural, one {# vehicle} other {# vehicles}} in this wave (Sw: {swCap} seats, So: {soCap} seats), and the live fleet covers that. The solver did not try to fit the live fleet, so splitting the students into routes differently might fit it.",
           "notProvenNoFloor": "Shortage not proven: the seat-capacity lower bound could not be computed. The solver did not try to fit the live fleet, so splitting the students into routes differently might fit it."
@@ -387,6 +386,7 @@
           "MATRIX_STALE": "The travel-time matrix is out of date (the refresh failed or it expired); routes could not be computed and no plan was produced.",
           "MATRIX_UNAVAILABLE": "The travel-time matrix could not be loaded or is incomplete; routes could not be computed.",
           "MISSING_OCCURRENCE_COVERAGE": "Some trips were not placed in any route; the plan was rejected.",
+          "NO_ACTIVE_VEHICLES": "The live fleet has no active vehicle; no plan was computed.",
           "NO_ADMITTED_DEMAND": "There are no confirmed trips for this day.",
           "NO_ROUTE_STEPS": "A route has no steps; the plan was rejected.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "The route solver did not return a successful result or could not be reached.",

@@ -184,10 +184,8 @@ function FleetShortageNote({ plan }: { plan: DailyPlanView }) {
   if (!shortage) return null;
   const floor = shortage.capacityFloor;
   const floorValues = floor ? { n: floor.vehicles, swCap: floor.swCapacity, soCap: floor.soCapacity } : null;
-  const needsValues = { time: shortage.anchorLabel, n: shortage.plannedVehicles ?? 0, m: shortage.liveFleet };
-  const needsKey = shortage.plannedVehicles === null
-    ? "needsUnknown"
-    : shortage.direction === "pickup" ? "needsPickup" : "needsDropoff";
+  const needsValues = { time: shortage.anchorLabel, n: shortage.plannedVehicles, m: shortage.liveFleet };
+  const needsKey = shortage.direction === "pickup" ? "needsPickup" : "needsDropoff";
   return (
     <Card data-testid="fleet-shortage" className="border-red-300 dark:border-red-800">
       <CardHeader className="pb-2">

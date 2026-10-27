@@ -326,7 +326,6 @@
           "title": "Mevcut filo eksiği",
           "needsPickup": "Hesaplanan plan, {time} varış dalgası için {n} araç gerektiriyor; mevcut filoda {m} araç var.",
           "needsDropoff": "Hesaplanan plan, {time} çıkış dalgası için {n} araç gerektiriyor; mevcut filoda {m} araç var.",
-          "needsUnknown": "{time} dalgası için hesaplanan plan mevcut filoya sığmadı; mevcut filoda {m} araç var.",
           "proven": "Kanıtlandı: yalnızca koltuk kapasitesi bu dalga için en az {n} araç gerektirir (Sw: {swCap} koltuk, So: {soCap} koltuk); bu, mevcut filodaki araç sayısından fazladır.",
           "notProven": "Eksiklik kanıtlanmadı: yalnızca koltuk kapasitesi bu dalga için en az {n} araç gerektirir (Sw: {swCap} koltuk, So: {soCap} koltuk) ve mevcut filo bunu karşılıyor. Çözücü filoya sığdırmayı denemedi; öğrencilerin rotalara başka biçimde bölünmesi mevcut filoya sığabilir.",
           "notProvenNoFloor": "Eksiklik kanıtlanmadı: koltuk kapasitesi alt sınırı hesaplanamadı. Çözücü filoya sığdırmayı denemedi; öğrencilerin rotalara başka biçimde bölünmesi mevcut filoya sığabilir."
@@ -387,6 +386,7 @@
           "MATRIX_STALE": "Seyahat süresi matrisi güncel değil (yenilenemedi veya süresi doldu); rota hesaplanamadı, plan oluşturulmadı.",
           "MATRIX_UNAVAILABLE": "Seyahat süresi matrisi alınamadı veya eksik; rota hesaplanamadı.",
           "MISSING_OCCURRENCE_COVERAGE": "Bazı seferler hiçbir rotaya yerleştirilmedi; plan geçersiz sayıldı.",
+          "NO_ACTIVE_VEHICLES": "Canlı filoda aktif araç yok; plan hesaplanmadı.",
           "NO_ADMITTED_DEMAND": "Bu gün için onaylı sefer yok.",
           "NO_ROUTE_STEPS": "Bir rotada hiç adım yok; plan geçersiz sayıldı.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "Rota çözücüsü başarılı bir sonuç döndürmedi veya ulaşılamadı.",

@@ -110,14 +110,13 @@ export const dudulluPreviewResponseSchema = z.object({
   vehicleSummary: vehicleSummarySchema.nullable(),
   /**
    * Evidence of a live-fleet shortage (MT1-10): the wave that did not fit, how many vehicles the
-   * computed plan used (null when the solver returned no usable route list), the live fleet size and
-   * the wave's capacity-only floor (null when it cannot be computed). Present only when
-   * FLEET_SHORTAGE came from a wave; older responses omit it.
+   * computed plan used, the live fleet size and the wave's capacity-only floor (null when it
+   * cannot be computed). Present only when FLEET_SHORTAGE came from a wave; older responses omit it.
    */
   fleetShortage: z.object({
     direction,
     anchorMinutes: finite,
-    plannedVehicles: count.nullable(),
+    plannedVehicles: count,
     liveFleet: count,
     capacityFloor: z.object({
       vehicles: count,

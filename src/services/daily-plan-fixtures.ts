@@ -205,6 +205,29 @@ export function shortageResponse(): Response {
   };
 }
 
+/**
+ * What the API returns when the live fleet is short (MT1-10): no jobs, a blocked-style body, and
+ * the `fleetShortage` evidence of the failing wave (08:45 arrival). `floor` is the wave's capacity
+ * floor; the live fleet has 1 vehicle and the computed plan used `plannedVehicles`.
+ */
+export function fleetShortageResponse(floor: number | null, plannedVehicles: number | null = 2): Response {
+  const response = shortageResponse();
+  return {
+    ...response,
+    jobs: [],
+    routeIntervals: [],
+    vehicleSummary: null,
+    fleet: { mode: "live", assignmentFleetSize: 1, liveActiveFleetSize: 1, template: null },
+    fleetShortage: {
+      direction: "pickup",
+      anchorMinutes: PICKUP_ANCHOR,
+      plannedVehicles,
+      liveFleet: 1,
+      capacityFloor: floor === null ? null : { vehicles: floor, swCount: 3, soCount: 0, swCapacity: 2, soCapacity: 2 },
+    },
+  };
+}
+
 /** Blocked before any plan exists (for example the travel-time matrix is missing). */
 export function blockedResponse(reasonCodes: string[] = ["MATRIX_UNAVAILABLE"]): Response {
   const response = baseResponse();

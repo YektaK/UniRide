@@ -1070,6 +1070,62 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(body.publishable).toBe(false);
     });
 
+    // MT1-10 (M1, O09 OQ-MT1-8 a): the shortage carries the computed plan's vehicle count, the live
+    // fleet, and the capacity floor of the wave, so the page can call it proven only when floor > fleet.
+    const shortageWith = async (students: number, vehicles: ReturnType<typeof vehicleRow>[], routeSizes: number[]) => {
+      setAdmin({
+        ...crowd(students), vehicles,
+        student_leg_decisions: Array.from({ length: students }, (_, index) => confirmedLeg(index + 1)),
+      });
+      let target = "";
+      optimizerFetchMock.mockImplementation(async (path: string, init?: { body: string }) => {
+        if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrixFor(students));
+        const body = JSON.parse(init!.body) as OptimizeBody & { target_time: string };
+        target = body.target_time;
+        let next = 0;
+        return Response.json({
+          success: false,
+          routes: routeSizes.map((size) => {
+            const ids = body.students.slice(next, next + size).map((student) => student.id);
+            next += size;
+            return {
+              vehicle_id: "x", route_details: [], total_duration_minutes: 11,
+              sw_count: size, so_count: 0, student_ids: ids,
+            };
+          }),
+          feasibility_certificate: {
+            is_feasible: false, violation_count: 1,
+            violations: [{ type: "fleet_size_violation", severity: "error", details: "routes exceed vehicles" }],
+          },
+        });
+      });
+      const { POST } = await import("./route");
+      const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+      const [hours, minutes] = target.split(":").map(Number);
+      return { body, anchorMinutes: hours! * 60 + minutes! };
+    };
+
+    it("reports the plan's vehicle count, the live fleet and a capacity floor above the fleet (proven shortage)", async () => {
+      // 3 Sw students, 1 live vehicle with 2 wheelchair seats: floor = ceil(3 / 2) = 2 > 1.
+      const { body, anchorMinutes } = await shortageWith(3, [vehicleRow("v1", 2, 2, 10)], [2, 1]);
+
+      expect(body.status).toBe("shortage");
+      expect(body.fleetShortage).toEqual({
+        direction: "pickup", anchorMinutes, plannedVehicles: 2, liveFleet: 1,
+        capacityFloor: { vehicles: 2, swCount: 3, soCount: 0, swCapacity: 2, soCapacity: 2 },
+      });
+    });
+
+    it("reports a capacity floor that does not exceed the fleet when only the heuristic needed more vehicles", async () => {
+      // 2 Sw students fit one vehicle by seats (floor 1), but the heuristic returned 2 routes.
+      const { body } = await shortageWith(2, [vehicleRow("v1", 2, 2, 10)], [1, 1]);
+
+      expect(body.status).toBe("shortage");
+      expect(body.fleetShortage).toMatchObject({
+        plannedVehicles: 2, liveFleet: 1, capacityFloor: { vehicles: 1 },
+      });
+    });
+
     it("keeps OPTIMIZATION_NOT_SUCCESSFUL for the same fleet_size_violation in virtual mode", async () => {
       setAdmin({
         ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10)],

@@ -11,6 +11,7 @@ import {
 import {
   blockedResponse,
   emptyDayResponse,
+  fleetShortageResponse,
   indeterminateResponse,
   peakWaveResponse,
   readyResponse,
@@ -358,6 +359,41 @@ describe("fleet assignment evidence", () => {
     expect(empty.state).toBe("missing");
     expect(empty.amount).toBe(0);
     expect(buildDailyPlanView({ ...shortageResponse(), jobs: [], routeIntervals: [], reasonCodes: ["MATRIX_UNAVAILABLE"] }).summary.fleet.state).toBe("unknown");
+  });
+
+  // MT1-10 (M1, O09 OQ-MT1-8 a): "proven" only when the wave's capacity floor exceeds the live fleet.
+  describe("fleet shortage evidence", () => {
+    it("calls the shortage proven when the capacity floor (2) exceeds the live fleet (1)", () => {
+      const shortage = buildDailyPlanView(fleetShortageResponse(2, 2)).summary.fleetShortage;
+      expect(shortage).toEqual({
+        direction: "pickup",
+        anchorLabel: "08:45",
+        plannedVehicles: 2,
+        liveFleet: 1,
+        capacityFloor: { vehicles: 2, swCount: 3, soCount: 0, swCapacity: 2, soCapacity: 2 },
+        proven: true,
+      });
+    });
+
+    it("does not call it proven when the floor (1) equals the fleet but the heuristic used 2", () => {
+      const shortage = buildDailyPlanView(fleetShortageResponse(1, 2)).summary.fleetShortage;
+      expect(shortage).toMatchObject({ plannedVehicles: 2, liveFleet: 1, proven: false });
+    });
+
+    it("does not call it proven when the floor is unknown", () => {
+      const shortage = buildDailyPlanView(fleetShortageResponse(null, 2)).summary.fleetShortage;
+      expect(shortage).toMatchObject({ capacityFloor: null, proven: false });
+    });
+
+    it("has no shortage evidence for a ready plan or a response from an older producer", () => {
+      expect(buildDailyPlanView(readyResponse()).summary.fleetShortage).toBeNull();
+      expect(buildDailyPlanView({ ...fleetShortageResponse(2), fleetShortage: undefined }).summary.fleetShortage).toBeNull();
+    });
+
+    it("keeps the evidence when the client parses the API body", () => {
+      const parsed = parseDudulluPreviewResponse(JSON.parse(JSON.stringify(fleetShortageResponse(2, 2))));
+      expect(parsed.fleetShortage?.capacityFloor?.vehicles).toBe(2);
+    });
   });
 
   it("parses available live identities while accepting older responses", () => {

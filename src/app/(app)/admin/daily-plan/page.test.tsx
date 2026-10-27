@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   blockedResponse,
   emptyDayResponse,
+  fleetShortageResponse,
   indeterminateResponse,
   peakWaveResponse,
   readyResponse,
@@ -207,6 +208,40 @@ describe("DailyPlanPage", () => {
 
     expect(screen.getByTestId("why-conclusion").textContent).toContain("belirleyici etken koltuk kapasitesidir");
     expect(screen.queryByText(/Fazladan/)).toBeNull();
+  });
+
+  // MT1-10 (M1, O09 OQ-MT1-8 a): honest fleet-shortage wording.
+  it("states a proven shortage when the wave's capacity floor exceeds the live fleet", async () => {
+    await generate(fleetShortageResponse(2, 2));
+
+    const block = screen.getByTestId("fleet-shortage");
+    expect(screen.getByTestId("fleet-shortage-needs").textContent).toBe(
+      "Hesaplanan plan, 08:45 varış dalgası için 2 araç gerektiriyor; mevcut filoda 1 araç var.",
+    );
+    const verdict = screen.getByTestId("fleet-shortage-verdict").textContent ?? "";
+    expect(verdict).toContain("Kanıtlandı");
+    expect(verdict).toContain("en az 2 araç");
+    expect(block.textContent).not.toMatch(/imkans|imkân/i);
+  });
+
+  it("does not call the shortage proven when the floor is not above the live fleet", async () => {
+    await generate(fleetShortageResponse(1, 2));
+
+    expect(screen.getByTestId("fleet-shortage-needs").textContent).toBe(
+      "Hesaplanan plan, 08:45 varış dalgası için 2 araç gerektiriyor; mevcut filoda 1 araç var.",
+    );
+    const verdict = screen.getByTestId("fleet-shortage-verdict").textContent ?? "";
+    expect(verdict).toContain("Eksiklik kanıtlanmadı");
+    expect(verdict).toContain("başka biçimde");
+    expect(verdict).not.toContain("Kanıtlandı");
+  });
+
+  it("shows the English copy for the same evidence", async () => {
+    testLocale = "en";
+    await generate(fleetShortageResponse(2, 2));
+
+    expect(screen.getByTestId("fleet-shortage-needs").textContent).toContain("08:45 arrival wave");
+    expect(screen.getByTestId("fleet-shortage-verdict").textContent).toContain("Proven");
   });
 
   it("hides the explanation when the vehicles are fewer than the capacity floor", async () => {

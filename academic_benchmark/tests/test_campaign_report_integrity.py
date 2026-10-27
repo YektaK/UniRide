@@ -44,6 +44,7 @@ def _call(out: Path, root: Path, mode: str, **extra):
 
 
 # ------------------------------------------------------------------------------------------------ run-index polish 2: root and notes
+@pytest.mark.requires_analysis_extra  # the module fixture ``paper`` runs a paper campaign (SciPy / statsmodels guard)
 def test_load_verified_campaign_verifies_against_the_root_it_is_given_and_returns_the_notes(paper, tmp_path):
     root, out = paper
     loaded = load_verified_campaign(out, repository_root=root)
@@ -81,6 +82,7 @@ def test_a_loaded_plan_that_equals_the_recorded_hash_gives_no_warning(tmp_path):
     assert not any("differs" in line for line in lines), lines
 
 
+@pytest.mark.requires_analysis_extra  # the module fixture ``paper`` runs a paper campaign (SciPy / statsmodels guard)
 def test_a_loaded_plan_that_differs_from_the_recorded_hash_is_refused_in_paper_mode(paper, tmp_path):
     root, out = paper
     copied = tmp_path / "out-copy"

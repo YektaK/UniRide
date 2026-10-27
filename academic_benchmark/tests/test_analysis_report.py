@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-import test_analysis_statistics as fx
+import academic_benchmark.tests.analysis_fixtures as fx
 import test_study_run_service as svc
 import test_study_smoke_composite as comp
 from academic_benchmark.analysis import report as report_module
@@ -339,6 +339,7 @@ def _paper_inference(active):
     return items, analysis
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_inferential_section_is_absent_in_smoke_mode_and_cannot_be_forced_in(active):
     items, analysis = _paper_inference(active)
     smoke = _report(items, plan=active, mode="smoke")
@@ -347,6 +348,7 @@ def test_the_inferential_section_is_absent_in_smoke_mode_and_cannot_be_forced_in
         _report(items, plan=active, mode="smoke", inference=[analysis])
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_inferential_section_of_a_paper_report_is_the_d05_output_quoted_verbatim(active):
     items, analysis = _paper_inference(active)
     report = _report(items, plan=active, mode="paper", inference=[analysis])
@@ -360,6 +362,7 @@ def test_the_inferential_section_of_a_paper_report_is_the_d05_output_quoted_verb
     json.dumps(report.data)  # the whole report is JSON-serialisable
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_paper_report_has_its_own_schema_name_and_title_and_a_smoke_report_keeps_the_descriptive_ones(active):
     """A20 L13: each artefact type is identified by its own versioned schema; the descriptive schema is unchanged."""
     items, analysis = _paper_inference(active)
@@ -373,6 +376,7 @@ def test_a_paper_report_has_its_own_schema_name_and_title_and_a_smoke_report_kee
     assert report_module.PAPER_REPORT_SCHEMA == "uniride-paper-report/v1"
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_paper_inference_of_another_plan_or_a_smoke_campaign_is_refused(active, draft):
     items, analysis = _paper_inference(active)
     smoke_analysis = analyse_family(items, study=fx.study_for(items, active), plan=active, family_id=fx.PER_INSTANCE,

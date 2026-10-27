@@ -73,9 +73,10 @@ def _with_problem_type(items, spelling):
     return out
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_statistics_service_accepts_a_lowercase_manifest_problem_type_and_refuses_an_unknown_one():
     """A20 L10 polish: the manifest-versus-family comparison in ``analyse_family`` is canonical (statistics.py, the in_family check)."""
-    import test_analysis_statistics as fx
+    import academic_benchmark.tests.analysis_fixtures as fx
     from academic_benchmark.analysis.statistics import StatisticsRefusal
 
     plan = fx.activate(_plan())

@@ -27,9 +27,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from scipy import stats as sps
-from statsmodels.stats.multitest import multipletests
-from statsmodels.stats.nonparametric import rank_compare_2indep
 
 from academic_benchmark.analysis import environment as analysis_environment
 from academic_benchmark.analysis import statistics as stats_service
@@ -46,211 +43,45 @@ from academic_benchmark.analysis.statistics import (
     smallest_possible_adjusted_p,
     vargha_delaney_a12,
 )
-from academic_benchmark.analysis.identity import comparison_cell_key
 from academic_benchmark.analysis.manifests import make_run_id
 from academic_benchmark.contracts import RunManifestV1
-from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
-from academic_benchmark.fairness import normalize_problem
-from academic_benchmark.studies.service import load_study_with_plan
 from academic_benchmark.studies.smoke import assert_no_ranking_words
+# The shared builders and module fixtures live in the scipy-free helper module (collected in CI without the analysis extra).
+from academic_benchmark.tests.analysis_fixtures import (  # noqa: F401  (the fixtures are used by name)
+    _BILDIRI,
+    ACROSS,
+    ALGORITHMS,
+    CROSS_INSTANCES,
+    INDEX_SHA256,
+    INTERLEAVED,
+    PER_INSTANCE,
+    SEPARATED,
+    STUDY3,
+    activate,
+    active,
+    cross_items,
+    draft,
+    draft_plans,
+    failed_item,
+    index_for,
+    _levels,
+    make_item,
+    per_instance_items,
+    run,
+)
 
-REPO = Path(__file__).resolve().parents[2]
-FAIR_V2 = "uniride-fair-tsp-v2"
-COMMIT = "a" * 40
-INDEX_SHA256 = "e" * 64  # the fixed run-index sha256 of the tests that build no campaign (A20 L7: analyse_family requires it)
-PER_INSTANCE = "per-instance-independent"
-ACROSS = "across-instances-tsp-matched"
-_BILDIRI = load_study_with_plan("academic_benchmark/studies/bildiri2026/study.json", repository_root=REPO, mode="smoke").study
-STUDY3 = _BILDIRI.model_copy(update={"algorithm_ids": ["Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure"]})  # the three algorithms of the fixtures
-CROSS_INSTANCES = ["berlin52", "eil51", "st70", "kroA100", "rd100", "eil76"]
-SEPARATED = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [6, 7, 8, 9, 10], "Core-GWO-TSP-Pure": [11, 12, 13, 14, 15]}
-INTERLEAVED = {"Core-GA-TSP": [1, 4, 7, 10, 13], "Core-PSO-TSP": [2, 5, 8, 11, 14], "Core-GWO-TSP-Pure": [3, 6, 9, 12, 15]}
-
-
-# ---------------------------------------------------------------- fixtures
-def _dataset(dataset_id, dimension=51):
-    return {
-        "schema_version": "uniride-dataset/v1", "dataset_id": dataset_id,
-        "artifact_path": f"academic_benchmark/tsplib_data/tsp/{dataset_id}.tsp",
-        "source": {"authority_url": "https://example.invalid/x", "retrieved_on": "2026-10-19"},
-        "checksum": {"algorithm": "sha256", "value": "0" * 64}, "problem_type": "TSP", "dimension": dimension,
-        "matrix_semantics": {"directed": False, "edge_weight_type": "EUC_2D", "diagonal_semantics": "zero"},
-        "best_known": {"status": "optimal", "value": 426.0, "provenance": "fixture"},
-    }
-
-
-def _levels(problem):
-    """The study profile's own level list of the instance (what the run service records); a made-up pair for other names."""
-    scaled = _BILDIRI.scaled_fixed_budget_levels.levels_by_dataset.get(f"tsplib-{normalize_problem(problem)}")
-    if scaled is not None:
-        return tuple(scaled)
-    base = 1000 + 17 * len(problem)
-    return (base, base * 5)
-
-
-def make_item(problem, algorithm, replicate, gap, *, dirty=False, evidence=None, level=0, study_id="bildiri2026", **row_extra):
-    levels = _levels(problem)
-    dataset_id = f"tsplib-{normalize_problem(problem)}"
-    manifest = RunManifestV1.model_validate({
-        "schema_version": "uniride-run/v1", "run_id": make_run_id(study_id, dataset_id, algorithm, level, replicate),
-        "study_id": study_id, "protocol_version": FAIR_V2, "git": {"commit": COMMIT, "dirty": dirty},
-        "environment": {"python": "3.13", "operating_system": "test", "cpu": "test", "numpy": "2.4.6",
-                        "numba": "0.66.0", "llvmlite": "0.48.0", "statistics_library": "none"},
-        "dataset": _dataset(dataset_id),
-        "algorithm": {"algorithm_id": algorithm, "capabilities": {}, "backend_policy": "prefer_numba",
-                      "backend_profile": {"objective": "numba", "polish": "none"}, "capability_evidence_ids": ["fixture"],
-                      "configuration": {"population": 20, "algorithm": algorithm}, "composition_stages": []},
-        "seeds": {"base_seed": 2026, "derived": {"run_seed": 1}},
-        "budget": {"levels": list(levels), "policy": "atomic_upper_bound_v1", "objective_evaluations": 5, "stage_allocation": {}},
-        "termination": {"reason": "evaluation_budget_exhausted", "runtime_seconds": 0.1},
-        "validation": {"passed": True, "checks": ["hamiltonian"]}, "outputs": [],
-    })
-    row = {
-        "protocol_version": FAIR_V2, "comparison_regime": "fixed_evaluation_budget", "problem": problem,
-        "algorithm_id": algorithm, "variant": "pure", "study_id": study_id, "evaluation_budget": levels[level],
-        "termination_policy": "atomic_upper_bound_v1;max_iterations=1237500;max_no_improvement=1237500",
-        "polish_policy": {"enabled": False, "initial": False, "periodic": False, "final": False, "operator": None},
-        "objective_cost": 500.0 + gap, "elapsed_ms": 1.0, "replicate": replicate,
-        "gap_to_exact_reference": gap, "gap_unit": "percent", "exact_reference_value": 426, "gap_missing_reason": None,
-    }
-    if evidence is not None:
-        row["evidence_class"] = evidence
-    row.update(row_extra)
-    return row, manifest
-
-
-def failed_item(problem, algorithm, replicate, **overrides):
-    row = {
-        "record_kind": "failed_run", "validation_status": "failed", "protocol_version": FAIR_V2, "study_id": "bildiri2026",
-        "comparison_regime": "fixed_evaluation_budget", "problem": problem, "algorithm_id": algorithm,
-        "replicate": replicate, "evaluation_budget": _levels(problem)[0],
-    }
-    row.update(overrides)
-    return row, None
-
-
-PLAN_SHA = "2" * 64
-PROFILE_SHA = "1" * 64
-
-
-def index_for(items, mode="paper", *, study_id="bildiri2026", dirty=False, drop=(), digest_of=None, extra_items=(),
-              failed=None, plan_sha=PLAN_SHA, plan_id=None):
-    """A ``RunIndexV2`` that lists the manifest of every completed item (the campaign index the caller has verified).
-
-    ``failed`` are the failed items the index lists (default: every failed item of ``items``); ``plan_sha="absent"`` models a
-    smoke campaign whose analysis plan file did not resolve."""
-    runs = []
-    for row, manifest in [*items, *extra_items]:
-        if manifest is None or manifest.run_id in drop or any(r["run_id"] == manifest.run_id for r in runs):
-            continue
-        digest = comparison_cell_key(row, manifest, allow_dirty=True).digest()
-        runs.append({"run_id": manifest.run_id, "manifest_path": f"manifests/{manifest.run_id}.json",
-                     "manifest_checksum": {"algorithm": "sha256", "value": "b" * 64},
-                     "comparison_key_digest": "0" * 64 if digest_of == "wrong" else digest})
-    listed = [row for row, manifest in items if manifest is None and row.get("record_kind") == "failed_run"] if failed is None else [row for row, _ in failed]
-    failed_runs = [{
-        "algorithm_id": row["algorithm_id"], "dataset_id": row.get("dataset_id") or f"tsplib-{normalize_problem(row['problem'])}",
-        "problem": row["problem"], "protocol_version": row["protocol_version"], "comparison_regime": row["comparison_regime"],
-        "evaluation_budget": row.get("evaluation_budget"), "replicate": row["replicate"],
-        "stage": "run", "exception_category": "RuntimeError", "error": "synthetic failure",
-    } for row in listed]
-    replicates = [row.get("replicate", 0) for row, _ in [*items, *extra_items]] or [0]
-    environment = {"python": "3.13", "operating_system": "test", "cpu": "test", "numpy": "2.4.6", "numba": "0.66.0",
-                   "llvmlite": "0.48.0", "statistics_library": "none"}
-    absent = plan_sha == "absent"
-    return RunIndexV2.model_validate({
-        "schema_version": "uniride-run-index/v2", "study_id": study_id, "mode": mode,
-        "status": "failed" if failed_runs else "passed",
-        "seed_protocol_version": "sha256-seed-v1", "base_seed": 2026, "git": {"commit": COMMIT, "dirty": dirty},
-        "environment": environment, "runs": runs, "outputs": [],
-        "profile": {"path": f"academic_benchmark/studies/{study_id}/study.json", "sha256": PROFILE_SHA},
-        "analysis_plan": {
-            "analysis_plan_id": plan_id or _BILDIRI.analysis_plan_id,
-            "path": None if absent else f"academic_benchmark/studies/{study_id}/analysis_plan.json",
-            "sha256": None if absent else plan_sha,
-        },
-        "planned": {"runs_per_cell": max(replicates) + 1, "runs": max(1, len(runs) + len(failed_runs))},
-        "output_location": {"path": "/campaign/out", "outside_repository_check": {"result": "outside_repository", "checked_against": ["/repo"]}},
-        "failed_runs": failed_runs,
-    })
-
-
-def per_instance_items(samples, problem="eil51", study_id="bildiri2026"):
-    return [make_item(problem, algorithm, r, gap, study_id=study_id) for algorithm, values in samples.items() for r, gap in enumerate(values)]
-
-
-ALGORITHMS = ("Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure")
-
-
-def cross_items(shift=0.0, problems=CROSS_INSTANCES, algorithms=ALGORITHMS, *, centres=None, skew=None):
-    """Every instance orders the algorithms the same way; the per-instance median of A, B, C is i, i + 1, i + 2 unless
-    ``centres[(problem, algorithm)]`` overrides it. ``skew[(problem, algorithm)]`` replaces the symmetric replicate offsets
-    (-0.1, 0, +0.1) of that cell, so that its mean differs from its median (the median stays the centre)."""
-    items = []
-    for i, problem in enumerate(problems):
-        for a, algorithm in enumerate(algorithms):
-            centre = (centres or {}).get((problem, algorithm), float(i + a)) + shift
-            offsets = (skew or {}).get((problem, algorithm), (-0.1, 0.0, 0.1))
-            for r, offset in enumerate(offsets):
-                items.append(make_item(problem, algorithm, r, centre + offset))
-    return items
-
-
-@pytest.fixture(scope="module")
-def draft_plans():
-    out = {}
-    for study in ("bildiri2026", "yaem2026"):
-        loaded = load_study_with_plan(f"academic_benchmark/studies/{study}/study.json", repository_root=REPO, mode="smoke")
-        out[study] = loaded.analysis_plan.plan
-    return out
-
-
-@pytest.fixture(scope="module")
-def draft(draft_plans):
-    return draft_plans["bildiri2026"]
-
-
-def activate(plan, *, minimum_n=3, alpha=None, rule=None, mutate=None):
-    data = plan.model_dump(mode="json")
-    data.update(status="active", unresolved=[], minimum_n_per_cell=minimum_n)
-    if alpha is not None:
-        data["alpha"] = alpha
-    if rule is not None:
-        for family in data["families"]:
-            family["post_hoc"]["rule"] = rule
-    if mutate is not None:
-        mutate(data)
-    return AnalysisPlanV1.model_validate(data)
-
-
-@pytest.fixture(scope="module")
-def active(draft):
-    return activate(draft)
-
-
-def study_for(items, plan=None):
-    """The profile of a test: the Bildiri study with exactly the algorithms that occur in the items (completed or failed)."""
-    names = {row["algorithm_id"] for row, _ in items}
-    update = {"algorithm_ids": [a for a in (*ALGORITHMS, *sorted(names - set(ALGORITHMS))) if a in names]}
-    if getattr(plan, "study_id", None) is not None:
-        update["study_id"] = plan.study_id
-        update["analysis_plan_id"] = plan.analysis_plan_id
-    return _BILDIRI.model_copy(update=update)
-
-
-def run(items, plan, family=PER_INSTANCE, *, mode="paper", study=None, **index_options):
-    index_options.setdefault("plan_id", getattr(plan, "analysis_plan_id", None))
-    return analyse_family(
-        items, study=study or study_for(items, plan), plan=plan, family_id=family, run_index=index_for(items, mode, **index_options),
-        index_sha256=INDEX_SHA256,
-    )
+# Tests that compare with SciPy / statsmodels, or run the statistics service or Holm (all of which need the pinned analysis extra
+# at run time), carry ``requires_analysis_extra``; the pure-Python tests (effect-size hand values, descriptive sample, plan
+# conventions, guard order) are unmarked and run in an environment without the extra.
 
 
 # ---------------------------------------------------------------- effect sizes against independent values
+@pytest.mark.requires_analysis_extra
 def test_epsilon_squared_hand_example():
     """Three groups [1,2,3], [4,5,6], [7,8,9]: rank sums 6, 15, 24, H = 12/(9*10) * (36 + 225 + 576)/3 - 3*10 = 7.2 (hand),
     so epsilon-squared = H / ((n^2 - 1) / (n + 1)) = 7.2 / 8 = 0.9 (Tomczak and Tomczak 2014)."""
+    from scipy import stats as sps
     assert epsilon_squared(7.2, 9) == pytest.approx(0.9, abs=1e-12)
     assert sps.kruskal([1, 2, 3], [4, 5, 6], [7, 8, 9]).statistic == pytest.approx(7.2, abs=1e-12)
     # the service's omnibus for five-observation groups: H = 12.5 by hand, epsilon-squared = 12.5 / 14
@@ -263,8 +94,10 @@ def test_epsilon_squared_refuses_impossible_inputs():
             epsilon_squared(h, n)
 
 
+@pytest.mark.requires_analysis_extra
 def test_kendalls_w_published_zar_example_without_ties():
     """Zar example 12.6: chi2_F = 10.68 (published, k = 4, b = 5), so W = 10.68 / (5 * 3) = 0.712."""
+    from scipy import stats as sps
     columns = [[7.0, 9.9, 8.5, 5.1, 10.3], [5.3, 5.7, 4.7, 3.5, 7.7], [4.9, 7.6, 5.5, 2.8, 8.4], [8.8, 8.9, 8.1, 3.3, 9.1]]
     blocks = [list(block) for block in zip(*columns)]  # one block = the four treatments of one subject
     assert kendalls_w(blocks) == pytest.approx(10.68 / 15, abs=5e-4)
@@ -295,9 +128,12 @@ def test_kendalls_w_is_undefined_when_every_block_is_constant():
     assert kendalls_w([[1, 1, 1], [2, 2, 2]]) is None
 
 
+@pytest.mark.requires_analysis_extra
 def test_a12_hand_example_and_library_cross_checks():
     """x = [1,2,3], y = [2,3,4]: of the 9 pairs, x > y in 1 (3 > 2), they tie in 2 (2 = 2, 3 = 3) and x < y in 6, so
     A12 = (1 + 0.5 * 2) / 9 = 2/9 (Vargha and Delaney 2000)."""
+    from scipy import stats as sps
+    from statsmodels.stats.nonparametric import rank_compare_2indep
     assert vargha_delaney_a12([1, 2, 3], [2, 3, 4]) == pytest.approx(2 / 9, abs=1e-12)
     assert vargha_delaney_a12([1, 2, 3], [2, 3, 4]) + vargha_delaney_a12([2, 3, 4], [1, 2, 3]) == pytest.approx(1.0)
     rng = np.random.default_rng(20261023)
@@ -324,8 +160,10 @@ def test_matched_pairs_rank_biserial_hand_examples():
     assert matched_pairs_rank_biserial([1, 2], [1, 2], "wilcox") is None  # no non-zero difference: undefined
 
 
+@pytest.mark.requires_analysis_extra
 def test_rank_biserial_equals_one_minus_twice_the_smaller_signed_rank_sum_over_the_total():
     """Wendt (1972): r = +/-(1 - 2 T_min / (n (n + 1) / 2)); T_min is SciPy's two-sided Wilcoxon statistic (no ties, no zeros)."""
+    from scipy import stats as sps
     rng = np.random.default_rng(7)
     for _ in range(5):
         x, y = rng.normal(size=9), rng.normal(size=9)
@@ -358,6 +196,7 @@ def test_descriptive_sample_of_one_value_has_an_empty_sd_and_an_empty_sample_is_
 
 
 # ---------------------------------------------------------------- per-instance family against exact known values
+@pytest.mark.requires_analysis_extra
 def test_per_instance_family_reproduces_the_hand_computed_values(active):
     """Three separated groups of five ([1..5], [6..10], [11..15]): H = 12/(15*16) * (15^2 + 40^2 + 65^2)/5 - 3*16 = 12.5 (hand),
     p = exp(-H/2) (chi-square with 2 df), epsilon-squared = 12.5/14; each pairwise U is 0 or 25, the exact two-sided
@@ -382,7 +221,10 @@ def test_per_instance_family_reproduces_the_hand_computed_values(active):
     assert {c.algorithm_id: c.summary["n"] for c in result.cells} == {name: 5 for name in SEPARATED}
 
 
+@pytest.mark.requires_analysis_extra
 def test_holm_adjustment_equals_statsmodels_on_unequal_p_values(active):
+    from scipy import stats as sps
+    from statsmodels.stats.multitest import multipletests
     samples = {"Core-GA-TSP": [1, 2, 3, 4, 5, 6], "Core-PSO-TSP": [2.5, 3.5, 7, 8, 9, 10], "Core-GWO-TSP-Pure": [11, 12, 13, 14, 15, 16]}
     result = run(per_instance_items(samples), active)
     pairs = sorted(result.inference.pairs, key=lambda p: (p.algorithm_a, p.algorithm_b))
@@ -393,7 +235,9 @@ def test_holm_adjustment_equals_statsmodels_on_unequal_p_values(active):
     assert len({round(p.p_value, 12) for p in pairs}) > 1  # the p-values are not all equal, so Holm is exercised
 
 
+@pytest.mark.requires_analysis_extra
 def test_post_hoc_runs_only_after_a_significant_omnibus_under_the_declared_rule(active, draft):
+    from scipy import stats as sps
     items = per_instance_items(INTERLEAVED)
     gated = run(items, active)
     # H = 0.5 by hand (rank sums 35, 40, 45), p = exp(-0.25)
@@ -410,6 +254,7 @@ def test_post_hoc_runs_only_after_a_significant_omnibus_under_the_declared_rule(
     assert first.p_value == pytest.approx(direct, abs=1e-12)
 
 
+@pytest.mark.requires_analysis_extra
 def test_alpha_is_read_from_the_plan_not_from_the_code(draft):
     items = per_instance_items(INTERLEAVED)  # omnibus p = 0.7788
     assert run(items, activate(draft, alpha=0.05)).inference.post_hoc_ran is False
@@ -453,10 +298,12 @@ def test_a_plan_without_the_convention_fields_is_refused(draft, field):
         AnalysisPlanV1.model_validate(data)
 
 
+@pytest.mark.requires_analysis_extra
 def test_mann_whitney_auto_reports_the_method_actually_used_per_pair(active):
     """scipy 1.18.1 ``method="auto"`` (``_mwu_choose_method``): exact only when at least one sample has at most 8 observations and there
     are no ties; asymptotic otherwise (with the plan's continuity correction). Each reported label is checked against the p-value of an
     explicit call of that method, so a wrong label cannot hide behind equal p-values."""
+    from scipy import stats as sps
     untied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4.5, 6, 7, 8, 9]}
     tied = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4, 6, 7, 8, 9]}
     eight = {"Core-GA-TSP": [float(v) for v in range(8)], "Core-PSO-TSP": [v + 3.5 for v in range(8)]}  # one sample <= 8, no ties
@@ -478,6 +325,7 @@ def test_mann_whitney_auto_reports_the_method_actually_used_per_pair(active):
     assert run(per_instance_items(big), active).inference.pairs[0].method_used == "asymptotic"
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_iman_davenport_p_not_the_chi_square_p_opens_the_omnibus_gate(draft):
     """Rank sums 8, 12, 16 over six blocks (four blocks A < B < C, one C < A < B, one B < A < C): chi2_F = 464/6 - 72 = 16/3, chi-square
     p = exp(-8/3) = 0.0695, Iman-Davenport F = 5 * (16/3) / (12 - 16/3) = 4 with (2, 10) df, p = 1.8^-5 = 0.0529. At alpha 0.06 only
@@ -496,8 +344,10 @@ def test_the_iman_davenport_p_not_the_chi_square_p_opens_the_omnibus_gate(draft)
     assert strict.omnibus.significant is False and strict.post_hoc_ran is False
 
 
+@pytest.mark.requires_analysis_extra
 def test_wilcoxon_auto_is_asymptotic_above_fifty_units():
     """scipy ``_wilcoxon_iv``: ``method="auto"`` with more than 50 differences is asymptotic even without ties or zeros."""
+    from scipy import stats as sps
     from academic_benchmark.analysis.statistics import wilcoxon_method_used
     x = [float(v) for v in range(51)]
     y = [v * 1.37 + 0.11 for v in x]  # 51 distinct non-zero differences
@@ -508,6 +358,7 @@ def test_wilcoxon_auto_is_asymptotic_above_fifty_units():
     assert wilcoxon_method_used(x[:50], y[:50], "auto") == "exact"
 
 
+@pytest.mark.requires_analysis_extra
 def test_perfect_agreement_text_states_that_f_is_infinite_and_where_f_comes_from(active):
     text = run(cross_items(), active, ACROSS).text
     assert "F infinite (perfect agreement), p below machine precision" in text
@@ -517,6 +368,7 @@ def test_perfect_agreement_text_states_that_f_is_infinite_and_where_f_comes_from
     assert "F infinite" not in swapped and "tie-corrected chi-square" in swapped
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_study_profile_must_match_the_plan_and_the_index(active):
     items = per_instance_items(SEPARATED)
     wrong = _BILDIRI.model_copy(update={"study_id": "yaem2026", "algorithm_ids": list(ALGORITHMS)})
@@ -528,7 +380,9 @@ def test_the_study_profile_must_match_the_plan_and_the_index(active):
 
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_plan_conventions_not_the_code_decide_the_method(draft):
+    from scipy import stats as sps
     samples = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [4.5, 6, 7, 8, 9]}
     items = per_instance_items(samples)
 
@@ -544,6 +398,7 @@ def test_the_plan_conventions_not_the_code_decide_the_method(draft):
     assert len({exact.p_value, asymptotic.p_value, no_correction.p_value}) == 3
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_convention_value_the_service_does_not_implement_is_refused(draft):
     plan = activate(draft)
     forged_conventions = plan.conventions.model_copy(update={"mann_whitney": plan.conventions.mann_whitney.model_copy(update={"method": "permutation"})})
@@ -554,6 +409,7 @@ def test_a_convention_value_the_service_does_not_implement_is_refused(draft):
         run(per_instance_items(SEPARATED), plan.model_copy(update={"conventions": forged_conventions}))
 
 
+@pytest.mark.requires_analysis_extra
 def test_significance_is_p_less_than_or_equal_to_alpha_everywhere():
     assert is_significant(0.05, 0.05) is True and is_significant(0.0500001, 0.05) is False and is_significant(0.01, 0.05) is True
     # Holm on [0.025, 0.05]: adjusted 0.05 and 0.05 (hand: 0.025 * 2, then max(0.05, 0.05 * 1)); both are significant at alpha = 0.05
@@ -563,6 +419,7 @@ def test_significance_is_p_less_than_or_equal_to_alpha_everywhere():
     assert holm_adjust([], 0.05) == []
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_omnibus_gate_uses_the_same_comparison(draft):
     """A plan alpha equal to the omnibus p opens the post-hoc tests (p <= alpha)."""
     items = per_instance_items(INTERLEAVED)
@@ -571,6 +428,7 @@ def test_the_omnibus_gate_uses_the_same_comparison(draft):
     assert at.inference.omnibus.significant is True and at.inference.post_hoc_ran is True
 
 
+@pytest.mark.requires_analysis_extra
 def test_identical_values_make_the_omnibus_undefined_not_an_error(active):
     samples = {name: [2.0] * 5 for name in SEPARATED}
     result = run(per_instance_items(samples), active)
@@ -581,10 +439,12 @@ def test_identical_values_make_the_omnibus_undefined_not_an_error(active):
 
 
 # ---------------------------------------------------------------- across instances (matched units)
+@pytest.mark.requires_analysis_extra
 def test_iman_davenport_f_follows_demsar_2006():
     """Demsar (2006), section 3.2.2: F_F = (b - 1) chi2_F / (b (k - 1) - chi2_F), F distributed with k - 1 and (k - 1)(b - 1) degrees
     of freedom. His example has b = 14 data sets, k = 4 algorithms and chi2_F = 9.28, which gives F_F = 13 * 9.28 / (42 - 9.28) =
     3.687 (printed as 3.69) with (3, 39) degrees of freedom, whose 5 % critical value is 2.85."""
+    from scipy import stats as sps
     f, df1, df2 = iman_davenport_f(9.28, 14, 4)
     assert (df1, df2) == (3, 39)
     assert f == pytest.approx(13 * 9.28 / (42 - 9.28), abs=1e-12) and round(f, 2) == 3.69
@@ -600,11 +460,14 @@ def swapped_cross_items(**kw):
     return cross_items(centres=centres, **kw)
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instance_family_reproduces_the_hand_computed_values(active):
     """b = 6, k = 3, rank sums 7, 11, 18 (see ``swapped_cross_items``), mean 12: chi2_F = 12/(6*3*4) * (49 + 121 + 324) - 3*6*4 =
     31/3 (hand); W = 12 S / (b^2 k (k^2 - 1)) = 12 * 62 / 864 = 0.861111 (S = 25 + 1 + 36); Iman-Davenport F = 5 * (31/3) /
     (12 - 31/3) = 31 with (2, 10) degrees of freedom; for 2 numerator degrees of freedom the F survival function is closed form,
     (1 + 2 F / d2)^(-d2 / 2) = 7.2^-5; the chi-square p (2 df) is exp(-chi2_F / 2)."""
+    from scipy import stats as sps
+    from statsmodels.stats.multitest import multipletests
     result = run(swapped_cross_items(), active, ACROSS)
     omnibus = result.inference.omnibus
     assert omnibus.test == "friedman" and omnibus.status == "computed"
@@ -628,6 +491,7 @@ def test_across_instance_family_reproduces_the_hand_computed_values(active):
     assert by_pair[("Core-GA-TSP", "Core-PSO-TSP")].effect_size == pytest.approx(-14 / 21, abs=1e-12)
 
 
+@pytest.mark.requires_analysis_extra
 def test_perfect_agreement_gives_an_infinite_f_and_zero_p_and_the_exact_wilcoxon_label(active):
     """Perfect agreement (W = 1): chi2_F = b (k - 1) = 12 (p exp(-6)), the Iman-Davenport denominator is 0, F is infinite and its
     p-value is exactly 0 (the limit). With pairwise differences that are all distinct and non-zero scipy's Wilcoxon is exact:
@@ -644,9 +508,11 @@ def test_perfect_agreement_gives_an_infinite_f_and_zero_p_and_the_exact_wilcoxon
         assert pair.significant is False and abs(pair.effect_size) == pytest.approx(1.0)  # low power, stated not hidden
 
 
+@pytest.mark.requires_analysis_extra
 def test_wilcoxon_auto_method_labels_follow_scipy():
     """scipy ``wilcoxon(method="auto")``: exact without zero differences and tied |d|; a deterministic permutation test for at most 13
     units with ties or zeros; asymptotic above that. Each label is checked against the explicit method's p-value."""
+    from scipy import stats as sps
     from academic_benchmark.analysis.statistics import wilcoxon_method_used
     x14 = [float(v) for v in range(14)]
     y14 = [v + 1.0 for v in x14]  # 14 units, all |d| equal: ties, more than 13 units
@@ -664,6 +530,7 @@ def test_wilcoxon_auto_method_labels_follow_scipy():
     assert wilcoxon_method_used(x5, y5, "asymptotic") == "asymptotic"
 
 
+@pytest.mark.requires_analysis_extra
 def test_an_all_zero_wilcoxon_pair_is_reported_with_p_one_and_stays_in_the_holm_family(active):
     centres = {(p, a): float(i) + (0, 0, 2)[n] for i, p in enumerate(CROSS_INSTANCES) for n, a in enumerate(ALGORITHMS)}
     result = run(cross_items(centres=centres), active, ACROSS)
@@ -677,6 +544,7 @@ def test_an_all_zero_wilcoxon_pair_is_reported_with_p_one_and_stays_in_the_holm_
     assert [p.p_holm for p in others] == pytest.approx([3 / 32, 3 / 32], abs=1e-12)
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_matched_unit_is_the_median_not_the_mean_of_the_replicates(active):
     """One skewed cell: Core-GA-TSP on eil51 has replicate gaps 1, 1, 10 (median 1, mean 4). The unit must be 1; with the mean 4 it
     would exceed Core-PSO-TSP's 2 and change the Friedman and Wilcoxon inputs."""
@@ -691,6 +559,7 @@ def test_the_matched_unit_is_the_median_not_the_mean_of_the_replicates(active):
     assert cell.summary["mean"] == pytest.approx(4.0) and cell.summary["median"] == pytest.approx(1.0)  # the descriptive columns differ
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instances_refuses_a_declared_instance_with_no_rows(active):
     """5 of 6 declared instances: Friedman and Wilcoxon would still compute (p = 0.006738); the plan declares six, so it is refused."""
     with pytest.raises(StatisticsRefusal, match="eil76"):
@@ -702,6 +571,7 @@ def test_across_instances_refuses_a_declared_instance_with_no_rows(active):
     assert smoke.inference is None and any(e["dataset_identity"] == "eil76" and e["algorithm_id"] is None for e in smoke.exclusions)
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_power_limit_is_declared_in_the_plan_and_stated_when_it_applies(active):
     assert smallest_possible_adjusted_p(6, 3) == pytest.approx(3 / 32, abs=1e-15)
     assert smallest_possible_adjusted_p(4, 3) == pytest.approx(3 / 8, abs=1e-15)
@@ -714,6 +584,7 @@ def test_the_power_limit_is_declared_in_the_plan_and_stated_when_it_applies(acti
     assert_no_ranking_words(text)
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_effect_size_directions_are_stated_neutrally(active):
     a12 = "A12 is P(gap of algorithm a > gap of algorithm b) + 0.5 P(equal)"
     biserial = "the matched-pairs rank-biserial r is positive when algorithm a has larger gaps than algorithm b"
@@ -723,12 +594,14 @@ def test_the_effect_size_directions_are_stated_neutrally(active):
         assert_no_ranking_words(text)
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instance_pair_directions_follow_the_units(active):
     result = run(cross_items(), active, ACROSS)
     pair = [p for p in result.inference.pairs if (p.algorithm_a, p.algorithm_b) == ("Core-GA-TSP", "Core-PSO-TSP")][0]
     assert pair.effect_size == pytest.approx(-1.0)  # the first algorithm's gap is smaller on every instance
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instance_matched_unit_is_the_median_over_replicates_and_replicate_seeds_are_not_pairing(active):
     items = cross_items()
     one = [item for item in items if item[0]["problem"] == "eil51" and item[0]["algorithm_id"] == "Core-GA-TSP"]
@@ -737,12 +610,14 @@ def test_across_instance_matched_unit_is_the_median_over_replicates_and_replicat
     assert result.inference.matched_units[("eil51", "Core-GA-TSP")] == pytest.approx(1.0)
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instances_refuses_a_false_pairing_one_instance_missing_an_algorithm(active):
     items = [item for item in cross_items() if not (item[0]["problem"] == "st70" and item[0]["algorithm_id"] == "Core-PSO-TSP")]
     with pytest.raises(StatisticsRefusal, match="unit"):
         run(items, active, ACROSS)
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instances_refuses_a_failed_cell_and_names_the_exclusion(active):
     items = [item for item in cross_items() if not (item[0]["problem"] == "st70" and item[0]["algorithm_id"] == "Core-PSO-TSP" and item[0]["replicate"] == 2)]
     items.append(failed_item("st70", "Core-PSO-TSP", 2))
@@ -750,12 +625,14 @@ def test_across_instances_refuses_a_failed_cell_and_names_the_exclusion(active):
         run(items, active, ACROSS)
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instances_refuses_an_instance_outside_the_declared_family(active):
     items = cross_items(problems=CROSS_INSTANCES[:5] + ["ft53"])
     with pytest.raises(StatisticsRefusal, match="family"):
         run(items, active, ACROSS)
 
 
+@pytest.mark.requires_analysis_extra
 def test_across_instances_needs_at_least_two_instances(active):
     result = run(cross_items(problems=["eil51"]), active, ACROSS)
     assert result.inference is None
@@ -763,6 +640,7 @@ def test_across_instances_needs_at_least_two_instances(active):
 
 
 # ---------------------------------------------------------------- guards
+@pytest.mark.requires_analysis_extra
 def test_both_real_plans_are_draft_and_inference_is_refused_with_descriptive_output(draft_plans):
     for study, plan in draft_plans.items():
         assert plan.status == "draft" and plan.minimum_n_per_cell is None
@@ -777,6 +655,7 @@ def test_both_real_plans_are_draft_and_inference_is_refused_with_descriptive_out
 
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_campaign_mode_comes_from_the_verified_run_index(active):
     items = per_instance_items(SEPARATED)
     smoke = run(items, active, mode="smoke")  # the index of a smoke campaign
@@ -790,6 +669,7 @@ def test_the_campaign_mode_comes_from_the_verified_run_index(active):
         analyse_family(items, study=STUDY3, plan=active, family_id=PER_INSTANCE, campaign_mode="paper", index_sha256=INDEX_SHA256)
 
 
+@pytest.mark.requires_analysis_extra
 def test_manifests_that_the_index_does_not_list_are_refused(active):
     items = per_instance_items(SEPARATED)
     unlisted = items[0][1].run_id
@@ -806,6 +686,7 @@ def test_manifests_that_the_index_does_not_list_are_refused(active):
         analyse_family(other_commit, study=STUDY3, plan=active, family_id=PER_INSTANCE, run_index=index_for(items), index_sha256=INDEX_SHA256)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_sample_below_the_plan_minimum_gives_insufficient_sample_and_no_p_value(draft):
     plan = activate(draft, minimum_n=6)
     result = run(per_instance_items(SEPARATED), plan)  # n = 5 per cell
@@ -824,6 +705,7 @@ def test_the_environment_guard_runs_first(monkeypatch, active):
         run([], active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_dirty_tree_is_refused_and_allow_dirty_is_never_passed(monkeypatch, active):
     items = per_instance_items(SEPARATED)
     dirty = [make_item("eil51", "Core-GA-TSP", 5, 6.0, dirty=True)]
@@ -843,6 +725,7 @@ def test_a_dirty_tree_is_refused_and_allow_dirty_is_never_passed(monkeypatch, ac
         run(items, active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_historical_unverified_rows_are_refused(active):
     items = per_instance_items(SEPARATED)
     items[0] = make_item("eil51", "Core-GA-TSP", 0, 1.0, evidence="historical_unverified")
@@ -850,6 +733,7 @@ def test_historical_unverified_rows_are_refused(active):
         run(items, active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_exact_union_and_joint_rows_are_refused(active):
     for protocol in ("exact_reference_v1", "union_day_v1", "exact_day_joint_v1"):
         items = per_instance_items(SEPARATED) + [({"protocol": protocol, "problem": "eil51", "algorithm_id": "x"}, None)]
@@ -857,6 +741,7 @@ def test_exact_union_and_joint_rows_are_refused(active):
             run(items, active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_fixed_and_native_rows_never_meet(active):
     native = ({"protocol_version": "uniride-native-tsp-v1", "comparison_regime": "algorithm_native_termination", "problem": "eil51",
                "algorithm_id": "Core-GA-TSP", "replicate": 9}, None)
@@ -864,6 +749,7 @@ def test_fixed_and_native_rows_never_meet(active):
         run(per_instance_items(SEPARATED) + [native], active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_mixed_comparison_cells_are_refused(active):
     items = per_instance_items(SEPARATED)
     items.append(make_item("eil76", "Core-GA-TSP", 9, 3.0))  # a second instance inside a per-instance family
@@ -876,6 +762,7 @@ def test_mixed_comparison_cells_are_refused(active):
         run(other_level, active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_unequal_replicate_sets_are_refused_per_instance(active):
     items = per_instance_items(SEPARATED)
     items = [item for item in items if not (item[0]["algorithm_id"] == "Core-PSO-TSP" and item[0]["replicate"] == 4)]
@@ -886,6 +773,7 @@ def test_unequal_replicate_sets_are_refused_per_instance(active):
         run(duplicate, active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_failed_run_excludes_its_cell_from_inference_and_is_reported(active):
     items = per_instance_items(SEPARATED)
     items = [item for item in items if not (item[0]["algorithm_id"] == "Core-PSO-TSP" and item[0]["replicate"] == 4)]
@@ -897,6 +785,7 @@ def test_a_failed_run_excludes_its_cell_from_inference_and_is_reported(active):
     assert "excluded" in result.text and "Core-PSO-TSP" in result.text
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_failed_row_must_belong_to_the_family(active):
     good = per_instance_items(SEPARATED)
     cases = {
@@ -913,6 +802,7 @@ def test_a_failed_row_must_belong_to_the_family(active):
         run(good + [(row, None)], active, study=STUDY3)
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_expected_algorithm_set_comes_from_the_study_profile(active):
     """Lead decision (OQ-9 a): the algorithms of a family are the profile's algorithm IDs, not the ones that happen to have rows. A failed
     row of a profile algorithm is excluded and reported even when the index lists no run of it; an algorithm outside the profile is
@@ -928,6 +818,7 @@ def test_the_expected_algorithm_set_comes_from_the_study_profile(active):
         run(good + failed, active, study=STUDY3, extra_items=alien_run)
 
 
+@pytest.mark.requires_analysis_extra
 def test_an_expected_algorithm_without_completed_or_failed_rows_refuses_the_per_instance_analysis(active):
     """The profile names three algorithms; the input has rows for two. Kruskal-Wallis over two groups would silently answer a different
     question, so it is refused (the plan has no way to declare that an algorithm does not apply to an instance)."""
@@ -944,6 +835,7 @@ def test_an_expected_algorithm_without_completed_or_failed_rows_refuses_the_per_
         run(per_instance_items(SEPARATED), active, study=_BILDIRI)
 
 
+@pytest.mark.requires_analysis_extra
 def test_an_expected_algorithm_without_rows_on_any_instance_refuses_the_cross_instance_analysis(active):
     four = STUDY3.model_copy(update={"algorithm_ids": [*STUDY3.algorithm_ids, "Core-HHO-TSP-Pure"]})
     with pytest.raises(StatisticsRefusal, match="Core-HHO-TSP-Pure"):
@@ -955,6 +847,7 @@ def test_an_expected_algorithm_without_rows_on_any_instance_refuses_the_cross_in
     assert run(cross_items(), active, ACROSS).inference is not None  # the matching three-algorithm profile is fine
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_fully_failed_per_instance_cell_is_excluded_reported_and_the_rest_is_analysed(active):
     """Two algorithms complete, the third failed on every replicate: its cell is excluded, the Holm family is the single remaining pair
     (adjusted p equals p), and the report lists the pairs that dropped out and why."""
@@ -976,6 +869,7 @@ def test_a_fully_failed_per_instance_cell_is_excluded_reported_and_the_rest_is_a
     assert run(per_instance_items(SEPARATED), active).excluded_pairs == ()
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_fully_failed_cross_instance_cell_still_refuses_the_analysis(active):
     items = [item for item in cross_items() if not (item[0]["problem"] == "st70" and item[0]["algorithm_id"] == "Core-PSO-TSP")]
     items += [failed_item("st70", "Core-PSO-TSP", r) for r in range(3)]
@@ -983,6 +877,7 @@ def test_a_fully_failed_cross_instance_cell_still_refuses_the_analysis(active):
         run(items, active, ACROSS)
 
 
+@pytest.mark.requires_analysis_extra
 def test_rows_without_a_usable_gap_are_refused(active):
     items = per_instance_items(SEPARATED)
     row, manifest = items[0]
@@ -997,6 +892,7 @@ def test_rows_without_a_usable_gap_are_refused(active):
         run([({**row, "gap_to_exact_reference": float("nan")}, manifest)] + items[1:], active)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_plan_value_the_service_does_not_implement_is_refused(draft):
     def swap(data):
         data["families"][0]["post_hoc"]["rule"] = "something_new"
@@ -1013,6 +909,7 @@ def test_a_plan_value_the_service_does_not_implement_is_refused(draft):
         run(per_instance_items(SEPARATED), forged)
 
 
+@pytest.mark.requires_analysis_extra
 def test_unknown_family_and_wrong_plan_type_are_refused(active):
     with pytest.raises(StatisticsRefusal, match="family"):
         run(per_instance_items(SEPARATED), active, "no-such-family")
@@ -1020,6 +917,7 @@ def test_unknown_family_and_wrong_plan_type_are_refused(active):
         run(per_instance_items(SEPARATED), {"alpha": 0.05})
 
 
+@pytest.mark.requires_analysis_extra
 def test_atsp_instance_is_analysed_per_instance_and_never_in_the_cross_instance_family(active):
     # ft53 is in the per-instance family (problem types TSP and ATSP) but not in the across-instance one (OQ-8 a)
     result = run(per_instance_items(SEPARATED, problem="ft53"), active)
@@ -1028,6 +926,7 @@ def test_atsp_instance_is_analysed_per_instance_and_never_in_the_cross_instance_
         run(cross_items(problems=["ft53", "eil51", "st70", "kroA100", "rd100", "eil76"]), active, ACROSS)
 
 
+@pytest.mark.requires_analysis_extra
 def test_report_text_uses_descriptive_wording_only(active, draft):
     for plan, mode in ((active, "paper"), (active, "smoke"), (draft, "paper")):
         for family, items in ((PER_INSTANCE, per_instance_items(SEPARATED)), (ACROSS, cross_items())):
@@ -1069,6 +968,7 @@ def native_study(listed, *, algorithm_ids=None):
     return STUDY3.model_copy(update=update)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_per_instance_failed_row_must_be_on_the_analysed_instance(active):
     """Reviewer repro: eil51 has GA and PSO completed and the profile names GA, PSO and GWO; the only GWO row is a failure on st70. That
     must not count as GWO being 'run' on eil51 (the analysis would silently cover two algorithms)."""
@@ -1083,6 +983,7 @@ def test_a_per_instance_failed_row_must_be_on_the_analysed_instance(active):
     assert run(on_instance, active, study=STUDY3).inference is not None
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_failed_row_outside_the_declared_family_is_refused(active):
     with pytest.raises(StatisticsRefusal, match="outside the declared family"):
         run(cross_items() + [failed_item("ft53", "Core-GA-TSP", 0)], active, ACROSS)
@@ -1090,6 +991,7 @@ def test_a_failed_row_outside_the_declared_family_is_refused(active):
         run(per_instance_items(SEPARATED) + [failed_item("pr76", "Core-GA-TSP", 0)], active, study=STUDY3)
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_analysis_plan_must_be_the_one_the_study_profile_names(draft):
     items = per_instance_items(SEPARATED)
     other = activate(draft, mutate=lambda data: data.update(analysis_plan_id="some-other-plan"))
@@ -1099,12 +1001,14 @@ def test_the_analysis_plan_must_be_the_one_the_study_profile_names(draft):
     assert run(items, activate(draft), study=STUDY3).inference is not None
 
 
+@pytest.mark.requires_analysis_extra
 def test_rows_of_another_study_than_the_plan_are_refused_with_a_named_reason(active):
     items = per_instance_items(SEPARATED, study_id="yaem2026")
     with pytest.raises(StatisticsRefusal, match="rows belong to study 'yaem2026' but the analysis plan to study 'bildiri2026'"):
         run(items, active, study=STUDY3, study_id="yaem2026")
 
 
+@pytest.mark.requires_analysis_extra
 def test_native_families_expect_the_secondary_protocol_algorithms(active):
     """Native expected algorithms: ``secondary_protocol.algorithm_ids`` when listed (a subset of the study's), all study algorithms when
     it is null (as in ``studies.service``)."""
@@ -1120,6 +1024,7 @@ def test_native_families_expect_the_secondary_protocol_algorithms(active):
         run(two, active, study=no_native)
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_index_may_hold_native_only_algorithms_of_the_study(active):
     """``studies.service`` runs the union of ``algorithm_ids`` and the native list: a native-only algorithm in the index is accepted."""
     fixed_study = STUDY3.model_copy(update={
@@ -1135,24 +1040,28 @@ def test_the_index_may_hold_native_only_algorithms_of_the_study(active):
 
 
 # ---------------------------------------------------------------- D-05 follow-up: failed rows are checked against the index list
+@pytest.mark.requires_analysis_extra
 def test_a_failed_row_that_the_run_index_does_not_list_is_refused(active):
     items = per_instance_items(SEPARATED) + [failed_item("eil51", "Core-PSO-TSP", 7)]
     with pytest.raises(StatisticsRefusal, match="not listed in the run index"):
         run(items, active, study=STUDY3, failed=[])
 
 
+@pytest.mark.requires_analysis_extra
 def test_an_index_listed_failure_that_is_missing_from_the_rows_is_refused(active):
     items = per_instance_items(SEPARATED)
     with pytest.raises(StatisticsRefusal, match="missing from the rows"):
         run(items, active, study=STUDY3, failed=[failed_item("eil51", "Core-PSO-TSP", 7)])
 
 
+@pytest.mark.requires_analysis_extra
 def test_listed_failures_that_match_the_rows_are_excluded_and_reported_as_before(active):
     items = per_instance_items(SEPARATED) + [failed_item("eil51", "Core-PSO-TSP", 7)]
     analysis = run(items, active, study=STUDY3)
     assert any(e["algorithm_id"] == "Core-PSO-TSP" and e["failed_runs"] == 1 for e in analysis.exclusions)
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_failure_check_counts_each_listed_run_once(active):
     """Two failed rows with the same identity are two index records; one record cannot cover both."""
     twice = [failed_item("eil51", "Core-PSO-TSP", 7), failed_item("eil51", "Core-PSO-TSP", 7)]
@@ -1162,6 +1071,7 @@ def test_the_failure_check_counts_each_listed_run_once(active):
         run(items, active, study=STUDY3, failed=twice[:1])
 
 
+@pytest.mark.requires_analysis_extra
 def test_failures_the_index_lists_on_another_instance_or_protocol_are_outside_a_per_instance_analysis(active):
     items = per_instance_items(SEPARATED)  # eil51 only
     other_instance = failed_item("st70", "Core-PSO-TSP", 0)
@@ -1171,12 +1081,14 @@ def test_failures_the_index_lists_on_another_instance_or_protocol_are_outside_a_
 
 
 # ---------------------------------------------------------------- the index names the analysis plan that is analysed
+@pytest.mark.requires_analysis_extra
 def test_a_run_index_that_names_another_analysis_plan_is_refused(active):
     items = per_instance_items(SEPARATED)
     with pytest.raises(StatisticsRefusal, match="analysis plan"):
         run(items, active, study=STUDY3, plan_id="some-other-plan-v1")
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_run_index_that_names_the_analysed_plan_is_accepted(active):
     run(per_instance_items(SEPARATED), active, study=STUDY3, plan_id=active.analysis_plan_id)
 
@@ -1186,6 +1098,7 @@ def _all_failed(problem, level=0, replicates=3):
     return [failed_item(problem, algorithm, r, evaluation_budget=_levels(problem)[level]) for algorithm in ALGORITHMS for r in range(replicates)]
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_fully_failed_instance_whose_failures_are_listed_but_not_passed_is_refused(active):
     """Every run of st70 at the analysed level failed and the index lists the failures; the rows omit them. The analysed level is
     the family's (level index 0, shared by the completed instances), so st70's listed failures are demanded as rows."""
@@ -1194,6 +1107,7 @@ def test_a_fully_failed_instance_whose_failures_are_listed_but_not_passed_is_ref
         run(completed, active, ACROSS, mode="smoke", failed=_all_failed("st70"))
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_fully_failed_instance_is_counted_in_the_descriptive_result(draft):
     items = cross_items(problems=[p for p in CROSS_INSTANCES if p != "st70"]) + _all_failed("st70")
     result = run(items, draft, ACROSS, mode="smoke")
@@ -1202,6 +1116,7 @@ def test_a_fully_failed_instance_is_counted_in_the_descriptive_result(draft):
     assert not any(e["algorithm_id"] is None and e["dataset_identity"] == "st70" for e in result.exclusions)
 
 
+@pytest.mark.requires_analysis_extra
 def test_failures_at_another_level_are_refused_for_an_instance_with_no_completed_rows(draft):
     """The analysed level is the family's level index, not whatever the failed rows of an empty instance say."""
     items = cross_items(problems=[p for p in CROSS_INSTANCES if p != "st70"]) + _all_failed("st70", level=1)
@@ -1209,6 +1124,7 @@ def test_failures_at_another_level_are_refused_for_an_instance_with_no_completed
         run(items, draft, ACROSS, mode="smoke")
 
 
+@pytest.mark.requires_analysis_extra
 def test_listed_failures_at_another_level_are_not_demanded_on_a_fully_failed_instance(draft):
     """st70's failures were at level 1, the family is analysed at level 0: they are outside this family, neither refused nor reported."""
     completed = cross_items(problems=[p for p in CROSS_INSTANCES if p != "st70"])

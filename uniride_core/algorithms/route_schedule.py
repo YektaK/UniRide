@@ -20,15 +20,29 @@ Counted quantities (owner decisions, plan section 3.1):
 
 * the return arc is part of the route;
 * waiting and service count in the tour (``end - start``);
-* a pickup student boards when service at the stop starts (arrival plus wait); the
-  ride runs from there to school arrival, so waiting and service after boarding,
-  including the service at the student's own stop, count. A drop-off student rides
-  from school departure to arrival at the stop, so waits at earlier stops count;
+* ride time, pickup: from the start of service at the student's own stop (arrival
+  plus wait) to school arrival. Waits and service after boarding count, including
+  the service at the student's own stop:
+  ``ride = end - (arrival + wait)``;
+* ride time, drop-off: from school departure to the end of service at the student's
+  own stop. The student is aboard through every earlier wait and service and through
+  the wait and service at the own stop:
+  ``ride = (arrival + wait + service) - start``;
 * service time of a stop is ``service[stop]`` plus ``sw_boarding`` per Sw student
   at the stop (``sw_counts[stop]``); both inputs are optional and default to 0.
 
+Everything is per stop position. ``windows``, ``service``, ``sw_counts`` and the
+returned ``waits``, ``arrivals`` and ``ride_times`` describe one stop, not one
+student. A caller with several students at one stop must intersect their windows
+into one window for that stop and apply the stop's ride time to each of them; the
+stop's dwell and all Sw boarding at that stop count for every student there.
+
+Input guards: a window with ``earliest > latest`` for a stop in the route, or the
+depot id inside ``route``, raises ``ValueError``.
+
 Feasibility tolerance: comparisons allow ``1e-9`` minutes so that float round-off in
-a sum of decimal arcs is not reported as a violation.
+a sum of decimal arcs is not reported as a violation; anything larger (for example
+a 0.001 minute miss) is a violation.
 
 The module is imported by no other module in MT1-01.
 """
@@ -92,6 +106,14 @@ class RouteSchedule:
     @property
     def service_starts(self) -> tuple[float, ...]:
         return tuple(a + w for a, w in zip(self.arrivals, self.waits))
+
+
+def _validate(route: Sequence[Hashable], windows: Windows, depot: Hashable) -> None:
+    if any(node == depot for node in route):
+        raise ValueError("route must not contain the depot")
+    for node in route:
+        if node in windows and windows[node][0] > windows[node][1]:
+            raise ValueError("time window opens after it closes")
 
 
 def _services(
@@ -163,6 +185,7 @@ def simulate_school_pickup(
     is feasible. ``deadline`` is the hard limit (``target_time - offset_minutes``).
     """
     windows = windows or {}
+    _validate(route, windows, depot)
     services = _services(route, service, sw_boarding, sw_counts)
 
     if route:
@@ -221,6 +244,7 @@ def simulate_school_dropoff(
     by ``day_end``. There is no per-student "home by" constraint.
     """
     windows = windows or {}
+    _validate(route, windows, depot)
     services = _services(route, service, sw_boarding, sw_counts)
     start = float(ready)
 
@@ -229,7 +253,7 @@ def simulate_school_dropoff(
     )
     if end > day_end + _TOLERANCE:
         violations.append(ScheduleViolation(END_AFTER_DAY, None, end, float(day_end)))
-    rides = tuple(a - start for a in arrivals)
+    rides = tuple(a + w + s - start for a, w, s in zip(arrivals, waits, services))
     return RouteSchedule(
         start=start,
         arrivals=tuple(arrivals),

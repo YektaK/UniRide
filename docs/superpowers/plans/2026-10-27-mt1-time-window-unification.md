@@ -16,7 +16,10 @@
 - Never `taskkill /IM`; kill only your own PIDs. Never `git stash`; no checkout/switch in the main checkout. Temp folders only under `C:\wt\<name>`.
 - Never read, copy, write or delete `academic_benchmark/tsplib_data/tsplib.db*`. No live database access or writes. Never write under `docs/paper/results`. No AMPL runs.
 - Each item: own worktree and branch (`git worktree add C:/wt/<item> -b <branch> WIP`), red test first, frequent commits, no merge, no push. The lead merges with `--no-ff` after the reviewer's ONAY and passing tests. The developer report shows the red test failing with the fix reverted.
-- Do not reopen decided questions: O01 (certify on captured authoritative arcs), O02 (conservative operational rounding), O03 (two duration limits: student ride and vehicle tour), O04 (direct arcs are not lower bounds), O05 (feasibility, then vehicles, then cost), O06 (strict arcs, explicit time-window modes), O07, V01/V02 (minimum is conditional; adequacy needs assignment evidence), U02, W01 (separate legs, exact anchors, 15-minute buffers), W02, H01 (typed fleet path additive; split goldens), H03-H06, S08, T09, A14 (no pooling across result-changing fixes), A20 L3/L5, A21 OQ-F7.
+- Do not reopen decided questions: O01 (certify on captured authoritative arcs), O02 (conservative operational rounding), O03 (two duration limits: student ride and vehicle tour), O04 (direct arcs are not lower bounds), O05 (feasibility, then vehicles, then cost), O06 (strict arcs, explicit time-window modes), O07, V01/V02 (minimum is conditional; adequacy needs assignment evidence), U02, W01 (separate legs, exact anchors, 15-minute buffers), W02, H03-H06, S08, T09, A14 (no pooling across result-changing fixes), A20 L3/L5, A21 OQ-F7 ("never merge between the approval commit and the campaign"; OQ-MT1-12 b would be an exception to it and needs the owner's answer).
+- **H01 is narrowed, not silently reopened:** H01 ("default `ga_split` and the shared decoder stay unchanged", split goldens) keeps holding for `use_time_windows=false`. MT1-05/06 change the shared decoder's time-window branch, regenerate the `|tw=on|` golden entries and change the split engines' search key when windows are on. This narrowing is an owner decision: **[O] OQ-MT1-13**.
+- **Tool-call ceiling:** every brief states one (start about 12; the lead raises it per item size, for example for MT1-05 and MT1-11).
+- **Required reading:** briefs of MT1-05, -06, -09, -11 and -12 list `ACADEMIC_STUDY_UNIFICATION_DESIGN.md` (study boundary); MT1-06 and MT1-09 also list `ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md` (accounting).
 - Not changed by MT1: the academic study profiles and datasets (`academic_benchmark/studies/`, `academic_benchmark/datasets/`), production strategy exposure, the capability catalog, the exact-solver code (`uniride_core/exact/`), fleet selection (`uniride_core/planning/`), and the behaviour of every request with `use_time_windows=false` except for the additive schedule fields of MT1-03 (section 3.2).
 - Each merged item updates Appendix J of `docs/ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md` for the IDs it closes (H2 `:2319`, H3 `:2320`, H4 `:2321`, H16 `:2334`, N1 `:2374`; M1, M2 and L12 get their own rows on first touch) and records decisions in a new `docs/DECISION_LOG.md` entry **O09 "MT1 time-window unification: plan and owner decisions"** (created when this plan is merged).
 
@@ -78,7 +81,7 @@ Consequence for planning: the demo's plans are not wrong today because of H2-H4,
 | # | Claim | Status | Evidence |
 |---|---|---|---|
 | H4-a | GA/GWO/PSO/HHO split search decodes with the capacity-only `decode_giant_tour` and ranks by `objective_key` (feasible, vehicles, cost); windows appear only in the final decode | **HOLDS [F]** | `ga_split_engine.py:110, 135, 397-414`; `gwo_split_engine.py:123, 135, 222`; `pso_split_engine.py:146, 158, 248`; `hho_split_engine.py:164, 176, 272`; `meta_split_common.py:92-134` |
-| H4-b | Decoder pickup anchor `self.target_time or 540` (09:00); drop-off uses only the first stop's window; drop-off `departure_time` recorded as `current - int(cost)` after waits | **HOLDS [F]** | `string_split_decoder.py:597, 524-526, 583` |
+| H4-b | Decoder pickup anchor `self.target_time or 540` (09:00); drop-off uses only the first stop's window; drop-off `departure_time` recorded as `current - int(cost)` after waits | **HOLDS [F]** | `string_split_decoder.py:~596, 524-526, ~582-583` |
 | H4-c | Repro: decoder says 0 violations, certificate rejects (473.9 > 473) although departing at 07:42 is feasible | **[F]** | section 1.0 |
 | H4-d | OR-Tools now receives `max_route_duration` but no windows | **PARTLY FIXED [F]** | `optimizer_api/strategies/ortools_cvrp.py:65-77` |
 | H4-e | PyVRP receives neither windows nor maximum duration nor ride limit | **HOLDS [F]** | `optimizer_api/strategies/pyvrp_strategy.py:102-110` |
@@ -94,7 +97,7 @@ The system fails closed (the certificate rejects), so the harm is false "no plan
 | H16-a | `from_solomon_text` sets no direction, so the profile defaults to `"pickup"` | **HOLDS [F]** | `uniride_core/adapters/matrix_builder.py:297-343`; default `uniride_core/models.py:30, 137` |
 | H16-b | `certify_problem_instance` runs the pickup branch of `check_time_windows` (no target, offset default 10) on Solomon routes; depot due time never checked | **HOLDS [F]** | `feasibility_certificate.py:636-670` (`:661-664`) |
 | H16-c | Split path and holistic engine disagree on Solomon violations | **[A]** not re-read (`split_decoder.py:128-142`, `base_engine.py:173-194`, `holistic_matrix_engine.py`); the developer re-runs the audit scenario first |
-| H16-d | Q3: no active study uses CVRPTW: both profiles declare `"problem_families": ["TSP"]` | **[F]** | `academic_benchmark/studies/bildiri2026/study.json`, `yaem2026/study.json` |
+| H16-d | Q3: no active study uses CVRPTW: Bildiri declares `["TSP", "ATSP"]`, YAEM `["TSP"]`; neither declares CVRP or CVRPTW | **[F]** | `academic_benchmark/studies/bildiri2026/study.json:66`, `yaem2026/study.json:78` |
 
 H16 therefore affects academic CVRPTW tooling only, not any study result.
 
@@ -107,7 +110,7 @@ H16 therefore affects academic CVRPTW tooling only, not any study result.
 | M1-c | Demo: virtual mode sends identical copies (no effect); live mode sends the real fleet, and a `fleet_size_violation` becomes `FLEET_SHORTAGE` with status "shortage"; the view shows the fleet as "missing" without a number | **[F]** | `daily-plan-run.ts:573-577, 595-598, 643-648`; `daily-plan-view.ts:446-450` |
 | M1-d | That shortage is a heuristic statement (the solver did not try to fit the fleet), not a proof | **[F]** by M1-a; wording owner choice **[O] OQ-MT1-8** |
 | M2-a | A PICKUP request with only `dropoff_time` gets a morning window from it | **HOLDS [F]** | `optimizer_api/models/schemas.py:465-472` (audit cited `:350-357`) |
-| L12-1 | Sweep clustering centred on hard-coded Dudullu coordinates; `vehicle_assignment` passes no depot | **MOSTLY FIXED [F]** | `vehicle_assignment.py:89, 126-127` passes the depot (O08); the fallback coordinates remain at `clustering_strategies/sweep.py:24` |
+| L12-1 | Sweep clustering centred on hard-coded Dudullu coordinates; `vehicle_assignment` passes no depot | **MOSTLY FIXED [F]** | `uniride_core/algorithms/vehicle_assignment.py:89, 126-127` passes the depot (O08); the fallback coordinates remain at `clustering_strategies/sweep.py:24` |
 | L12-2 | `to_problem_instance` collapses `[sw, so]` to `sw`; `check_capacity_vectors` checks only `min(len(load), len(capacity))` dimensions | **HOLDS [F]** | `matrix_builder.py:129-136`; `feasibility_certificate.py:147` |
 | L12-3 | `check_time_windows` skips travel into nodes beyond the window list | **HOLDS, latent [F]** | `feasibility_certificate.py:397-399`; the production certifier gives every node a window `(0, 1440)` (`response_certifier.py:649-652`) |
 | L12-4 | Missing capacities default to total demand | **HOLDS [F]** | `uniride_core/algorithms/routing_demand_utils.py:67-68` |
@@ -126,31 +129,35 @@ H16 therefore affects academic CVRPTW tooling only, not any study result.
 
 ### 2.1 What the studies and guards use
 
-The study run imports from `uniride_core`: `models` (`ProblemInstance`), `adapters.matrix_builder`, `algorithms.capabilities`, `tsplib_parser`, `three_opt`, `sota_tsp`, `composition`, `tsp_matrix_metaheuristics`, `objective_budget`, `engine_factory`, `numba_*`, `exact`, `planning` (grep of `academic_benchmark` without tests). It does **not** import `feasibility_certificate`, `string_split_decoder`, `route_scheduling`, the split engines, `meta_split_common` or `optimizer_api` **[F]**. Both profiles are TSP only (H16-d).
+**Module imported (static import closure of `academic_benchmark/studies/run.py`, `service.py`, `smoke.py`) [F, fact-check round 1]:** every registry-executed study run imports `academic_benchmark.core.registry_setup` (`academic_benchmark/fair_pilot.py:496, :563`). From there: `registry_setup.py:10` imports `engine_factory`; `engine_factory.py:8` imports `fcm_split_engine`; `tsp_meta_engines.py:12` imports `meta_split_common.shuffle_permutation`; `meta_split_common.py:11` imports `string_split_decoder` (`decode_giant_tour`, `decode_with_time_windows`); `base_engine.py:10` imports `split_decoder` (`optimal_split_result`, `split_with_time_windows_result`). The study run also imports `models` and `adapters.matrix_builder`. **Not** in the closure: `feasibility_certificate`, `route_scheduling`, `ga_split_engine`, `gwo_split_engine`, `pso_split_engine`, `hho_split_engine`, `optimizer_api`.
+
+**Function executed on the TSP/ATSP study path (separate question):** `tsp_meta_engines.py` calls only `shuffle_permutation` from `meta_split_common` (`:105, :170, :357, :375, :436, :684`), which MT1 does not change. `base_engine.py` reaches the split functions only inside `solve_cvrp` / `solve_cvrptw` (`:120-135`, `:165-176`); a TSP/ATSP run calls `optimize_permutation`. So the decoder and split functions MT1 changes are, on the evidence read, **not executed** on the TSP/ATSP path **[F for the call sites; A that no study executor calls `solve_cvrp*`]**. No existing guard test proves non-execution, so the conservative default holds: **every study-imported item waits for the campaign**. Profiles: Bildiri `["TSP", "ATSP"]`, YAEM `["TSP"]` (H16-d).
 
 Guard set used by the MT6 follow-up close (`2026-10-27-mt6-followup-sota-common-shims-l3-l10.md:103`): `academic_benchmark/tests/test_fixed_budget_tables_unchanged.py`, the `uniride_core/tests/golden/gwo_hho_native_pre_schedule.json` tests, `uniride_core/tests/test_mt6_budgeted_tolerance.py`, the `academic_benchmark/tests/fixtures/fcm_tsp_golden_pre_refusal.json` tests, and an empty `git diff --stat` for `academic_benchmark/studies` and `academic_benchmark/datasets`.
 
-A second, non-study guard matters: `uniride_core/tests/golden/split_parity.json` (H01) pins `decode_giant_tour`, `decode_with_time_windows` and GA split outputs, including time-window cases (`test_split_parity_golden.py:102-151`). The daily-planning paper archives (fleet campaign, WP-E10, WP-E4) were produced with `use_time_windows=false`; the non-TW golden entries prove they stay reproducible.
+A second, non-study guard matters: `uniride_core/tests/golden/split_parity.json` (H01) pins `decode_giant_tour`, `decode_with_time_windows`, `meta_split_common` and GA/PSO/GWO/HHO split outputs: 54 keys contain `|tw=on|` and 54 contain `|tw=off|` (`test_split_parity_golden.py:102-151`). Limits of this guard: the test compares the whole dump at once (`:162-170`), so it is red between a code commit and the regeneration commit; and the `tw=off` scenarios use `target_time=None` (`:130-133, :152`), so they do not cover the demo shape (`target_time` set, windows off, `offset_minutes` not sent, API default 15, `schemas.py:274`). The daily-planning paper archives (fleet campaign, WP-E10, WP-E4) were produced with `use_time_windows=false`; the `tw=off` entries cover that decoder path only partly, and the demo replay (section 7.2) covers the rest.
 
 ### 2.2 Per item
 
-| Item | Changes | Study path? | Guards that must pass unedited | When it may merge |
-|---|---|---|---|---|
-| MT1-01 | new core module | No (nothing imports it) | all | now |
-| MT1-02 | production certifier | No | all | now |
-| MT1-03 | router, `route_scheduling`, response schema | No | all | now |
-| MT1-04 | TypeScript daily plan / fleet runner | No | all + vitest | now |
-| MT1-05 | `string_split_decoder` TW branch | No | all; `split_parity.json` non-TW entries byte-identical, TW entries regenerated in a separate commit | now |
-| MT1-06 | split engines' search key when windows on | No | as MT1-05 | now (after 05) |
-| MT1-07 | split strategies' success flag | No | all | now |
-| MT1-08 | `schemas.get_time_windows` | No | all | now |
-| MT1-09 | OR-Tools/PyVRP strategies; optional PyVRP core parameter (default keeps behaviour) | Shared core engine imported by the academic registry, behaviour unchanged by default | all | now |
-| MT1-10 | TypeScript shortage wording and proof | No | all + vitest | now |
-| MT1-11 | H16: `matrix_builder`, `models.ConstraintProfile`, core certificate forward branch, `split_decoder` | **Yes, shared modules imported by the study run** (results of TSP studies unchanged, academic CVRPTW results change) | all | **after the paper campaign** (A20 L5, A21 OQ-F7) [O] OQ-MT1-11 |
-| MT1-12 | L12 capacity contract in core | Shared core (CVRP engines, `matrix_builder`) | all | **after the paper campaign** |
-| MT1-13 | documents, tracker | No | n/a | last |
+| Item | Changes | Module imported by the study run? | Changed function executed on the TSP/ATSP study path? | Guards that must pass unedited | When it may merge |
+|---|---|---|---|---|---|
+| MT1-01 | new core module `route_schedule.py` | No while nothing in the closure imports it; **yes once MT1-05 makes `string_split_decoder` import it** | No (only decoder TW branch would call it) | all | now; any later change to it after MT1-05 is study-imported and waits |
+| MT1-02 | production certifier | No | No | all | now |
+| MT1-03 | router, `route_scheduling`, response schema | No | No | all | now |
+| MT1-04 | TypeScript daily plan / fleet runner | No | No | all + vitest | now |
+| MT1-05 | `string_split_decoder` TW branch | **Yes** (`meta_split_common.py:11`) | No [F call sites in 2.1; A no `solve_cvrp*` caller] | all; `split_parity.json` `tw=off` entries unchanged, `tw=on` entries regenerated in a separate commit | **after the paper campaign** |
+| MT1-06 | split engines' search key, `meta_split_common`, `objective_rank` | **Yes** (`meta_split_common`; the four split engines themselves are not in the closure) | No (only `shuffle_permutation` runs; unchanged) | as MT1-05 | **after the paper campaign** (after 05) |
+| MT1-07 | split strategies' success flag (`optimizer_api`) | No | No | all | now |
+| MT1-08 | `schemas.get_time_windows` (`optimizer_api`) | No | No | all | now |
+| MT1-09 | OR-Tools/PyVRP strategies; optional PyVRP core parameter | **Yes** (core `pyvrp_cvrp_engine` is imported by the academic registry) | No (CVRP engines; TSP runs do not call them) [A] | all | **after the paper campaign** |
+| MT1-10 | TypeScript shortage wording and proof | No | No | all + vitest | now |
+| MT1-11 | H16: `matrix_builder`, `models.ConstraintProfile`, core certificate forward branch, `split_decoder` | **Yes** | `models`/`matrix_builder`: the modules run on every study, the changed Solomon function does not; `split_decoder`: no | all | **after the paper campaign** (A20 L5, A21 OQ-F7) [O] OQ-MT1-11 |
+| MT1-12 | L12 capacity contract in core | **Yes** (`matrix_builder`, `models`; CVRP engines) | `to_problem_instance` [A: the developer checks whether the TSPLIB path calls it]; capacity code: no | all | **after the paper campaign** |
+| MT1-13 | documents, tracker | No | No | n/a | last |
 
-"Now" means: before the lead's pre-approval commit. Rule from A21 OQ-F7: no merge may change study code or study results between that commit and the campaign. MT1-01..10 change neither; whether they may still merge inside that window is **[O] OQ-MT1-12** (the recommendation keeps MT1-09 out of the window because it edits a core engine the academic registry imports).
+"Now" means: before the lead's pre-approval commit. A21 OQ-F7 says never merge between the approval commit and the campaign. MT1-02, -03, -04, -07, -08 and -10 (and MT1-01 while no study-imported module imports it) change no study-imported module; whether they may still merge inside that window is **[O] OQ-MT1-12** (an exception to OQ-F7). MT1-05, -06, -09, -11 and -12 wait for the campaign in every case.
+
+**Consequence for the demo timeline:** the demo-relevant contract work (Lane A: 01 -> 02 -> 03 -> 04, plus 07, 08, 10) merges now. The search part of H4 and the decoder part of H2 (05, 06) and the PyVRP part of H4 (09) land after the campaign. The demo is not affected by the wait, because it sends `use_time_windows=false` (section 1.1); until 05/06 land, windowed API requests stay certificate-checked (fail closed) but the search may still return `success=false` where a feasible plan exists.
 
 ---
 
@@ -190,7 +197,8 @@ Counted quantities (one definition, used everywhere):
 - **Tour (`max_travel_time`):** `end - start`. **Ride (`max_ride_time`):** pickup: from the student's boarding to school arrival; drop-off: from school departure to the student's arrival.
 - **Service/dwell time:** default 0, as today; the parameter exists so the owner can set it **[O] OQ-MT1-5**.
 - **`target_time` and `offset_minutes`:** one meaning: `deadline = target_time - offset_minutes` (pickup), `ready = target_time + offset_minutes` (drop-off) **[O] OQ-MT1-2**. The daily plan and the fleet runner send `offset_minutes: 0` because the anchor already holds the W01 buffer (D-b).
-- **No `target_time`:** a `use_time_windows=true` request without `target_time` is refused with 422 (MT1-08) instead of being anchored at an invented 09:00 or 14:00. This closes the audit's H4 scenario 2 by refusal. Every demo request has `target_time`.
+- **No `target_time`:** today a windowed request without `target_time` is anchored differently by each component (decoder 09:00/14:00, `string_split_decoder.py:~596, :616`; `ga_split_strategy.py:142-146` leaves the target `None`; the certificate falls back to the largest window close, `response_certifier.py:653-658` with `feasibility_certificate.py:365-369`). What the simulator does then is **[O] OQ-MT1-14** (options include refusing with 422). Every demo request has `target_time`.
+- **Students without a time of their own:** `schemas.py:473-474` gives every such student the window `target - 30 .. target` (pickup) when `use_time_windows` and `target_time` are set. Whether to keep that silent window is also **[O] OQ-MT1-14**.
 
 For the demo (one anchor, no windows, no service) the simulator gives exactly the TypeScript interval: start = anchor - total travel, end = anchor (pickup); start = anchor, end = anchor + total (drop-off). So demo plans do not change.
 
@@ -205,7 +213,7 @@ For the demo (one anchor, no windows, no service) the simulator gives exactly th
 ### 3.3 How search ranks candidates
 
 - Decoder (split DP, inner level, O05): a trip (consecutive stops of the giant tour) is built only after `simulate_school_*` on that trip. Strict mode drops infeasible trips; soft mode keeps them with their violation count. DP key stays (violations, cost) as today.
-- Outer search (GA/GWO/PSO/HHO split), only when `use_time_windows` is true: candidates are decoded with windows and ranked by **(violations, vehicles, cost)**; the final decode is the same decode, so "solver feasible" equals "certificate feasible". With `use_time_windows=false` nothing changes (golden).
+- Outer search (GA/GWO/PSO/HHO split), only when `use_time_windows` is true: candidates are decoded with windows and ranked by **(violations, vehicles, cost)**; the final decode is the same decode, so "solver feasible" equals "certificate feasible". With `use_time_windows=false` nothing changes (proven by the unchanged `|tw=off|` golden entries, which use `target_time=None`, plus the demo-shaped test of MT1-05 and the demo replay, section 7.2). These search changes merge after the paper campaign (section 2.2).
 - Strategies without time-window search (OR-Tools, PyVRP, VROOM, SOTA, holistic, typed) refuse `use_time_windows=true` with a clear 422 **[O] OQ-MT1-9**. PyVRP additionally receives `max_route_duration` so ordinary requests stop failing on the tour limit (H4-e).
 
 ### 3.4 Truthful vehicle count
@@ -226,21 +234,25 @@ No new scheduling framework, no time-dependent travel times, no OR-Tools/PyVRP t
 
 ## 4. Work items
 
-Lanes: **A** (contract, serial) 01 -> 02 -> 03 -> 04; **B** (search, serial, after 01) 05 -> 06; **C** (independent, parallel with A and B) 07, 08, 09, 10; **D** (after the paper campaign) 11, 12; **E** close 13. Items closing a High finding (H2, H3, H4, H16) get an **Opus** reviewer (CLAUDE.md rule); the rest Sonnet. Every reviewer runs the tests and reverts the source change in a scratch worktree to show the red test fails.
+Lanes (section 2.2 gives the merge timing):
+- **Merge now:** **A** (contract, serial) 01 -> 02 -> 03 -> 04; **C** (independent, parallel with A) 07, 08, 10.
+- **After the paper campaign:** **B** (search, serial) 05 -> 06, after 01 and 08 and the OQ-MT1-1, -13 and -14 answers; 09 after the OQ-MT1-1 answer and, under OQ-MT1-1 (a) or (b), after 06; **D** 11, 12.
+- **E** close 13 (a first close record for the merge-now set may be written before the campaign; the final one after B and D).
+- **Critical path for the demo:** OQ-MT1-2..6 answers -> 01 -> 02 -> 03 -> 04 -> demo acceptance (section 7.2). Developers may prepare B, 09 and D on their branches earlier; only the merge waits. Items closing a High finding (H2, H3, H4, H16) get an **Opus** reviewer (CLAUDE.md rule); the rest Sonnet. Every reviewer runs the tests and reverts the source change in a scratch worktree to show the red test fails.
 
 ### MT1-01 Core route simulator (school profiles)
 
 - **Goal:** `uniride_core/algorithms/route_schedule.py` with `RouteSchedule`, `simulate_school_pickup`, `simulate_school_dropoff`, typed violations (`deadline`, `window`, `start_before_day`, `end_after_day`). No caller yet.
 - **Files:** new module; new `uniride_core/tests/test_route_schedule.py`.
 - **Red tests first:** (1) audit H2 scenario -> `deadline` violation (school 08:40 > 08:15 after offset); (2) audit H4 scenario (target 08:15, offset 0, arcs 10.9/10.9/10.2, A closes 07:53) -> feasible, start 462.1 (latest departure), A 473.0, school 494.1, no truncation; (3) audit H3 scenario -> start 07:50, A 08:00, B 08:05, school 08:15; (4) demo shape (no windows) -> start = deadline - travel, zero waits, end = deadline; (5) drop-off with a late-opening window -> wait counted; (6) property test (seeded, n <= 6, integer and decimal directed arcs, random windows): a feasible schedule replays clean under an independent naive forward check, and when the simulator says infeasible no departure on a 0.05-minute grid in `[0, deadline]` is feasible.
-- **Acceptance:** tests green; module imported by nothing; `uniride_core/tests` green.
+- **Acceptance:** tests green; module imported by nothing (so it is outside the study import closure until MT1-05 merges); `uniride_core/tests` green.
 - **Risk:** contract-defining. **Opus reviewer.** Depends on OQ-MT1-2, -3, -4, -5, -6.
 
 ### MT1-02 Production certificate uses the simulator (H2)
 
 - **Goal:** in `_certify_optimization_response` (`response_certifier.py:645-690`), when the request has `target_time` or `use_time_windows`, simulate every route on the captured matrix; report deadline/window violations as `time_window_violation`, tour with waits as `duration_violation`, ride with waits as `ride_time_violation`. Typed requests keep `_typed_fleet_violations` and gain only the deadline check.
 - **Files:** `optimizer_api/verification/response_certifier.py`; new `optimizer_api/tests/test_mt1_certificate_schedule.py`.
-- **Red tests:** the audit H2 scenario as a request/response pair with an injected `arc_lookup` -> today `is_feasible=True`, after the fix false; a demo-shaped request (`use_time_windows=false`, `target_time`, `offset_minutes=0`) -> still feasible and byte-identical certificate.
+- **Red tests:** the audit H2 scenario as a request/response pair with an injected `arc_lookup` -> today `is_feasible=True`, after the fix false; a demo-shaped request (`use_time_windows=false`, `target_time`, `offset_minutes=0`) -> still feasible and byte-identical certificate; the same request **with `offset_minutes` not sent** (what the daily plan sends today, so the API default 15 applies, `schemas.py:274`) -> the expected result under the OQ-MT1-2 answer is pinned (under (a): deadline = anchor - 15, so the certificate must not reject a route whose TS interval ends at the anchor before MT1-04 sends 0; the developer shows how the item avoids that, for example by checking the deadline only when `offset_minutes` is explicitly set or by merging MT1-02 and MT1-04 together).
 - **Acceptance:** `optimizer_api/tests` green; `test_certifier_authoritative_matrix.py`, `test_certifier_arc_sources.py`, `test_mutation_proof_strategies.py` unedited and green; `certify_benchmark_response` unchanged.
 - **Risk:** fail-closed boundary. **Opus reviewer.** Depends on MT1-01.
 
@@ -262,19 +274,19 @@ Lanes: **A** (contract, serial) 01 -> 02 -> 03 -> 04; **B** (search, serial, aft
 
 ### MT1-05 Split decoder time-window branch uses the simulator (H2 decoder, H4-b, N1-b)
 
-- **Goal:** `_build_trips_with_tw` (`string_split_decoder.py:~380-585`) calls `simulate_school_pickup`/`_dropoff` per candidate trip; remove `int()` truncation, the 09:00/14:00 defaults (no target and no windows -> the request is refused upstream, see MT1-08) and the first-stop-only drop-off start; `schedules` in the result come from the simulator.
+- **Goal:** `_build_trips_with_tw` (`string_split_decoder.py:~380-585`) calls `simulate_school_pickup`/`_dropoff` per candidate trip; remove `int()` truncation and the first-stop-only drop-off start; handle a missing target as OQ-MT1-14 decides (replacing the 09:00/14:00 defaults, `:~596, :616`); `schedules` in the result come from the simulator. **Study-imported module:** merges after the paper campaign (section 2.2).
 - **Files:** `uniride_core/algorithms/string_split_decoder.py`; tests `uniride_core/tests/test_split_decoder_tw_modes.py`, `test_split_decoder_max_ride_time.py`, `optimizer_api/tests/test_cvrptw_phase2.py`, `test_cvrptw_phase3.py` (updated only where they pinned the defect, each with a reason); `split_parity.json` TW entries regenerated **in a separate commit** whose message lists every changed key.
-- **Red tests:** H4 scenario -> decoder reports the trip feasible with schedule start 462.1, equal to MT1-01; H2 scenario strict -> trip [A,B] not admitted, soft -> 1 violation; N1 repro (3 students, drop-off, target 16:00, ride limit 45) -> 1 vehicle.
-- **Acceptance:** non-TW golden entries byte-identical (`test_split_parity_golden.py`); `test_p2_academic_code_never_imports_heterogeneous_modules` green.
-- **Risk:** **Opus reviewer** (H2, H4). Depends on MT1-01 and MT1-08 (the decoder raises `ValueError` if it is ever reached without a target; MT1-08 makes that unreachable from the API).
+- **Red tests:** H4 scenario -> decoder reports the trip feasible with schedule start 462.1, equal to MT1-01; H2 scenario strict -> trip [A,B] not admitted, soft -> 1 violation; N1 repro (3 students, drop-off, target 16:00, ride limit 45) -> 1 vehicle; **key-class test:** a helper compares the old and the regenerated `split_parity.json` and asserts that every changed key contains `|tw=on|` (no `|tw=off|` key changes); a **demo-shaped decoder test** (`target_time` set, `use_time_windows=false`, `offset_minutes` not sent) pinned before and after, because the golden's `tw=off` scenarios use `target_time=None`.
+- **Acceptance:** `test_split_parity_golden.py` green after the regeneration commit (it is red between the code commit and that commit, because it compares the whole dump, `:162-170`); key-class test green; `test_p2_academic_code_never_imports_heterogeneous_modules` green; full study guard set unedited.
+- **Risk:** **Opus reviewer** (H2, H4). Depends on MT1-01, MT1-08, OQ-MT1-13 and OQ-MT1-14.
 
 ### MT1-06 Search ranks by (violations, vehicles, cost) when windows are on (H4-a)
 
 - **Goal:** GA/GWO/PSO/HHO split evaluation decodes with windows when `use_time_windows` is true and ranks by (violations, vehicles, cost); non-TW path unchanged.
 - **Files:** `ga_split_engine.py:~100-140`, `gwo_split_engine.py:~120-136`, `pso_split_engine.py:~146-158`, `hho_split_engine.py:~164-176`, `meta_split_common.py`, `objective_rank.py` (one helper); tests.
 - **Red tests:** the audit H4 repro (section 1.0) through `ga_split` with `use_time_windows=true` -> certified success (today `success=false`); a seeded n = 5 instance where the capacity-only search ends on a TW-infeasible tour while a feasible one exists -> success after the fix; property test over seeded small instances: strategy `success` equals certificate `is_feasible`.
-- **Acceptance:** `split_parity.json` non-TW entries unchanged, TW entries regenerated in a separate commit; MT6 regression command green.
-- **Risk:** **Opus reviewer** (H4). Depends on MT1-05. Dropped if OQ-MT1-1 = c.
+- **Acceptance:** key-class test (as MT1-05): only `|tw=on|` keys change, regenerated in a separate commit; MT6 regression command green; full study guard set unedited. **Study-imported module** (`meta_split_common`): merges after the paper campaign.
+- **Risk:** **Opus reviewer** (H4). Depends on MT1-05 and OQ-MT1-13. Dropped if OQ-MT1-1 = c.
 
 ### MT1-07 Fallback is reported, not hidden (N1-a)
 
@@ -285,18 +297,18 @@ Lanes: **A** (contract, serial) 01 -> 02 -> 03 -> 04; **B** (search, serial, aft
 
 ### MT1-08 Windows built for the right direction only (M2)
 
-- **Goal:** `get_time_windows` (`schemas.py:448-495`) uses `pickup_time` for PICKUP and `dropoff_time` for DROPOFF only; a student without its direction's time gets no window (the route deadline then comes from `target_time`); a `use_time_windows=true` request without `target_time` is refused with 422 (section 3.1).
+- **Goal:** `get_time_windows` (`schemas.py:448-495`) uses `pickup_time` for PICKUP and `dropoff_time` for DROPOFF only (removes the cross-direction fallback `:469-472`). Two further changes happen only as OQ-MT1-14 decides: what a windowed request without `target_time` does, and whether the `target - 30 .. target` window for students without a time (`:473-474`) stays.
 - **Files:** `optimizer_api/models/schemas.py`; tests `optimizer_api/tests/test_cvrptw_phase1.py` (updated with reason).
-- **Red tests:** PICKUP, only `dropoff_time` 17:00 -> today window (16:30, 17:00); after: none. Audit H4 scenario 2 (one student with pickup 07:30, no `target_time`) -> today `ga_split` anchors at 09:00 and fails; after: 422 with a fixed message.
-- **Risk:** low. Sonnet. Independent.
+- **Red tests:** PICKUP, only `dropoff_time` 17:00 -> today window (16:30, 17:00); after: no window from `dropoff_time`. If OQ-MT1-14 chooses refusal: audit H4 scenario 2 (one student with pickup 07:30, no `target_time`) -> today `ga_split` anchors at 09:00 and fails; after: 422 with a fixed message.
+- **Risk:** low. Sonnet. Depends on OQ-MT1-14 for its second part; the M2 part is independent.
 
 ### MT1-09 Strategies without time-window search refuse it; PyVRP gets the tour limit (H4-d, H4-e)
 
 - **Goal:** a capability flag `supports_time_windows` on strategies (true only for the split family after MT1-06, or for none if OQ-MT1-1 = c); `/optimize` and `/compare` refuse `use_time_windows=true` for the others with 422 before solving; PyVRP strategy passes `max_route_duration` (new optional core parameter, default `None` keeps the academic call identical).
 - **Files:** `optimizer_api/strategies/*` (flag), `optimizer_api/routers/optimization.py`, `optimizer_api/strategies/pyvrp_strategy.py`, `uniride_core/algorithms/pyvrp_cvrp_engine.py`; tests (PyVRP tests skip when the package is missing; state it).
 - **Red tests:** `ortools_cvrp` with `use_time_windows=true` -> today runs and fails at the certificate; after: 422 with a fixed message; PyVRP on an instance whose cheapest routes exceed `max_travel_time` -> after the fix no `duration_violation`.
-- **Acceptance:** registry snapshot unchanged (keys); academic OR-Tools/PyVRP callers unchanged.
-- **Risk:** **Opus reviewer** (H4). Independent of A and B.
+- **Acceptance:** `academic_benchmark/tests/test_production_registry_snapshot.py` green and unedited (keys); academic OR-Tools/PyVRP callers unchanged; full study guard set unedited. **Study-imported module** (`pyvrp_cvrp_engine`): merges after the paper campaign.
+- **Risk:** **Opus reviewer** (H4). Depends on the OQ-MT1-1 answer and, under OQ-MT1-1 (a) or (b), on MT1-06 (the flag must be true exactly for strategies whose search handles windows).
 
 ### MT1-10 Honest fleet and vehicle-count wording (M1, R2-R5)
 
@@ -329,8 +341,8 @@ Lanes: **A** (contract, serial) 01 -> 02 -> 03 -> 04; **B** (search, serial, aft
 | Risk | Control |
 |---|---|
 | Demo plans change unexpectedly | MT1-04 cross-check; demo acceptance replay (7.2) must show identical vehicles and durations |
-| The daily-planning paper archives become irreproducible | non-TW `split_parity.json` entries byte-identical; `scripts/verify_fleet_rerun.py` tests and research tests green |
-| Study results change before the campaign | MT1-11/12 wait; guard set per merge; empty diff of `studies/` and `datasets/` |
+| The daily-planning paper archives become irreproducible | `|tw=off|` `split_parity.json` entries unchanged (key-class test); demo-shaped decoder test; `scripts/verify_fleet_rerun.py` tests and research tests green; demo replay (7.2) |
+| Study results change before the campaign | every study-imported item (05, 06, 09, 11, 12) waits; guard set per merge; empty diff of `studies/` and `datasets/` |
 | The certificate starts rejecting archived exact-gap replays (`scripts/run_exact_wave_gaps.py` calls `certify_optimization_response`) | those requests have no windows, so the new check only adds the deadline, which a latest-start schedule always meets [A: the MT1-02 developer runs that script's tests] |
 | A developer chooses a timing rule | rules are owner questions; briefs quote the answer |
 
@@ -409,8 +421,20 @@ Each question lists options with pros (+) and cons (-) and a recommendation. Non
 
 **OQ-MT1-12. May production-only MT1 items merge between the pre-approval commit and the campaign?**
 - (a) No merges in that window at all (as A21 OQ-F7 a for MT6F). + simplest rule. - MT1 stalls for the length of the window.
-- (b) Yes, if the item changes no module the study run imports, the guard set passes unedited and `studies/`/`datasets/` are unchanged; the campaign runs from its pinned commit (A18 OQ-10). + the demo work continues. - one more rule for the lead to check.
-- **Recommendation: (b)** for MT1-01..08 and MT1-10; MT1-09 (shared PyVRP engine) waits like MT1-11/12.
+- (b) Yes, for items that change no module in the study import closure (section 2.1), with the guard set passing unedited and `studies/`/`datasets/` unchanged; the campaign runs from its pinned commit (A18 OQ-10). Merge-now set: MT1-02, -03, -04, -07, -08 and -10, and MT1-01 only while no study-imported module imports it. + the demo work continues. - one more rule for the lead to check.
+- Option (b) is an **exception to A21 OQ-F7** ("never merge between the approval commit and the campaign"), so it needs the owner's answer.
+- **Recommendation: (b).** MT1-05, -06, -09, -11 and -12 wait for the campaign under both options, because they change modules in the study import closure.
+
+**OQ-MT1-13. Narrowing H01 for the time-window branch.** H01 says the default `ga_split` and the shared decoder stay unchanged, protected by `split_parity.json`. MT1-05/06 would change the decoder's time-window branch, the split engines' search key when windows are on, and the 54 `|tw=on|` golden entries.
+- (a) Narrow H01: it holds for `use_time_windows=false` (the `|tw=off|` entries stay unchanged, proven by the key-class test); the time-window branch changes and its entries are regenerated in separate, listed commits. + makes the windowed path correct (OQ-MT1-1 a/b); the daily-planning and fleet paths keep their guard. - H01's "unchanged" wording becomes conditional; a decision record is needed.
+- (b) Keep H01 whole: the decoder's TW branch is not touched; windows are handled only by the certificate, the schedule and refusals (as OQ-MT1-1 c). + no golden change. - H2's decoder part and H4 stay open (refused, not fixed).
+- (c) Fork: a new TW decoder module next to the old one; the old one stays as-is for the golden. + golden untouched. - two decoders with the same job, the duplication the audit warns against.
+- **Recommendation: (a)**, recorded in O09 with a pointer from H01.
+
+**OQ-MT1-14. Windowed requests without `target_time`, and the implicit window for students without their own time.** Today: the decoder anchors at 09:00/14:00 (`string_split_decoder.py:~596, :616`), `ga_split_strategy.py:142-146` passes `None`, the certificate uses the largest window close (`response_certifier.py:653-658`, `feasibility_certificate.py:365-369`); and `schemas.py:473-474` gives every student without a time the window `target - 30 .. target` (pickup) or `target .. target + 30` (drop-off).
+- Missing `target_time`: (a) refuse `use_time_windows=true` without `target_time` with 422. + no invented anchor; simplest. - API callers that relied on the 09:00 default get an error. (b) Derive it: pickup deadline = the latest window close on the route, drop-off ready = the earliest window open. + keeps such requests working; matches today's certificate. - a deadline the caller never stated. (c) Pickup deadline = day end, drop-off ready = day start. + no invention. - drop-off routes would start at 00:00 and wait.
+- Implicit window: (a) keep it. + no change for callers. - a silent constraint: it caps how early a student is picked up, which is really a ride-time rule. (b) Delete it; a student without a time has no window, and the route deadline plus `max_ride_time` bound the schedule. + every constraint is explicit. - windowed results change for such students.
+- **Recommendation: refuse (a) for missing `target_time`; delete (b) for the implicit window.** No UI caller is affected (section 1.1).
 
 ---
 
@@ -420,17 +444,17 @@ Each question lists options with pros (+) and cons (-) and a recommendation. Non
 
 | Item | Suites (worktree, `PYTHONPATH` set) |
 |---|---|
-| every Python item | new red tests; `uniride_core/tests`; `optimizer_api/tests`; registry snapshot; study guard set (section 2.1); `split_parity` golden; `git diff --stat WIP -- academic_benchmark/studies academic_benchmark/datasets` empty |
-| 05, 06, 11 | plus `academic_benchmark/tests`; the canonical 3-opt regression command (`CANONICAL_THREE_OPT_DESIGN.md:124-128`) |
+| every Python item | new red tests; `uniride_core/tests`; `optimizer_api/tests`; registry snapshot (`academic_benchmark/tests/test_production_registry_snapshot.py`); study guard set (section 2.1); `split_parity` golden; `git diff --stat WIP -- academic_benchmark/studies academic_benchmark/datasets` empty |
+| 05, 06, 09, 11, 12 | plus `academic_benchmark/tests`; the canonical 3-opt regression command (`CANONICAL_THREE_OPT_DESIGN.md:141-144`); 05/06 also the key-class test |
 | 02, 03 | plus `scripts/test_verify_fleet_rerun.py`, `scripts/test_plan_fleet_pareto.py` and the tests of `scripts/run_exact_wave_gaps.py` [A: the developer locates them] |
 | 04, 10 | `npx vitest run` for the touched services and pages; `npx tsc --noEmit`; `scripts/research-tests` |
 | reviewer | runs the same suites, then reverts only the source change in a scratch worktree and shows the red test fails |
 
-### 7.2 Demo acceptance (before MT1-13, run by the lead or a developer)
+### 7.2 Demo acceptance (run by the lead or a developer: once for the merge-now set before the first close record, again after B and D)
 
-1. **Replay:** the MT6-04 replay approach (A20 L4): archived Dudullu daily requests for week 2026-10-05 (4sw5so archive), API default `ga_split`, seed 42, in memory, before and after MT1. Required: identical vehicles per wave and day, identical total durations, every response certified.
-2. **Schedule check:** for every replayed route, the server schedule equals the TypeScript interval (`[anchor - total, anchor]` pickup, `[anchor, anchor + total]` drop-off) within the arc tolerance; every pickup arrives at school by its anchor; no route starts before 00:00 or ends after the day end.
-3. **Known number:** 2026-10-05 still needs 3 vehicles (memory note: data-driven, 27 students, capacity floor 2); the page wording says "this plan uses 3" and explains the floor, without calling 3 "the minimum" unless V01 proves it.
+1. **Replay:** the MT6-04 replay approach (A20 L4) on the archive `docs/paper/results/week-2026-10-05-4sw5so/` (it supersedes the old `week-2026-10-05/` 4 Sw / 10 So archive, X01). The archive holds responses and matrices (jobs with `anchorMinutes` and `occurrenceId`), not request bodies, so the requests are **reconstructed from the archived jobs** exactly as the app builds them (`daily-plan-run.ts:604-623`), API default `ga_split`, seed 42, in memory, before and after MT1. The replay must send what the app sends: today the app sends no `offset_minutes`, so the API default 15 applies (`schemas.py:274`); after MT1-04 it sends 0 (if OQ-MT1-2 = a). Required: identical vehicles per wave and day, identical total durations, every response certified.
+2. **Schedule check:** for every replayed route, the server schedule equals the TypeScript interval (`[anchor - total, anchor]` pickup, `[anchor, anchor + total]` drop-off) within the arc tolerance. This holds only when the request carries the offset the answer to OQ-MT1-2 implies (0 under option a); a replay without `offset_minutes` would see the server deadline 15 minutes before the anchor, and the check must account for that. Every pickup arrives at school by its anchor; no route starts before 00:00 or ends after the day end.
+3. **Known numbers:** the replay gives the same vehicles and durations as before MT1. For reference, the archive's `summary.csv` holds for 2026-10-05 (27 students, 54 legs, 12 waves): ride limit 50/60/70/90 -> `vehicles_required` 6/5/4/4, `vehicle_count_proven` true, `capacity_floor` 3. The page wording says "this plan uses N" and explains the floor; it says "minimum" only where V01 proves it.
 4. **Windowed sanity set:** the audit H2, H3, H4 and N1 scenarios through `/optimize` with `ga_split`: H2 refused or rerouted feasibly, H3 times as in MT1-01 test 3, H4 certified, N1 one vehicle.
 
 These are acceptance checks, not evidence of algorithm quality; no superiority claim follows from them.

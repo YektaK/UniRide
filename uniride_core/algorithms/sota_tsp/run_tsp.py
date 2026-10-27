@@ -18,7 +18,9 @@ Core ideas borrowed (not the original update equations):
 Discrete TSP Adaptation:
   - Continuous slope computation → discrete move operator evaluation
   - k1 → 2-opt move (shallow gradient)
-  - k2 → 3-opt-bounded move (deeper gradient)
+  - k2 → canonical 3-opt move on one random cut (deeper gradient): the unchanged
+         tour or the best of that cut's canonical reconnections (7 undirected on a
+         symmetric matrix, 1 directed on an asymmetric one)
   - k3 → swap move (different direction)
   - k4 → insert move (another direction)
   - RK4 weighted average → weighted selection of best move result
@@ -34,6 +36,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from .base_solver import BaseTSPSolver, TSPResult
 from .deadline import WallClockDeadline
 from .ls_engine import MultiLayerLS
+from uniride_core.algorithms.three_opt import (
+    closed_tour_cost,
+    generate_three_opt_candidates,
+    is_symmetric_matrix,
+    validate_three_opt_window,
+)
 
 
 @dataclass
@@ -86,54 +94,42 @@ def _apply_2opt(tour: List[int], dist_matrix: List[List[float]],
     return result
 
 
-def _apply_3opt_bounded(tour: List[int], dist_matrix: List[List[float]],
-                        rng: random.Random, window: int = 12) -> List[int]:
-    """Apply a single 3-opt-bounded move (k2 slope — deeper gradient)."""
+def _apply_random_cut_three_opt(tour: List[int], dist_matrix: List[List[float]],
+                                rng: random.Random, window: int = 12,
+                                directed: Optional[bool] = None) -> List[int]:
+    """Apply one canonical 3-opt move on one random cut (k2 slope — deeper gradient).
+
+    One admitted cut ``(i, j, k)`` is drawn with three ``rng.randint`` calls (i, then
+    j, then k).  Admitted means the canonical rules of
+    ``uniride_core.algorithms.three_opt.iter_three_opt_cuts``: ``j - i >= 2``,
+    ``k - j >= 2``, ``n - k + i >= 2`` and both forward separations at most
+    ``window``.  The draw is sequential, so it is not uniform over all admitted cuts.
+
+    The candidates are the unchanged tour plus the canonical neighbourhood of that one
+    cut: the seven undirected reconnections on a symmetric matrix, or the single
+    orientation-preserving ``S1 + S3 + S2`` reconnection on an asymmetric one
+    (``directed``; ``None`` detects it from the matrix).  Each candidate is costed once
+    with ``closed_tour_cost`` and the first minimum is returned (so a tie keeps the
+    unchanged tour).  The window is validated first (an invalid one raises ``ValueError``
+    whatever the tour size); a tour with fewer than six nodes admits no cut and is then
+    returned unchanged.  This is one random cut, not a best-improvement scan of the neighbourhood.
+    """
     result = tour[:]
     n = len(result)
+    window = validate_three_opt_window(window, allow_none=False)  # even when n < 6
     if n < 6:
         return result
-    # Select three cut points within bounded window
-    i = rng.randint(0, n - 4)
-    j = rng.randint(i + 1, min(i + window, n - 2))
-    k = rng.randint(j + 1, min(j + window, n - 1))
+    if directed is None:
+        directed = not is_symmetric_matrix(dist_matrix)
 
-    # Try all 7 Lin-Kernighan reconnection patterns, pick best
-    candidates = []
+    # Sequential draw; every range below is non-empty for n >= 6 and window >= 2.
+    i = rng.randint(0, n - 5)
+    j = rng.randint(i + 2, min(i + window, n - 3, n + i - 4))
+    k = rng.randint(j + 2, min(j + window, n - 1, n + i - 2))
 
-    # Case 0: no change (baseline)
-    candidates.append(result[:])
-
-    # Case 1: reverse segment [i+1..j]
-    c1 = result[:]
-    c1[i + 1:j + 1] = c1[i + 1:j + 1][::-1]
-    candidates.append(c1)
-
-    # Case 2: reverse segment [j+1..k]
-    c2 = result[:]
-    c2[j + 1:k + 1] = c2[j + 1:k + 1][::-1]
-    candidates.append(c2)
-
-    # Case 3: reverse both [i+1..j] and [j+1..k]
-    c3 = result[:]
-    c3[i + 1:j + 1] = c3[i + 1:j + 1][::-1]
-    c3[j + 1:k + 1] = c3[j + 1:k + 1][::-1]
-    candidates.append(c3)
-
-    # Case 4: move segment [i+1..j] after k
-    c4 = result[:i + 1] + result[j + 1:k + 1] + result[i + 1:j + 1] + result[k + 1:]
-    candidates.append(c4)
-
-    # Case 5: move segment [j+1..k] before i+1
-    c5 = result[:i + 1] + result[j + 1:k + 1] + result[i + 1:j + 1] + result[k + 1:]
-    candidates.append(c5)
-
-    # Case 6: reverse [i+1..j], move after k
-    c6 = result[:i + 1] + result[j + 1:k + 1] + list(reversed(result[i + 1:j + 1])) + result[k + 1:]
-    candidates.append(c6)
-
-    best = min(candidates, key=lambda t: _tour_cost(t, dist_matrix))
-    return best
+    candidates = [result] + generate_three_opt_candidates(result, i, j, k, directed=directed)
+    costs = [closed_tour_cost(candidate, dist_matrix) for candidate in candidates]
+    return candidates[costs.index(min(costs))]
 
 
 def _apply_swap(tour: List[int], dist_matrix: List[List[float]],
@@ -250,6 +246,7 @@ class RUN_TSP(BaseTSPSolver):
         super().__init__("RUN-TSP", config.seed if config else 42)
         self.cfg = config or RUNConfig()
         self._rng = random.Random(self.cfg.seed)
+        self._directed: Optional[bool] = None  # set once per solve from the matrix
 
     def _init_population(self, n: int) -> List[List[int]]:
         """Initialize population with greedy + random tours."""
@@ -267,12 +264,14 @@ class RUN_TSP(BaseTSPSolver):
         """Compute 4 RK4 slope stages as discrete TSP moves.
 
         k1: 2-opt (shallow gradient)
-        k2: 3-opt-bounded (deeper gradient)
+        k2: canonical 3-opt on one random cut: unchanged tour or the best canonical
+            reconnection of that cut (deeper gradient)
         k3: swap (different direction)
         k4: insert (another direction)
         """
         k1 = _apply_2opt(tour, self._dist_matrix, self._rng, self.cfg.three_opt_window)
-        k2 = _apply_3opt_bounded(k1, self._dist_matrix, self._rng, self.cfg.three_opt_window)
+        k2 = _apply_random_cut_three_opt(k1, self._dist_matrix, self._rng,
+                                         self.cfg.three_opt_window, self._directed)
         k3 = _apply_swap(k2, self._dist_matrix, self._rng)
         k4 = _apply_insert(k3, self._dist_matrix, self._rng)
         return [k1, k2, k3, k4]
@@ -411,6 +410,9 @@ class RUN_TSP(BaseTSPSolver):
                 seed=self.cfg.seed,
                 extra_stats=deadline.stats(),
             )
+
+        # Directed (ATSP) 3-opt mode is decided once per solve, not once per move.
+        self._directed = not is_symmetric_matrix(self._dist_matrix)
 
         # Initialize population
         population = self._init_population(n)

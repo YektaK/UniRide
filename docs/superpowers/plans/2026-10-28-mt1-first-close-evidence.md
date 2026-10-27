@@ -71,10 +71,11 @@ Rule slip reported by the replay author: two read-only `python -c` one-liners an
 ## 5. H16 dashboard note: red/green and checks
 
 - Check: `academic_benchmark/dashboard.py` is launched only as a Streamlit script (`cli_engine.py:2526`, `smart_benchmark.py:1338`, `__main__.py:16`); no module under `academic_benchmark/studies`, `fair_pilot.py` or the study run imports it.
+
 All logs are under `C:/wt/mt1-13-scratch/` (outside the repository).
 
 - Red commit `6b520c72` (test only): 1 failed, 1 passed (`red.log`). Fix commit `9e6a208d`.
-- After the fix: 2 passed (`green.log`). With the fix diff reverse-applied the shown-note test failed again: 1 failed, 1 passed (`revert.log`); the code reviewer independently confirmed revert -> 1 failed, 1 passed.
-- DUZELT round 1 added a third test (upper-case `CVRPTW`): 3 passed (`green2.log`); with `.str.lower()` removed at `dashboard.py:528` that test fails, 1 failed, 2 passed (`mutation_lower.log`).
+- After the fix: 2 passed (`green.log`). With the fix diff reverse-applied the shown-note test failed again: 1 failed, 1 passed (`revert.log`).
+- Sonnet code review (lead's record, 2026-10-28): ONAY on `9e6a208d`; the reviewer's own revert run gave 1 failed, 1 passed; its one polish item (an upper-case problem type is not tested) was applied in the fact-check correction round: a third test (`['cvrp', 'CVRPTW']`), `green2.log` 3 passed, `mutation_lower.log` 1 failed, 2 passed.
 - Dashboard tests (`test_h16_dashboard_cvrptw_note`, `test_c5_dashboard_no_inference`, `test_c5f1_descriptive_labels`, `test_cx02_dashboard_obsolete_csv`, `test_dashboard_utils`, `test_gate_d_reporting_sweep`) plus `test_production_registry_snapshot.py`: 69 passed, 3 skipped before the third test (`suite2.log`), 70 passed, 3 skipped after it (`suite3.log`); the three skips are the `test_cx02_dashboard_obsolete_csv.py` cases that need `streamlit`.
-- Doc-consistency tests that cite the edited documents (8 files): 193 passed (`docs.log`).
+- Doc-consistency run after the last doc edits (`test_gate_d_docs_consistency`, `test_gate_d_redline_applied`, `test_mt1_08_window_direction`): 79 passed (`docs2.log`). An earlier wider run of tests that cite the edited documents gave 193 passed (`docs.log`).

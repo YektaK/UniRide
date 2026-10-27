@@ -27,6 +27,7 @@ REPO = Path(__file__).resolve().parents[2]
 MANIFESTS = (
     REPO / "archive" / "academic_benchmark" / "bildiri2026_legacy" / "manifest.json",
     REPO / "archive" / "academic_benchmark" / "yaem2026_legacy" / "manifest.json",
+    REPO / "archive" / "uniride_core" / "sota_common_legacy" / "manifest.json",
 )
 LF_TEXT = b"VALUE = 1\nOTHER = 2\n"
 CRLF_TEXT = LF_TEXT.replace(b"\n", b"\r\n")

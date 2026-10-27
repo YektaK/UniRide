@@ -322,6 +322,15 @@
           "gap": "{n, plural, one {# extra vehicle does} other {# extra vehicles do}} not come from seat capacity. Possible causes: the limits of {ride} min in the vehicle per student and {tour} min per vehicle tour splitting the routes, routes that fall at the same times, and the vehicle cooldown.",
           "capacityBinding": "The vehicles needed equal this lower bound: seat capacity is the binding constraint, the time limits do not require extra vehicles."
         },
+        "shortage": {
+          "title": "Live fleet shortage",
+          "needsPickup": "The computed plan needs {n, plural, one {# vehicle} other {# vehicles}} for the {time} arrival wave; the live fleet has {m, plural, one {# vehicle} other {# vehicles}}.",
+          "needsDropoff": "The computed plan needs {n, plural, one {# vehicle} other {# vehicles}} for the {time} departure wave; the live fleet has {m, plural, one {# vehicle} other {# vehicles}}.",
+          "needsUnknown": "The computed plan for the {time} wave did not fit the live fleet, which has {m, plural, one {# vehicle} other {# vehicles}}.",
+          "proven": "Proven: seat capacity alone needs at least {n, plural, one {# vehicle} other {# vehicles}} in this wave (Sw: {swCap} seats, So: {soCap} seats), which is more than the live fleet has.",
+          "notProven": "Shortage not proven: seat capacity alone needs at least {n, plural, one {# vehicle} other {# vehicles}} in this wave (Sw: {swCap} seats, So: {soCap} seats), and the live fleet covers that. The solver did not try to fit the live fleet, so splitting the students into routes differently might fit it.",
+          "notProvenNoFloor": "Shortage not proven: the seat-capacity lower bound could not be computed. The solver did not try to fit the live fleet, so splitting the students into routes differently might fit it."
+        },
         "sections": {
           "pickup": "Morning pickup",
           "dropoff": "Evening dropoff"
@@ -369,7 +378,7 @@
           "DUPLICATE_MATRIX_ARC": "The travel-time matrix has conflicting durations for the same arc.",
           "DUPLICATE_OCCURRENCE_COVERAGE": "The same trip appears in more than one route; the plan was rejected.",
           "FLEET_INVALID": "Vehicle records contain invalid or duplicate data.",
-          "FLEET_SHORTAGE": "Current fleet cannot be assigned to these routes. This does not prove that other routes are impossible or establish an exact extra vehicle count.",
+          "FLEET_SHORTAGE": "The live fleet could not be assigned to the computed routes. The shortage counts as proven only when the seat-capacity lower bound of a wave exceeds the live fleet; otherwise a different split of the students into routes might still fit the fleet, and no exact number of missing vehicles is established.",
           "JOB_CONTRACT_MISMATCH": "A wave has an inconsistent time or direction; the plan was rejected.",
           "LEG_DECISIONS_UNAVAILABLE": "The student decision table was not found; recorded confirmations could not be read.",
           "LEGACY_AMBIGUOUS_CONFIRMATION": "Some students have legacy requests and their confirmation state is ambiguous.",

@@ -238,7 +238,11 @@ describe("DailyPlanPage", () => {
 
   it("shows the English copy for the same evidence", async () => {
     testLocale = "en";
-    await generate(fleetShortageResponse(2, 2));
+    mocks.run.mockResolvedValue(fleetShortageResponse(2, 2));
+    render(<DailyPlanPage />);
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
+    await screen.findByTestId("preview-banner");
 
     expect(screen.getByTestId("fleet-shortage-needs").textContent).toContain("08:45 arrival wave");
     expect(screen.getByTestId("fleet-shortage-verdict").textContent).toContain("Proven");
@@ -380,7 +384,9 @@ describe("DailyPlanPage", () => {
     const needed = screen.getByTestId("card-needed-vehicles");
     expect(within(needed).getByTestId("needed-vehicles-value").textContent).toBe("—");
     expect(within(needed).getByText("Bu rotalar için en az 2 araç gerekir.")).toBeTruthy();
-    expect(screen.getByText(/Bu sonuç farklı rotalarla çözüm olmadığını/)).toBeTruthy();
+    expect(screen.getByText(/Eksiklik yalnızca bir dalganın koltuk kapasitesi alt sınırı mevcut filoyu aştığında kanıtlanmış sayılır/)).toBeTruthy();
+    // No wave evidence in this response (older producer): nothing is called proven.
+    expect(screen.queryByTestId("fleet-shortage")).toBeNull();
     expect(screen.getByText(/Bu sonuçta araç ataması yok/)).toBeTruthy();
     expect(screen.queryAllByTestId("vehicle-row")).toHaveLength(0);
   });

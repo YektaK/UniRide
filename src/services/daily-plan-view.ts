@@ -173,6 +173,26 @@ export interface CapacityFloor {
   readonly soCapacity: number;
 }
 
+/**
+ * The wave that did not fit the live fleet (MT1-10, R4). `proven` is true only when the wave's
+ * capacity floor exceeds the live fleet; otherwise the shortage is a statement about the computed plan.
+ */
+export interface FleetShortageView {
+  readonly direction: PlanDirection;
+  readonly anchorLabel: string;
+  /** Vehicles the computed plan used in that wave; null when the solver returned no usable list. */
+  readonly plannedVehicles: number | null;
+  readonly liveFleet: number;
+  readonly capacityFloor: {
+    readonly vehicles: number;
+    readonly swCount: number;
+    readonly soCount: number;
+    readonly swCapacity: number;
+    readonly soCapacity: number;
+  } | null;
+  readonly proven: boolean;
+}
+
 export interface PlanSummary {
   readonly status: PlanStatus;
   readonly tone: PlanTone;
@@ -188,6 +208,8 @@ export interface PlanSummary {
   readonly routes: number;
   readonly invalidStudentRecords: number;
   readonly fleet: FleetComparison;
+  /** Evidence of a live-fleet shortage; null unless the live plan was short of vehicles. */
+  readonly fleetShortage: FleetShortageView | null;
   /** Longest student ride of the whole day (minutes); null when the plan has no route. */
   readonly maxRideMinutes: number | null;
 }
@@ -462,6 +484,21 @@ function compareFleet(
   };
 }
 
+function buildFleetShortage(response: DudulluPreviewResponse): FleetShortageView | null {
+  const evidence = response.fleetShortage;
+  if (!evidence || response.status !== "shortage" || response.fleetMode !== "live"
+    || !response.reasonCodes.includes("FLEET_SHORTAGE")) return null;
+  return {
+    direction: evidence.direction,
+    anchorLabel: formatMinutesOfDay(evidence.anchorMinutes),
+    plannedVehicles: evidence.plannedVehicles,
+    liveFleet: evidence.liveFleet,
+    capacityFloor: evidence.capacityFloor,
+    // R4: "proven" only when the capacity floor alone already exceeds the live fleet.
+    proven: evidence.capacityFloor !== null && evidence.capacityFloor.vehicles > evidence.liveFleet,
+  };
+}
+
 /**
  * Capacity-only lower bound on the vehicles of a day. Sw and So students use separate seat
  * pools, so a wave needs max(ceil(Sw / swCapacity), ceil(So / soCapacity)) vehicles at once
@@ -624,6 +661,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
       routes: routeCount,
       invalidStudentRecords: response.candidateSummary.invalidStudentRecords,
       fleet: compareFleet(neededVehicles, neededAtMost, response),
+      fleetShortage: buildFleetShortage(response),
       maxRideMinutes: pendingRoutes.length === 0
         ? null
         : Math.max(...pendingRoutes.map((route) => route.maxRideMinutes)),

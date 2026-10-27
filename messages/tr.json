@@ -322,6 +322,15 @@
           "gap": "Fazladan {n} araç koltuk kapasitesinden kaynaklanmıyor. Olası nedenler: öğrencinin araçta en fazla {ride} dk ve araç turunun en fazla {tour} dk kalma sınırlarının rotaları bölmesi, aynı saatlere denk gelen rotalar ve araçların bekleme süresi.",
           "capacityBinding": "Gereken araç sayısı bu alt sınıra eşit: belirleyici etken koltuk kapasitesidir, süre sınırları ek araç gerektirmiyor."
         },
+        "shortage": {
+          "title": "Mevcut filo eksiği",
+          "needsPickup": "Hesaplanan plan, {time} varış dalgası için {n} araç gerektiriyor; mevcut filoda {m} araç var.",
+          "needsDropoff": "Hesaplanan plan, {time} çıkış dalgası için {n} araç gerektiriyor; mevcut filoda {m} araç var.",
+          "needsUnknown": "{time} dalgası için hesaplanan plan mevcut filoya sığmadı; mevcut filoda {m} araç var.",
+          "proven": "Kanıtlandı: yalnızca koltuk kapasitesi bu dalga için en az {n} araç gerektirir (Sw: {swCap} koltuk, So: {soCap} koltuk); bu, mevcut filodaki araç sayısından fazladır.",
+          "notProven": "Eksiklik kanıtlanmadı: yalnızca koltuk kapasitesi bu dalga için en az {n} araç gerektirir (Sw: {swCap} koltuk, So: {soCap} koltuk) ve mevcut filo bunu karşılıyor. Çözücü filoya sığdırmayı denemedi; öğrencilerin rotalara başka biçimde bölünmesi mevcut filoya sığabilir.",
+          "notProvenNoFloor": "Eksiklik kanıtlanmadı: koltuk kapasitesi alt sınırı hesaplanamadı. Çözücü filoya sığdırmayı denemedi; öğrencilerin rotalara başka biçimde bölünmesi mevcut filoya sığabilir."
+        },
         "sections": {
           "pickup": "Sabah toplama",
           "dropoff": "Akşam bırakma"
@@ -369,7 +378,7 @@
           "DUPLICATE_MATRIX_ARC": "Seyahat süresi matrisinde aynı yol için çelişen süreler var.",
           "DUPLICATE_OCCURRENCE_COVERAGE": "Aynı sefer birden fazla rotada görünüyor; plan geçersiz sayıldı.",
           "FLEET_INVALID": "Araç kayıtlarında geçersiz veya tekrar eden bilgi var.",
-          "FLEET_SHORTAGE": "Mevcut filo bu rotalara atanamıyor. Bu sonuç farklı rotalarla çözüm olmadığını veya tam kaç ek araç gerektiğini kanıtlamaz.",
+          "FLEET_SHORTAGE": "Mevcut filo hesaplanan rotalara atanamadı. Eksiklik yalnızca bir dalganın koltuk kapasitesi alt sınırı mevcut filoyu aştığında kanıtlanmış sayılır; aksi halde öğrencilerin rotalara başka biçimde bölünmesi mevcut filoya sığabilir ve tam kaç aracın eksik olduğu belirlenmiş olmaz.",
           "JOB_CONTRACT_MISMATCH": "Bir dalganın saat veya yön bilgisi tutarsız; plan geçersiz sayıldı.",
           "LEG_DECISIONS_UNAVAILABLE": "Öğrenci onay kayıtları tablosu bulunamadı; kayıtlı onaylar okunamadı.",
           "LEGACY_AMBIGUOUS_CONFIRMATION": "Bazı öğrencilerin eski usul talepleri var ve onay durumları belirsiz.",

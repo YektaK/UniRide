@@ -21,6 +21,8 @@ import {
   type VirtualFleetTemplate,
 } from "@/services/dudullu-preview";
 import type { MatrixSnapshot, PreviewJobInput, PreviewOptimizationResult, PreviewVehicle, PreviewReasonCode } from "@/services/dudullu-preview";
+import { computeCapacityFloor } from "@/services/daily-plan-view";
+import type { DudulluPreviewResponse } from "@/services/dudullu-preview-response";
 import { serviceDateBounds } from "@/services/istanbul-service-date";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 import { buildMatrixAge, type MatrixAge } from "@/services/matrix-age";
@@ -126,6 +128,45 @@ async function selectRowsOrMissingRelation(query: PromiseLike<QueryResult>): Pro
 function violatesFleetSize(certificate: unknown): boolean {
   if (!isRow(certificate) || !Array.isArray(certificate.violations)) return false;
   return certificate.violations.some((violation) => isRow(violation) && violation.type === "fleet_size_violation");
+}
+
+type FleetShortageEvidence = NonNullable<DudulluPreviewResponse["fleetShortage"]>;
+
+/**
+ * MT1-10 (M1, O09 OQ-MT1-8 a): what the page needs to word a live-fleet shortage honestly. The solver
+ * (`ga_split`) never tries to fit the fleet, so the shortage is a statement about the computed plan.
+ * The wave's capacity floor is the existing `computeCapacityFloor` on the wave's Sw/So counts and the
+ * live fleet's largest seat counts; only a floor above the fleet proves the shortage. The daily-plan
+ * request sends no `total_capacity`, so there is no total-seat term. `plannedVehicles` is the route
+ * count the solver returned, or null when it is not above the fleet (an unusable route list).
+ */
+function fleetShortageEvidence(
+  group: readonly PreviewDemand[],
+  returnedRoutes: number,
+  liveFleet: number,
+  capacity: { readonly swCapacity: number; readonly soCapacity: number } | null,
+): FleetShortageEvidence {
+  const first = group[0]!;
+  const floor = computeCapacityFloor([{
+    direction: first.direction,
+    anchorMinutes: first.anchorMinutes,
+    anchorLabel: exactClock(first.anchorMinutes),
+    swCount: group.filter((demand) => demand.disabilityType === "Sw").length,
+    soCount: group.filter((demand) => demand.disabilityType === "So").length,
+  }], capacity);
+  return {
+    direction: first.direction,
+    anchorMinutes: first.anchorMinutes,
+    plannedVehicles: returnedRoutes > liveFleet ? returnedRoutes : null,
+    liveFleet,
+    capacityFloor: floor === null ? null : {
+      vehicles: floor.vehicles,
+      swCount: floor.swCount,
+      soCount: floor.soCount,
+      swCapacity: floor.swCapacity,
+      soCapacity: floor.soCapacity,
+    },
+  };
 }
 
 export function violatesRideTime(certificate: unknown): boolean {
@@ -521,9 +562,12 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
   let matrixAge: MatrixAge | null = null;
   // Which algorithm settings and seed the optimizer calls used (H17); set once all waves solved.
   let solverConfig: SolverConfigSummary | null = null;
+  // MT1-10: evidence of the wave that did not fit the live fleet (see `fleetShortageEvidence`).
+  let fleetShortage: FleetShortageEvidence | undefined;
   const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
     ...withReasonCodes(result, extraReasons),
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
+    ...(fleetShortage === undefined ? {} : { fleetShortage }),
     admissionMode,
     fleetMode,
     hypothetical,
@@ -644,6 +688,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       // The solver needs more routes than the real fleet has vehicles: report the shortage
       // instead of a generic optimization failure. Not applied to the virtual fleet, where
       // the vehicle list is capped by the optimizer policy and not by the real fleet.
+      fleetShortage = fleetShortageEvidence(group, result.routes.length, liveVehicles.length, fleetInfo.maxCapacity);
       return finish({ ...blockedPreview(serviceDate, admitted, matrix, "FLEET_SHORTAGE"), status: "shortage" as const });
     }
     if (!result.success && violatesRideTime(result.feasibility_certificate)) {

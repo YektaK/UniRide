@@ -205,6 +205,10 @@ def _group_stops(route: List[int], node_codes: List[str]) -> List[List[int]]:
     return stops
 
 
+# Simulator violation kinds a typed (vehicle_types) request is held to.
+_TYPED_SCHEDULE_KINDS = frozenset({DEADLINE, START_BEFORE_DAY, END_AFTER_DAY})
+
+
 def _fmt(minutes: float) -> str:
     return f"{minutes:.2f}"
 
@@ -236,8 +240,10 @@ def _schedule_violations(
     ``max_ride_time``). A route the core travel-only checks already flagged is not
     reported a second time.
 
-    Typed requests use the simulator only for the deadline: service time counts
-    toward it, but the typed tour and ride limits stay travel-only (plan MT1-02).
+    Typed requests keep the deadline, start-before-day and end-after-day checks
+    (service time counts toward them) and drop window, tour and ride: the typed
+    tour and ride limits stay travel-only (plan MT1-02). No window is applied to a
+    typed request, so in practice only the day-bound checks can fire for it.
 
     Intra-stop arcs are never read: consecutive students at one location code
     form one stop (zero-length arcs by construction; every authoritative lookup
@@ -318,7 +324,7 @@ def _schedule_violations(
             )
 
         for item in schedule.violations:
-            if typed and item.kind != DEADLINE:
+            if typed and item.kind not in _TYPED_SCHEDULE_KINDS:
                 continue
             # simulator positions are 0-based indices into the route we passed
             node = stops[item.position][0] if item.position is not None else None

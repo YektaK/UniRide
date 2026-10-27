@@ -22,7 +22,9 @@ ortools>=9.8.0
 
 # PyVRP: DIMACS 2021 Challenge Winner - State-of-the-art VRP solver
 # Note: Requires native build tools. Install separately for benchmark:
-# pip install pyvrp>=0.9.0
+# Upper bound <0.14: PyVRP 0.14.0 changed Model.add_depot (location argument);
+# adapting uniride_core/algorithms/pyvrp_cvrp_engine.py is a separate later item.
+# pip install "pyvrp>=0.9.0,<0.14"
 
 # VROOM: High-performance VRP solver with time windows
 # Note: Requires VROOM binary installation - see https://github.com/VROOM-Project/vroom

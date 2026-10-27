@@ -56,7 +56,7 @@ def test_optimizer_requirements_install_hint_pins_pyvrp_below_0_14():
     hints = [
         line.strip()
         for line in path.read_text(encoding="utf-8").splitlines()
-        if re.search(r"pip install\s+pyvrp", line, re.IGNORECASE)
+        if re.search(r"pip install\s+[\"']?pyvrp", line, re.IGNORECASE)
     ]
 
     assert hints, "requirements.txt no longer carries the pyvrp install hint"

@@ -16,7 +16,9 @@ dependencies = [
 [project.optional-dependencies]
 solvers = [
     "ortools",
-    "pyvrp",
+    # <0.14: PyVRP 0.14.0 changed Model.add_depot (location argument); adapting
+    # uniride_core/algorithms/pyvrp_cvrp_engine.py is a separate later item.
+    "pyvrp>=0.9.0,<0.14",
     "pyvroom",
     "vrplib"
 ]

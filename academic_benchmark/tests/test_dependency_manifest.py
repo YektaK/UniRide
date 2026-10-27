@@ -33,4 +33,6 @@ def test_pyproject_declares_optional_solver_dependencies():
     data = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     solvers = set(data["project"]["optional-dependencies"]["solvers"])
 
-    assert {"ortools", "pyvrp", "pyvroom", "vrplib"}.issubset(solvers)
+    assert {"ortools", "pyvroom", "vrplib"}.issubset(solvers)
+    # pyvrp carries a version bound (see test_pyvrp_upper_bound.py), so match by name.
+    assert any(entry.startswith("pyvrp") for entry in solvers)

@@ -6,6 +6,7 @@ of failing with a validation error hidden behind the generic except.
 """
 
 import math
+import re
 
 import pytest
 
@@ -53,7 +54,7 @@ def _run(problem, strategy):
 
 def test_conversion_refuses_cvrptw_with_time_windows():
     runner = BenchmarkRunner()
-    with pytest.raises(Exception, match=REFUSAL):
+    with pytest.raises(Exception, match=re.escape(REFUSAL)):
         runner._benchmark_problem_to_optimization_request(_cvrptw(), "ga_split")
 
 

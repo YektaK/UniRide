@@ -250,6 +250,72 @@ def test_invalid_window_is_rejected():
         _move(list(range(8)), matrix, random.Random(0), 1)
 
 
+@pytest.mark.parametrize("n", [0, 3, 5, 8])
+@pytest.mark.parametrize("window", [1, 0, None, 2.5])
+def test_window_is_validated_before_the_small_tour_return(n, window):
+    matrix = _matrix(max(n, 1), 1, True)
+    with pytest.raises(ValueError):
+        _move(list(range(n)), matrix, random.Random(0), window)
+
+
+# ------------------------------------------------------------------------------------ ties
+
+
+@pytest.mark.parametrize("symmetric", [True, False])
+@pytest.mark.parametrize("n", [8, 12])
+def test_all_candidates_tied_keeps_the_unchanged_tour(n, symmetric):
+    """Constant off-diagonal costs: every candidate costs the same, so the first minimum is
+    the unchanged tour.  A "last minimum" implementation returns a reconnection."""
+    matrix = [[0 if a == b else 7 for b in range(n)] for a in range(n)]
+    tour = random.Random(4).sample(range(n), n)
+    for cut in CUTS[n]:
+        assert _move(tour, matrix, _CutRng(cut), 12) == tour, (n, symmetric, cut)
+
+
+def test_a_reconnection_that_ties_the_identity_does_not_replace_it():
+    """Fixed cut on a symmetric matrix where one reconnection costs exactly the same as the
+    unchanged tour and nothing is cheaper: the unchanged tour must come back."""
+    n = 8
+    cut = (1, 3, 5)
+    tour = list(range(n))
+    matrix = [[0 if a == b else 5 for b in range(n)] for a in range(n)]
+
+    def put(a, b, value):
+        matrix[a][b] = value
+        matrix[b][a] = value
+
+    for x in range(n):
+        put(tour[x], tour[(x + 1) % n], 1)
+    # Reversing both S1 = [2, 3] and S2 = [4, 5] swaps the edges 1-2, 3-4, 5-6 for 1-3,
+    # 2-5, 4-6; give the new edges cost 1 too, so that candidate costs exactly 8 = identity.
+    put(1, 3, 1)
+    put(2, 5, 1)
+    put(4, 6, 1)
+    costs = sorted(_cost(c, matrix) for c in _reference_classes(tour, *cut, False).values())
+    assert costs[0] == costs[1] == 8, costs
+    assert _move(tour, matrix, _CutRng(cut), 12) == tour
+
+
+# ---------------------------------------------------------------- directed mode on solver path
+
+
+@pytest.mark.parametrize("symmetric", [True, False])
+def test_solver_passes_the_matrix_mode_to_the_canonical_generator(monkeypatch, symmetric):
+    calls = []
+    original = run_tsp.generate_three_opt_candidates
+
+    def spy(route, i, j, k, *, directed):
+        calls.append(directed)
+        return original(route, i, j, k, directed=directed)
+
+    monkeypatch.setattr(run_tsp, "generate_three_opt_candidates", spy)
+    matrix = _matrix(12, 6, symmetric)
+    RUN_TSP(RUNConfig(population_size=4, max_iterations=2, seed=3)).solve_with_matrix(matrix)
+
+    assert calls, "the solver never reached the canonical 3-opt generator"
+    assert set(calls) == {not symmetric}
+
+
 # ------------------------------------------------------------------------------ determinism
 
 

@@ -110,14 +110,15 @@ def _apply_random_cut_three_opt(tour: List[int], dist_matrix: List[List[float]],
     orientation-preserving ``S1 + S3 + S2`` reconnection on an asymmetric one
     (``directed``; ``None`` detects it from the matrix).  Each candidate is costed once
     with ``closed_tour_cost`` and the first minimum is returned (so a tie keeps the
-    unchanged tour).  A tour with fewer than six nodes admits no cut and is returned
-    unchanged.  This is one random cut, not a best-improvement scan of the neighbourhood.
+    unchanged tour).  The window is validated first (an invalid one raises ``ValueError``
+    whatever the tour size); a tour with fewer than six nodes admits no cut and is then
+    returned unchanged.  This is one random cut, not a best-improvement scan of the neighbourhood.
     """
     result = tour[:]
     n = len(result)
+    window = validate_three_opt_window(window, allow_none=False)  # even when n < 6
     if n < 6:
         return result
-    window = validate_three_opt_window(window, allow_none=False)
     if directed is None:
         directed = not is_symmetric_matrix(dist_matrix)
 

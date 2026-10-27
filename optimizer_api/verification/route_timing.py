@@ -83,8 +83,11 @@ class RequestNodes:
         return len(self.node_keys)
 
 
-def request_nodes(request: Any) -> RequestNodes:
-    occurrence_keys = student_occurrence_keys(request.students)
+def request_nodes(
+    request: Any, occurrence_keys: Optional[List[str]] = None
+) -> RequestNodes:
+    if occurrence_keys is None:
+        occurrence_keys = student_occurrence_keys(request.students)
     node_keys = [request.depot.id] + occurrence_keys
     return RequestNodes(
         occurrence_keys=occurrence_keys,

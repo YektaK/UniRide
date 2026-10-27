@@ -18,6 +18,7 @@ import dataclasses
 import math
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from uniride_core.adapters.demand_builder import student_occurrence_keys
 from uniride_core.algorithms.distance import tsplib_distance_by_type
 from uniride_core.algorithms.route_schedule import (
     DEADLINE,
@@ -618,7 +619,7 @@ def _certify_optimization_response(
     DataLoader repository. This bound certifies constraint satisfaction, not
     optimality.
     """
-    nodes_of_request = request_nodes(request)
+    nodes_of_request = request_nodes(request, student_occurrence_keys(request.students))
     occurrence_keys = nodes_of_request.occurrence_keys
     node_keys = nodes_of_request.node_keys
     loc_to_node = nodes_of_request.loc_to_node

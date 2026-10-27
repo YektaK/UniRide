@@ -14,7 +14,7 @@ from uniride_core.algorithms.clustering_strategies.fuzzy_cmeans_enhanced import 
     fuzzy_c_means_with_membership,
 )
 from uniride_core.algorithms.tsp_meta_engines import solve_two_opt_tsp
-from uniride_core.algorithms.tsp_meta_matrix_engine import TSPSolver
+from uniride_core.algorithms.tsp_meta_matrix_engine import TSPSolver, resolve_seed
 from uniride_core.models import PermutationResult, RoutingProblem
 
 
@@ -59,6 +59,7 @@ class FCMSplitMatrixEngine(UnifiedEngine):
         dm = np.asarray(distance_matrix, dtype=np.float64)
         n = int(dm.shape[0])
         started = time.perf_counter()
+        seed = resolve_seed(seed)
         rng = random.Random(seed)
 
         problem_type = str(cfg.get("problem_type", "tsp")).lower()
@@ -184,7 +185,7 @@ def _cluster_node_indices(
         )
         for idx in node_indices
     ]
-    rng = random.Random(seed)
+    rng = random.Random(resolve_seed(seed))
     _, _, assignments = fuzzy_c_means_with_membership(
         points,
         k=k,

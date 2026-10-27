@@ -17,6 +17,17 @@ TSPSolver = Callable[
 ]
 
 
+# Seed used when a caller supplies none (audit L10-c): the same repository
+# default as clustering (H12) and production (seed_utils). An engine never
+# builds ``random.Random(None)``; the effective seed is reported in the result.
+DEFAULT_ENGINE_SEED = 42
+
+
+def resolve_seed(seed: Optional[int]) -> int:
+    """Return ``seed`` or the repository default; ``0`` stays ``0``."""
+    return DEFAULT_ENGINE_SEED if seed is None else seed
+
+
 class TSPMetaMatrixEngine(UnifiedEngine):
     """Expose string-keyed core TSP metaheuristics as matrix-native engines."""
 
@@ -31,6 +42,7 @@ class TSPMetaMatrixEngine(UnifiedEngine):
         seed: Optional[int] = None,
     ) -> PermutationResult:
         cfg = dict(config or {})
+        seed = resolve_seed(seed)
         dm = np.asarray(distance_matrix, dtype=np.float64)
         n = dm.shape[0]
         problem_type = str(cfg.get("problem_type", "tsp")).lower()
@@ -80,4 +92,4 @@ def _route_cost(route: List[str], matrix: np.ndarray, *, depot: int, routing_pro
     return total
 
 
-__all__ = ["TSPMetaMatrixEngine", "TSPSolver"]
+__all__ = ["DEFAULT_ENGINE_SEED", "TSPMetaMatrixEngine", "TSPSolver", "resolve_seed"]

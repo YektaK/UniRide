@@ -35,6 +35,9 @@ class LocalSearchType(str, Enum):
 
 
 TARGET_TIME_REQUIRED_MESSAGE = "use_time_windows requires target_time"
+SERVICE_TIME_REQUIRES_TARGET_MESSAGE = (
+    "stop_dwell_minutes and sw_boarding_minutes require target_time"
+)
 
 
 def _parse_hhmm(time_str: str) -> int:
@@ -275,6 +278,22 @@ class OptimizationRequest(BaseModel):
         description="Content hash of the authoritative matrix snapshot for preview calls",
     )
     offset_minutes: int = 15
+    stop_dwell_minutes: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "MT1-02: service time at every stop, in minutes (default 0). Counts "
+            "in the tour, the ride time and the school deadline."
+        ),
+    )
+    sw_boarding_minutes: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "MT1-02: extra service minutes per Sw student at a stop (default 0), "
+            "on top of stop_dwell_minutes."
+        ),
+    )
     allow_time_shift: bool = False
     slack_window_minutes: int = 60
     vehicles: Optional[List[VehicleConfig]] = None
@@ -414,6 +433,14 @@ class OptimizationRequest(BaseModel):
         """MT1-08 (OQ-MT1-14): a windowed request must say when the trip is anchored."""
         if self.use_time_windows and not self.target_time:
             raise ValueError(TARGET_TIME_REQUIRED_MESSAGE)
+        return self
+
+    @model_validator(mode="after")
+    def validate_service_time_has_anchor(self) -> "OptimizationRequest":
+        """MT1-02: service minutes are simulated against target_time, so a request
+        with service time and no anchor is refused instead of silently ignored."""
+        if (self.stop_dwell_minutes > 0 or self.sw_boarding_minutes > 0) and not self.target_time:
+            raise ValueError(SERVICE_TIME_REQUIRES_TARGET_MESSAGE)
         return self
 
     @model_validator(mode="after")

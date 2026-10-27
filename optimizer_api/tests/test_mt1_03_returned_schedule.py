@@ -102,14 +102,14 @@ def _route_for(order, arcs, vehicle_id="V1"):
     )
 
 
-def _stub(orders, arcs, **route_overrides):
+def _stub(orders, arcs, success=True, **route_overrides):
     def factory(request):
         routes = [_route_for(order, arcs, f"V{i + 1}") for i, order in enumerate(orders)]
         for route in routes:
             for name, value in route_overrides.items():
                 setattr(route, name, value)
         return OptimizationResponse(
-            algorithm_used="stub", success=True, routes=routes,
+            algorithm_used="stub", success=success, routes=routes,
             total_vehicles=len(routes),
             total_duration_minutes=sum(r.total_duration_minutes for r in routes),
             execution_time_seconds=0.01, direction=request.direction.value,
@@ -128,8 +128,10 @@ def client(monkeypatch):
     return TestClient(app)
 
 
-def _serve(monkeypatch, orders, arcs, **route_overrides):
-    _install_strategy(monkeypatch, "stub", _stub(orders, arcs, **route_overrides))
+def _serve(monkeypatch, orders, arcs, success=True, **route_overrides):
+    _install_strategy(
+        monkeypatch, "stub", _stub(orders, arcs, success=success, **route_overrides)
+    )
     monkeypatch.setattr(
         optimization, "authoritative_arc_lookup",
         lambda *args, **kwargs: _lookup(arcs),
@@ -156,8 +158,10 @@ def test_h3_returned_schedule_is_the_certified_schedule(client, monkeypatch):
 
     assert body["success"] is True, body.get("error_message")
     route = body["routes"][0]
-    # before the fix: the last stop was pinned to its own window close and the walk went
-    # backwards with no return arc (A picked up 25 minutes late, school at 08:40)
+    # before the fix (base WIP, after MT1-08 removed B's implicit window): the walk went
+    # backwards from A's window close (08:00) with no return arc, giving departure 07:45,
+    # A 07:55, B 08:00 and the depot key holding the departure 07:45 instead of the
+    # school arrival (the audit's 08:25 / 08:40 numbers are the pre-MT1-08 values)
     assert route["departure_time"] == "07:50"
     assert route["arrival_times"] == {"A": "08:00", "B": "08:05", "D": "08:15"}
     assert route["schedule_start_minutes"] == pytest.approx(470.0)
@@ -431,7 +435,11 @@ def test_a_strategy_supplied_schedule_is_replaced(client, monkeypatch):
 
 def test_unanswered_arc_leaves_the_route_unscheduled_and_rejected(client, monkeypatch):
     arcs = dict(H3_ARCS)
-    _install_strategy(monkeypatch, "stub", _stub([["A", "B"]], arcs))
+    # the strategy supplies its own (uncertified) HH:MM times; they must not survive
+    _install_strategy(monkeypatch, "stub", _stub(
+        [["A", "B"]], arcs,
+        departure_time="01:00", arrival_times={"A": "01:05", "B": "01:10", "D": "01:20"},
+    ))
 
     def lookup(origin, destination):
         if (origin, destination) == ("A", "B"):
@@ -450,6 +458,56 @@ def test_unanswered_arc_leaves_the_route_unscheduled_and_rejected(client, monkey
     route = body["routes"][0]
     assert route["departure_time"] is None and route["arrival_times"] is None
     assert NEW_ROUTE_KEYS.isdisjoint(route)
+
+
+def test_dropoff_display_depot_key_is_the_departure_stops_round_down(client, monkeypatch):
+    # target 17:00, offset 3 -> ready 1023 (17:03); fractional arcs
+    arcs = {("D", "A"): 7.6, ("A", "B"): 3.9, ("B", "D"): 6.0}
+    _serve(monkeypatch, [["A", "B"]], arcs)
+    body = _optimize(client, _payload(
+        _students([("A", None, None), ("B", None, None)]),
+        direction="dropoff", target_time="17:00", offset_minutes=3,
+    ))
+
+    assert body["success"] is True, body.get("error_message")
+    route = body["routes"][0]
+    assert route["schedule_start_minutes"] == pytest.approx(1023.0)
+    assert route["arrival_minutes"] == pytest.approx({"A": 1030.6, "B": 1034.5})
+    assert route["schedule_end_minutes"] == pytest.approx(1040.5)
+    # depot key = school departure = ready (not the return at 17:20); stops rounded down
+    assert route["departure_time"] == "17:03"
+    assert route["arrival_times"] == {"A": "17:10", "B": "17:14", "D": "17:03"}
+
+
+@pytest.mark.parametrize("endpoint", ["optimize", "compare"])
+def test_failed_strategy_response_carries_no_times(client, monkeypatch, endpoint):
+    # success=False: any times the strategy supplied are uncertified and are cleared
+    _serve(
+        monkeypatch, [["A", "B"]], H3_ARCS, success=False,
+        departure_time="01:00", arrival_times={"A": "01:05", "B": "01:10", "D": "01:20"},
+        schedule_start_minutes=60.0, schedule_end_minutes=80.0,
+        arrival_minutes={"A": 65.0, "B": 70.0},
+    )
+    payload = _payload(
+        _students([("A", "08:00", None), ("B", None, None)]),
+        use_time_windows=True, target_time="08:30", offset_minutes=0,
+    )
+    if endpoint == "optimize":
+        route = _optimize(client, payload)["routes"][0]
+        assert route["departure_time"] is None and route["arrival_times"] is None
+        assert NEW_ROUTE_KEYS.isdisjoint(route)
+    else:
+        base = OptimizationRequest.model_validate(payload).model_dump()
+        compare = CompareRequest.model_validate(
+            {k: v for k, v in base.items() if k in CompareRequest.model_fields}
+            | {"algorithms": ["stub"]}
+        )
+        result = optimization.compare_algorithms(compare).results[0]
+        assert result.success is False
+        route = result.routes[0]
+        assert route.departure_time is None and route.arrival_times is None
+        assert route.schedule_start_minutes is None
+        assert route.schedule_end_minutes is None and route.arrival_minutes is None
 
 
 def test_compare_routes_carry_the_same_schedule(monkeypatch):

@@ -507,21 +507,45 @@ def _typed_request(students, **overrides):
     )
 
 
-def test_typed_request_gets_only_the_deadline_check():
-    # Target 00:20 with a 29.75 minute tour: a pickup departing before midnight.
-    # Non-typed requests report it; typed requests judge only the deadline,
-    # which the latest-start schedule meets.
-    arcs = DEMO_ARCS
-    plain = _request(_demo_students(), target_time="00:20", offset_minutes=0)
-    assert any(
-        "start of the day" in v["details"]
-        for v in _window_violations(_certify(plain, ["L1", "L2"], arcs))
-    )
-    typed = _typed_request(_demo_students(), target_time="00:20", offset_minutes=0)
-    certificate = certify_optimization_response(
+def _typed_certify(typed, arcs):
+    return certify_optimization_response(
         typed, _typed_response(typed, ["L1", "L2"], arcs), arc_lookup=_lookup(arcs)
     )
-    assert certificate["is_feasible"], certificate
+
+
+def test_typed_request_keeps_the_day_bound_checks_only():
+    # Typed requests keep deadline, start-before-day and end-after-day; they drop
+    # window, tour and ride. Target 00:20 with a 29.75 minute tour: a pickup that
+    # must leave before midnight is a violation, as for the non-typed twin.
+    arcs = DEMO_ARCS
+    kwargs = dict(target_time="00:20", offset_minutes=0)
+    plain = _certify(_request(_demo_students(), **kwargs), ["L1", "L2"], arcs)
+    typed = _typed_certify(_typed_request(_demo_students(), **kwargs), arcs)
+    assert [v for v in _window_violations(plain) if "start of the day" in v["details"]]
+    assert not typed["is_feasible"], typed
+    found = _window_violations(typed)
+    assert len(found) == 1 and "start of the day" in found[0]["details"], typed
+    assert found[0]["route_index"] == 0
+
+
+def test_typed_dropoff_returning_after_midnight_is_a_violation():
+    # Drop-off ready 23:50 (1430), tour 29.75: back at the school after 24:00.
+    arcs = DEMO_ARCS
+    kwargs = dict(target_time="23:50", offset_minutes=0, direction="dropoff")
+    plain = _certify(_request(_demo_students(), **kwargs), ["L1", "L2"], arcs)
+    typed = _typed_certify(_typed_request(_demo_students(), **kwargs), arcs)
+    assert [v for v in _window_violations(plain) if "end of the day" in v["details"]]
+    found = _window_violations(typed)
+    assert len(found) == 1 and "end of the day" in found[0]["details"], typed
+    assert not typed["is_feasible"]
+
+
+def test_typed_request_within_the_day_stays_feasible():
+    typed = _typed_certify(
+        _typed_request(_demo_students(), target_time="08:15", offset_minutes=0),
+        DEMO_ARCS,
+    )
+    assert typed["is_feasible"], typed
 
 
 def test_typed_request_service_does_not_become_a_tour_or_ride_violation():

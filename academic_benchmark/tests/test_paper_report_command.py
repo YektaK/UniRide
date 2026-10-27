@@ -22,7 +22,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import test_analysis_statistics as stats_fx
+import academic_benchmark.tests.analysis_fixtures as stats_fx
 import test_campaign_rebuild as rebuild
 import test_study_run_service as svc
 from academic_benchmark.analysis import campaign_report as cr
@@ -85,6 +85,7 @@ def default_reference(monkeypatch):
 
 
 # ------------------------------------------------------------------------------------------------ the report
+@pytest.mark.requires_analysis_extra
 def test_a_verified_paper_campaign_gets_a_paper_report_with_the_inferential_section_and_the_campaign_identity(tmp_path, default_reference, capsys):
     root, out, run = _paper_campaign(tmp_path)
     assert run.status == "passed", run.text
@@ -114,6 +115,7 @@ def test_a_verified_paper_campaign_gets_a_paper_report_with_the_inferential_sect
     assert "paper_report.txt" in stdout
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_paper_report_is_rebuilt_identically_from_the_same_campaign(tmp_path, default_reference):
     root, out, _run = _paper_campaign(tmp_path)
     assert cr.main([str(out), *_paper_args(root)]) == 0
@@ -122,6 +124,7 @@ def test_the_paper_report_is_rebuilt_identically_from_the_same_campaign(tmp_path
     assert [(out / name).read_bytes() for name in PAPER_FILES] == first
 
 
+@pytest.mark.requires_analysis_extra
 def test_the_paper_command_leaves_the_descriptive_rebuild_alone(tmp_path, default_reference):
     root, out, _run = _paper_campaign(tmp_path)
     assert cr.main([str(out), "--repository-root", str(root)]) == 0  # no --paper: the descriptive report, as before
@@ -138,6 +141,7 @@ def test_a_smoke_campaign_is_refused_with_exit_2_and_no_paper_report(tmp_path, c
     assert not any((out / name).exists() for name in PAPER_FILES)
 
 
+@pytest.mark.requires_analysis_extra
 def test_an_interrupted_campaign_is_refused_with_exit_2(tmp_path, capsys):
     with pytest.raises(svc._Killed):
         _paper_campaign(tmp_path, gateway=svc._gateway(kill_after=3))
@@ -149,6 +153,7 @@ def test_an_interrupted_campaign_is_refused_with_exit_2(tmp_path, capsys):
     assert not any((out / name).exists() for name in PAPER_FILES)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_truncated_campaign_is_refused_with_exit_2(tmp_path, default_reference, capsys):
     root, out, _run = _paper_campaign(tmp_path)
     fixed = out / "fixed_runs.jsonl"
@@ -159,6 +164,7 @@ def test_a_truncated_campaign_is_refused_with_exit_2(tmp_path, default_reference
     assert not any((out / name).exists() for name in PAPER_FILES)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_tampered_run_index_is_refused_with_exit_2(tmp_path, default_reference, capsys):
     root, out, _run = _paper_campaign(tmp_path)
     index = out / "run_index.json"
@@ -171,6 +177,7 @@ def test_a_tampered_run_index_is_refused_with_exit_2(tmp_path, default_reference
     assert not any((out / name).exists() for name in PAPER_FILES)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_campaign_that_ran_with_an_uncommitted_plan_is_refused_with_exit_2(tmp_path, default_reference, capsys):
     """The run hashed a working-tree plan that git does not hold at the campaign commit: the plan the campaign ran with cannot be
     read back, so the paper report is refused (the rebuild reads the plan at the commit and compares the hash)."""
@@ -187,6 +194,7 @@ def test_a_campaign_that_ran_with_an_uncommitted_plan_is_refused_with_exit_2(tmp
     assert not any((out / name).exists() for name in PAPER_FILES)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_plan_committed_after_the_campaign_does_not_change_the_paper_report(tmp_path, default_reference):
     root, out, _run = _paper_campaign(tmp_path)
     assert cr.main([str(out), *_paper_args(root)]) == 0
@@ -205,6 +213,7 @@ def test_a_plan_committed_after_the_campaign_does_not_change_the_paper_report(tm
     assert second == first  # same analysis plan (alpha 0.05, minimum 2), same inferential results
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_statistics_refusal_is_exit_2_with_the_reason_and_leaves_no_old_paper_report(tmp_path, monkeypatch, capsys):
     root, out, _run = _paper_campaign(tmp_path)
     monkeypatch.setattr(cr, "default_reference_table", _provider)
@@ -221,6 +230,7 @@ def test_a_statistics_refusal_is_exit_2_with_the_reason_and_leaves_no_old_paper_
     assert not any((out / name).exists() for name in PAPER_FILES)  # the stale report of the first run is gone
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_campaign_folder_inside_the_repository_is_refused_for_the_paper_report_too(tmp_path, default_reference, capsys):
     root, out, _run = _paper_campaign(tmp_path)
     inside = root / "results-copy"
@@ -248,6 +258,7 @@ def test_a_smoke_overwrite_removes_a_paper_report_of_an_earlier_run(tmp_path):
 
 
 # ------------------------------------------------------------------------------------------------ the guards in front of the analysis
+@pytest.mark.requires_analysis_extra
 def test_a_dirty_run_index_is_refused_before_any_analysis(tmp_path, default_reference, monkeypatch, capsys):
     import dataclasses
 
@@ -266,6 +277,7 @@ def test_a_dirty_run_index_is_refused_before_any_analysis(tmp_path, default_refe
     assert not any((out / name).exists() for name in PAPER_FILES)
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_profile_that_is_not_active_is_refused(tmp_path, default_reference, monkeypatch, capsys):
     import academic_benchmark.studies.service as service
 
@@ -278,6 +290,7 @@ def test_a_profile_that_is_not_active_is_refused(tmp_path, default_reference, mo
     assert not any((out / name).exists() for name in PAPER_FILES)
 
 
+@pytest.mark.requires_analysis_extra
 def test_an_analysis_plan_that_is_not_active_is_refused(tmp_path, default_reference, monkeypatch, capsys):
     import academic_benchmark.studies.service as service
 
@@ -301,6 +314,7 @@ def _fail_one(kwargs):
     return kwargs["requested_algorithm_id"] == svc.ALGS[0] and kwargs["run_idx"] == 1 and kwargs["evaluation_budget"] == svc.LEVELS[0]
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_paper_campaign_with_failed_runs_gets_its_report_with_exit_1_and_names_the_excluded_cell(tmp_path, default_reference):
     root, out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=_fail_one), tsplib_ids=True)
     assert run.status == "failed" and run.rows_failed >= 1
@@ -316,6 +330,7 @@ def test_a_paper_campaign_with_failed_runs_gets_its_report_with_exit_1_and_names
     assert "excluded from inference" in (out / "paper_report.txt").read_text("utf-8")
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_failed_run_with_a_dataset_id_that_is_not_in_the_tsplib_form_is_refused_with_exit_2(tmp_path, default_reference, capsys):
     root, out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=_fail_one))  # the fixture's dataset id is "tiny10"
     assert run.status == "failed"
@@ -338,6 +353,7 @@ def _analyses(items, plan):
     return cr._paper_analyses(items, study=stats_fx.study_for(items, plan), plan=plan, campaign=_stub(items))
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_cross_instance_family_is_analysed_once_per_protocol_and_level_and_the_per_instance_family_once_per_instance(active):
     items = []
     for level in (0, 1):  # two budget levels of the same six instances and three algorithms
@@ -359,6 +375,7 @@ def test_a_cross_instance_family_is_analysed_once_per_protocol_and_level_and_the
     assert len(analyses) == len(cells) == 14 and notes == []
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_failed_cell_reaches_the_statistics_service_and_is_excluded_not_counted_as_a_small_sample(active):
     samples = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [6, 7, 8, 9], "Core-GWO-TSP-Pure": [11, 12, 13, 14, 15]}
     items = stats_fx.per_instance_items(samples)
@@ -383,6 +400,7 @@ def test_a_failed_run_whose_dataset_id_is_not_a_tsplib_id_is_refused_by_name(act
 
 
 # ------------------------------------------------------------------------------------------------ the run service prints the command
+@pytest.mark.requires_analysis_extra
 def test_the_run_service_prints_the_exact_command_that_builds_the_paper_report_and_runs_no_analysis(tmp_path):
     _root, out, run = _paper_campaign(tmp_path)
     command = f"python -m academic_benchmark.analysis.campaign_report {out} --paper"
@@ -393,6 +411,7 @@ def test_the_run_service_prints_the_exact_command_that_builds_the_paper_report_a
     assert argv[:3] == ["python", "-m", "academic_benchmark.analysis.campaign_report"] and argv[3:] == [str(out), "--paper"]
 
 
+@pytest.mark.requires_analysis_extra
 def test_a_campaign_with_failed_runs_prints_the_command_too_and_says_the_failed_cells_are_excluded_and_the_exit_is_1(tmp_path):
     _root, out, run = _paper_campaign(tmp_path, gateway=svc._gateway(fail=lambda k: k["run_idx"] == 1))
     assert run.status == "failed"
@@ -418,6 +437,7 @@ def test_analyse_family_requires_the_index_sha256_keyword():
 
 
 @pytest.mark.parametrize("value", [None, "", "e" * 63, "e" * 65, "E" * 64, "g" * 64, 5, b"e" * 64])
+@pytest.mark.requires_analysis_extra
 def test_analyse_family_refuses_an_index_sha256_that_is_not_64_lower_case_hex(active, value):
     items = stats_fx.per_instance_items(stats_fx.SEPARATED)
     with pytest.raises(StatisticsRefusal, match="index_sha256"):

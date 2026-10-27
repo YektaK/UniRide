@@ -102,7 +102,7 @@ def test_the_marker_is_registered(pytestconfig):
 
 
 MARKED = f"{TESTS}/test_analysis_statistics.py::test_epsilon_squared_hand_example"  # compares with sps.kruskal: needs SciPy
-UNMARKED = f"{TESTS}/test_analysis_statistics.py::test_significance_is_p_less_than_or_equal_to_alpha_everywhere"  # pure Python
+UNMARKED = f"{TESTS}/test_analysis_statistics.py::test_epsilon_squared_refuses_impossible_inputs"  # pure Python
 
 
 def test_a_marked_test_is_skipped_with_the_install_command_when_the_extra_is_missing(tmp_path):

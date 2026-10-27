@@ -12,9 +12,11 @@ import json
 import pytest
 
 import test_analysis_report as tar
-import test_analysis_statistics as fx
+import academic_benchmark.tests.analysis_fixtures as fx
 from academic_benchmark.analysis.report import ReportError
 from academic_benchmark.analysis.statistics import analyse_family
+
+pytestmark = pytest.mark.requires_analysis_extra  # every test runs analyse_family (SciPy / statsmodels guard)
 
 plans, draft, active = tar.plans, tar.draft, tar.active  # the module fixtures of the report tests
 

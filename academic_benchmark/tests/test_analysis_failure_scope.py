@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import pytest
 
-import test_analysis_statistics as ts
+import academic_benchmark.tests.analysis_fixtures as ts
 from academic_benchmark.analysis.statistics import StatisticsRefusal
 from academic_benchmark.studies.service import load_study_with_plan
+
+pytestmark = pytest.mark.requires_analysis_extra  # every test runs analyse_family (SciPy / statsmodels guard)
 
 
 @pytest.fixture(scope="module")

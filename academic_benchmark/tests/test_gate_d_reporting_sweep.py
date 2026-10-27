@@ -222,14 +222,14 @@ import json  # noqa: E402
 import pandas as pd  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 
-import test_analysis_statistics as fx  # noqa: E402
+import academic_benchmark.tests.analysis_fixtures as fx  # noqa: E402
 from academic_benchmark import obsolete_results as orr  # noqa: E402
 from academic_benchmark import results_reader  # noqa: E402
 from academic_benchmark.analysis import campaign_report as cr  # noqa: E402
 from academic_benchmark.analysis.gaps import ExactReferenceTable  # noqa: E402
 from academic_benchmark.analysis.manifests import VerifiedCampaign  # noqa: E402
 from academic_benchmark.analysis.report import ReportError, build_descriptive_table, build_report  # noqa: E402
-from academic_benchmark.analysis.statistics import StatisticsRefusal  # noqa: E402
+from academic_benchmark.analysis.statistics import StatisticsRefusal, analyse_family  # noqa: E402
 from academic_benchmark.dashboard_utils import (  # noqa: E402
     benchmark_rows_to_progress_frame,
     load_csv_frames,
@@ -640,12 +640,13 @@ REFUSAL = "evidence_class|obsolete|historical|invalid"
 
 
 def _analyse(items, plan, clean):
-    return fx.analyse_family(
+    return analyse_family(
         items, study=fx.study_for(clean, plan), plan=plan, family_id=fx.PER_INSTANCE, run_index=fx.index_for(clean, "paper"),
         index_sha256=fx.INDEX_SHA256,
     )
 
 
+@pytest.mark.requires_analysis_extra
 def test_statistics_service_analyses_the_clean_fixture(active_plan):
     clean = _clean_items()
     result = _analyse(clean, active_plan, clean)  # positive control: the fixture itself is analysable
@@ -653,12 +654,14 @@ def test_statistics_service_analyses_the_clean_fixture(active_plan):
 
 
 @pytest.mark.parametrize("kind", sorted(CONTAMINANTS))
+@pytest.mark.requires_analysis_extra
 def test_statistics_service_refuses_historical_and_invalid_rows(active_plan, kind):
     clean = _clean_items()
     with pytest.raises(StatisticsRefusal, match=REFUSAL):
         _analyse(_contaminated(kind), active_plan, clean)
 
 
+@pytest.mark.requires_analysis_extra
 def test_statistics_service_refuses_exact_and_mixed_protocol_rows(active_plan):
     clean = _clean_items()
     with pytest.raises(StatisticsRefusal):

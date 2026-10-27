@@ -79,6 +79,12 @@ def test_cvrptw_note_is_shown_when_cvrptw_rows_are_present():
     assert "must not be cited" in blob
 
 
+def test_cvrptw_note_is_shown_for_an_upper_case_problem_type():
+    blob = _run_tab8(["cvrp", "CVRPTW"])
+    assert "school-pickup" in blob
+    assert "must not be cited" in blob
+
+
 def test_cvrptw_note_is_hidden_without_cvrptw_rows():
     blob = _run_tab8(["cvrp", "uniride"])
     assert "school-pickup" not in blob

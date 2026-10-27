@@ -8,20 +8,20 @@ The merge-now set of plan section 2.2: MT1-01, -02, -03, -04, -07, -08, -10, plu
 
 ## 2. Merged items and the lead's post-merge test results
 
-| Item | Merge commit | Content (DECISION_LOG O09 notes) | Lead's post-merge run |
+| Item | Merge commit | Content (O09 notes and merge commit subjects) | Lead's post-merge run |
 |---|---|---|---|
 | MT1-10 | `8ad1b94b` | honest fleet wording; `NO_ACTIVE_VEHICLES` reason | vitest 95 files, 1195 passed; `tsc` clean |
 | MT1-08 | `0fc7bc7b` | window direction; 422 `use_time_windows requires target_time`; implicit window deleted; `/compare` optional `target_time`; benchmark runner refuses CVRPTW rows (`cvrptw_refused_h16_mt1_11`) | optimizer_api + registry snapshot: 2852 passed |
 | MT1-07 | `a74aff76` | split fallback reported; `strategy_error` in the error JSON for allow-listed codes | 2872 passed |
 | MT1-01 | `7584f2fa` | route simulator `uniride_core/algorithms/route_schedule.py` | uniride_core: 2740 passed, 7 skipped, 42 deselected |
-| MT1-02 | `8513c2b6` | production certificate simulates every route on the captured arcs when `target_time` is set | optimizer_api + registry snapshot + exact-certification callers: 3112 passed, 8 deselected |
-| MT1-03 | `f9bf58f6` | returned schedule = certified schedule (exact `schedule_start_minutes`, `schedule_end_minutes`, `arrival_minutes`); certificate `schedule_mismatch`; `calculate_scheduled_times` removed | optimizer_api + uniride_core + exact callers: 5761 passed, 7 skipped |
+| MT1-02 | `8513c2b6` | production certificate simulates every route on the captured arcs when `target_time` is set | optimizer_api/tests + `academic_benchmark/tests/test_production_registry_snapshot.py` + uniride_core exact-certification callers (`test_exact_certification`, `test_exact_typed_certification`, `test_exact_goal1_runner`, `test_exact_typed_runner`) + academic_benchmark `test_exact_day_joint_runner` and `test_gate_d_reporting_sweep`: 3112 passed, 8 deselected |
+| MT1-03 | `f9bf58f6` | returned schedule = certified schedule (exact `schedule_start_minutes`, `schedule_end_minutes`, `arrival_minutes`); certificate `schedule_mismatch`; `calculate_scheduled_times` removed | optimizer_api + uniride_core + exact callers: 5761 passed, 7 skipped, 42 deselected |
 | MT1-04 | `ac22a383` | daily plan and fleet runner send `offset_minutes` 0 and cross-check their interval against the certified `schedule_start/end_minutes`; mismatch blocks the plan with `SCHEDULE_MISMATCH` | vitest 1211 of 1212 passed; `tsc` clean; research tests 6 files, 55 passed |
 | H16 note | this branch | one warning line in the CVRP/CVRPTW diagnostics tab of `academic_benchmark/dashboard.py` when CVRPTW rows are present; test `academic_benchmark/tests/test_h16_dashboard_cvrptw_note.py` | see section 5 |
 
 MT1-04 test note: the one failing test is `typed-selection-verify-cli.test.ts`. It is an environment effect: Node v26.12.1 with tsx prints a DEP0205 warning to stderr; reproduced on the base commit (before MT1-04).
 
-Reviewers recorded in DECISION_LOG O09: MT1-01 Opus ONAY round 1; MT1-02 Opus ONAY round 2; MT1-03 Opus ONAY round 1; MT1-04 Sonnet ONAY (merge subject of `ac22a383`). MT1-07, -08 and -10 reviewer names are not recorded in the O09 notes that were read.
+Reviews (source: the lead's merge facts, except where marked): MT1-10 Sonnet review ONAY (review and polish re-check); MT1-08 Sonnet ONAY round 1 (after one DUZELT); MT1-07 Sonnet ONAY round 2 (after two DUZELT rounds; round 2 = allow-list for `strategy_error`); MT1-04 Sonnet ONAY (merge commit subject `ac22a383`); MT1-01 Opus round 1, MT1-02 Opus round 2, MT1-03 Opus round 1 (DECISION_LOG O09).
 
 ## 3. Demo acceptance (plan section 7.2 items 1, 2, 3, 4a)
 
@@ -71,5 +71,10 @@ Rule slip reported by the replay author: two read-only `python -c` one-liners an
 ## 5. H16 dashboard note: red/green and checks
 
 - Check: `academic_benchmark/dashboard.py` is launched only as a Streamlit script (`cli_engine.py:2526`, `smart_benchmark.py:1338`, `__main__.py:16`); no module under `academic_benchmark/studies`, `fair_pilot.py` or the study run imports it.
-- Red commit `6b520c72` (test only, 1 failed, 1 passed); fix commit `9e6a208d`.
-- Result after the fix: `test_h16_dashboard_cvrptw_note.py` 2 passed. With the fix reverted in the working tree the shown-note test fails again (1 failed, 1 passed). Dashboard tests (`test_h16_dashboard_cvrptw_note`, `test_c5_dashboard_no_inference`, `test_c5f1_descriptive_labels`, `test_cx02_dashboard_obsolete_csv`, `test_dashboard_utils`, `test_gate_d_reporting_sweep`) plus `test_production_registry_snapshot.py`: 69 passed, 3 skipped (the three skips are the `test_cx02_dashboard_obsolete_csv.py` cases that need `streamlit`).
+All logs are under `C:/wt/mt1-13-scratch/` (outside the repository).
+
+- Red commit `6b520c72` (test only): 1 failed, 1 passed (`red.log`). Fix commit `9e6a208d`.
+- After the fix: 2 passed (`green.log`). With the fix diff reverse-applied the shown-note test failed again: 1 failed, 1 passed (`revert.log`); the code reviewer independently confirmed revert -> 1 failed, 1 passed.
+- DUZELT round 1 added a third test (upper-case `CVRPTW`): 3 passed (`green2.log`); with `.str.lower()` removed at `dashboard.py:528` that test fails, 1 failed, 2 passed (`mutation_lower.log`).
+- Dashboard tests (`test_h16_dashboard_cvrptw_note`, `test_c5_dashboard_no_inference`, `test_c5f1_descriptive_labels`, `test_cx02_dashboard_obsolete_csv`, `test_dashboard_utils`, `test_gate_d_reporting_sweep`) plus `test_production_registry_snapshot.py`: 69 passed, 3 skipped before the third test (`suite2.log`), 70 passed, 3 skipped after it (`suite3.log`); the three skips are the `test_cx02_dashboard_obsolete_csv.py` cases that need `streamlit`.
+- Doc-consistency tests that cite the edited documents (8 files): 193 passed (`docs.log`).

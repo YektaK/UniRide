@@ -100,6 +100,24 @@ def _build_or_get_dist_matrix(
     """
     Return (index_map, dist_matrix, unique_locs) for `route`.
 
+    Contract (MT6F-07, audit L10-f; documented and pinned, behaviour unchanged):
+      * Location codes in `route` must be unique.  Duplicates collapse into one
+        matrix index, so the matrix is smaller than the route and the closed-cycle
+        3-opt engine (improve_three_opt) rejects the pair.  ThreeOptLocalSearch
+        raises a ValueError naming the duplicates before this function is called.
+      * With a prebuilt matrix (every active caller: academic_benchmark/
+        cli_engine.py, academic_benchmark/core/registry_setup.py,
+        uniride_core/algorithms/numba_metaheuristics.py) the matrix entries are
+        the problem's own arc costs and the search objective is the closed cycle
+        over that matrix.  The caller's duration_func is not queried.
+      * Without a prebuilt matrix the fallback entries are
+        dist_matrix[i, j] = duration_func([a, b]) - duration_func([a]).  For a
+        depot-costed duration_func the individual entries carry depot terms
+        (d(b, depot) - d(a, depot)), but those terms cancel in the SUM over any
+        closed cycle, so the objective is the closed cycle over the waypoints
+        only.  It is not the open depot-to-depot path that duration_func(route)
+        reports.  The fallback matrix is generally asymmetric.
+
     Resolution order:
       1. Prebuilt matrix: if the duration_func was built by
          create_np_duration_func() it carries the problem's own numpy matrix in
@@ -591,6 +609,20 @@ class ThreeOptLocalSearch(BaseLocalSearch):
     The historical Numba kernel used a different and incomplete neighborhood.
     This compatibility wrapper delegates to the correctness-first shared core
     until a JIT implementation passes semantic-parity tests.
+
+    Contract (MT6F-07, audit L10-f; pinned by
+    uniride_core/tests/test_mt6f_numba_three_opt_contract.py):
+      * Location codes in `route` must be unique; duplicates raise a ValueError
+        that names them.
+      * With a prebuilt matrix on `duration_func` (create_np_duration_func(); every
+        active caller) the objective is the closed cycle over that matrix, and the
+        result equals improve_three_opt on the matrix reordered to the route.
+      * Without one, the fallback matrix duration_func([a, b]) - duration_func([a])
+        is used; the search then optimises the closed cycle over the waypoints and
+        the depot terms of a depot-costed duration_func cancel (see
+        _build_or_get_dist_matrix).
+      * The returned duration is always duration_func(improved_route), which for a
+        depot-costed function is the open path, not the optimised cycle.
     """
 
     def __init__(
@@ -618,7 +650,15 @@ class ThreeOptLocalSearch(BaseLocalSearch):
         route: List[str],
         duration_func: Callable[[List[str]], float]
     ) -> Tuple[List[str], float]:
-        """Improve a route using canonical symmetric or directed 3-opt."""
+        """Improve a route using canonical symmetric or directed 3-opt.
+
+        Raises ValueError (naming the codes) if `route` repeats a location code.
+        """
+        duplicates = sorted({loc for loc in route if route.count(loc) > 1}, key=str)
+        if duplicates:
+            raise ValueError(
+                f"3-opt route must contain unique location codes; duplicated: {duplicates}"
+            )
         route_indices, dist_matrix = self._prepare_numba_inputs(route, duration_func)
 
         result = improve_three_opt(

@@ -143,8 +143,29 @@ def test_dropoff_waits_for_late_window_and_counts_it():
     assert s.waits == (pytest.approx(10), pytest.approx(0))
     assert s.end == pytest.approx(460)
     assert s.tour == pytest.approx(40)  # wait counted in the tour
-    # ride = school departure -> own arrival; the wait at stop 1 is aboard for stop 2
-    assert s.ride_times == (pytest.approx(10), pytest.approx(30))
+    # ride = school departure -> end of alighting at the own stop (arrival + wait +
+    # service): the student at stop 1 waits 10 minutes aboard, so 20, not 10
+    assert s.ride_times == (pytest.approx(20), pytest.approx(30))
+
+
+def test_dropoff_ride_includes_own_stop_service_and_sw_boarding():
+    arc = make_arc({(0, 1): 10, (1, 2): 10, (2, 0): 10})
+
+    s = simulate_school_dropoff(
+        [1, 2],
+        arc,
+        ready=420,
+        service={1: 3},
+        sw_boarding=2,
+        sw_counts={2: 2},  # two Sw students at stop 2 -> 4 minutes
+    )
+
+    assert s.feasible
+    assert s.services == (pytest.approx(3), pytest.approx(4))
+    assert s.arrivals == (pytest.approx(430), pytest.approx(443))
+    assert s.end == pytest.approx(457)
+    # stop 1: 430 + 3 - 420; stop 2: 443 + 4 - 420 (the stop's whole service counts)
+    assert s.ride_times == (pytest.approx(13), pytest.approx(27))
 
 
 def test_dropoff_window_close_and_day_end_are_typed_violations():
@@ -280,6 +301,64 @@ def test_schedule_types_are_immutable():
     with pytest.raises(Exception):
         s.start = 0  # type: ignore[misc]
     assert isinstance(ScheduleViolation(DEADLINE, None, 2.0, 1.0), ScheduleViolation)
+
+
+# --------------------------------------------------------------------------
+# tolerance: 1e-9 minutes absorbs float round-off and nothing more
+# --------------------------------------------------------------------------
+def test_deadline_miss_of_a_thousandth_minute_is_a_violation():
+    arc = make_arc({(0, 1): 10, (1, 0): 10})
+    # latest departure 475 reaches stop 1 at 485; the window opens at 485.001
+    s = simulate_school_pickup([1], arc, deadline=495, windows={1: (485.001, 600)})
+
+    assert kinds(s) == [DEADLINE]
+    assert s.violations[0].amount == pytest.approx(0.001, abs=1e-9)
+
+
+def test_window_miss_of_a_thousandth_minute_is_a_violation():
+    arc = make_arc({(0, 1): 10, (1, 0): 10})
+    s = simulate_school_dropoff([1], arc, ready=420, windows={1: (0, 429.999)})
+
+    assert kinds(s) == [WINDOW]
+    assert s.violations[0].amount == pytest.approx(0.001, abs=1e-9)
+
+
+def test_float_round_off_within_tolerance_is_not_a_violation():
+    arc = make_arc({(0, 1): 0.2, (1, 0): 0.2})
+    # 0.1 + 0.2 == 0.30000000000000004 > 0.3 in binary floating point
+    assert 0.1 + 0.2 > 0.3
+
+    s = simulate_school_dropoff([1], arc, ready=0.1, windows={1: (0.0, 0.3)})
+
+    assert s.feasible
+    assert s.arrivals[0] > 0.3  # the round-off is really there
+
+
+# --------------------------------------------------------------------------
+# input guards
+# --------------------------------------------------------------------------
+@pytest.mark.parametrize("profile", ["pickup", "dropoff"])
+def test_window_opening_after_it_closes_is_invalid_input(profile):
+    arc = make_arc({(0, 1): 10, (1, 0): 10})
+    run = (
+        (lambda w: simulate_school_pickup([1], arc, deadline=495, windows=w))
+        if profile == "pickup"
+        else (lambda w: simulate_school_dropoff([1], arc, ready=420, windows=w))
+    )
+
+    with pytest.raises(ValueError, match="time window opens after it closes"):
+        run({1: (500, 480)})
+    assert run({1: (480, 480)}) is not None  # open == close is a valid point window
+
+
+@pytest.mark.parametrize("profile", ["pickup", "dropoff"])
+def test_depot_inside_route_is_rejected(profile):
+    arc = make_arc({(0, 1): 10, (1, 0): 10})
+    with pytest.raises(ValueError, match="route must not contain the depot"):
+        if profile == "pickup":
+            simulate_school_pickup([1, 0], arc, deadline=495)
+        else:
+            simulate_school_dropoff([1, 0], arc, ready=420)
 
 
 # --------------------------------------------------------------------------

@@ -234,6 +234,17 @@ def _clear_schedule(route: Any) -> None:
     route.arrival_minutes = None
 
 
+def clear_route_schedules(routes: Sequence[Any]) -> None:
+    """Drop every returned time (HH:MM and exact) from the routes.
+
+    Used for a response whose strategy reported ``success=False``: no schedule was
+    computed for it, so any time a strategy supplied is uncertified and must not
+    reach the caller.
+    """
+    for route in routes:
+        _clear_schedule(route)
+
+
 def attach_route_schedules(
     request: Any, routes: Sequence[Any], arc_lookup: Optional[ArcLookup]
 ) -> None:
@@ -302,6 +313,7 @@ __all__ = [
     "RouteTiming",
     "TimingSpec",
     "attach_route_schedules",
+    "clear_route_schedules",
     "group_stops",
     "parse_anchor_minutes",
     "request_nodes",

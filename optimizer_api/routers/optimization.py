@@ -63,7 +63,7 @@ from verification.authoritative_arcs import (
     matrix_provenance_of,
 )
 from verification.response_certifier import certify_optimization_response
-from verification.route_timing import attach_route_schedules
+from verification.route_timing import attach_route_schedules, clear_route_schedules
 
 router = APIRouter(
     prefix="/api/v1",
@@ -330,6 +330,9 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
             # MT1-03 (audit H3): the returned schedule is the simulator's schedule on
             # the captured authoritative arcs, never built from reported step durations
             attach_route_schedules(request, result.routes, arc_lookup)
+        else:
+            # a failed strategy result never carries uncertified times (C1)
+            clear_route_schedules(result.routes)
 
         typed_certificate = _typed_certificate(
             certify_optimization_response(
@@ -493,6 +496,8 @@ def _run_single_algorithm(
         if original_success:
             # MT1-03: same schedule function as /optimize, before the certificate
             attach_route_schedules(effective_request, response.routes, arc_lookup)
+        else:
+            clear_route_schedules(response.routes)
         typed_certificate = _typed_certificate(
             certify_optimization_response(
                 effective_request,

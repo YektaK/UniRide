@@ -211,12 +211,26 @@ class VehicleRoute(BaseModel):
     # Heterogeneous fleet (ga_split_hf only). Absent from the JSON when unset,
     # so single-type responses stay byte-identical.
     vehicle_type: Optional[str] = None
+    # MT1-03 (audit H3): the exact schedule the certificate re-simulates, in minutes
+    # from midnight, not rounded. ``arrival_minutes`` is keyed by occurrence key and
+    # holds the arrival at the stop before any wait. Absent from the JSON when the
+    # request has no target_time (no schedule), so such responses stay byte-identical.
+    schedule_start_minutes: Optional[float] = None
+    schedule_end_minutes: Optional[float] = None
+    arrival_minutes: Optional[Dict[str, float]] = None
 
     @model_serializer(mode="wrap")
-    def _omit_unset_vehicle_type(self, handler):
+    def _omit_unset_optional_fields(self, handler):
         data = handler(self)
-        if isinstance(data, dict) and data.get("vehicle_type") is None:
-            data.pop("vehicle_type", None)
+        if isinstance(data, dict):
+            for name in (
+                "vehicle_type",
+                "schedule_start_minutes",
+                "schedule_end_minutes",
+                "arrival_minutes",
+            ):
+                if data.get(name) is None:
+                    data.pop(name, None)
         return data
 
 class BottleneckInfo(BaseModel):

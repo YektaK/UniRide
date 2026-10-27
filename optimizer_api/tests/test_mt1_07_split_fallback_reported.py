@@ -105,3 +105,44 @@ def test_feasible_split_still_succeeds(name):
     assert result.success is True
     assert result.error_message is None
     assert sorted(sid for r in result.routes for sid in r.student_ids) == ["S1", "S2"]
+
+
+# -- the two detection signals, one test each -----------------------------------
+
+
+def _reason(final_result):
+    from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
+
+    return HybridSplitBaseStrategy._split_failure_reason(final_result)
+
+
+def test_error_key_alone_is_a_fallback():
+    assert "no_feasible_split" in _reason(
+        {"error": "No feasible splitting found", "total_cost": 5.0}
+    )
+
+
+def test_non_finite_total_cost_alone_is_a_fallback():
+    assert "no_feasible_split" in _reason({"routes": [["a"]], "total_cost": float("inf")})
+
+
+def test_merged_segment_result_with_a_fallback_part_is_a_fallback():
+    from uniride_core.algorithms.string_split_decoder import _merge_segment_results
+
+    ok = {"routes": [["a"]], "costs": [1.0], "total_cost": 1.0, "num_vehicles": 1}
+    bad = {
+        "routes": [["b"]],
+        "costs": [float("inf")],
+        "total_cost": float("inf"),
+        "num_vehicles": 1,
+        "error": "No feasible splitting found",
+    }
+    merged = _merge_segment_results([ok, bad])
+    assert "error" not in merged  # the merge drops the flag; only inf is left
+
+    assert "no_feasible_split" in _reason(merged)
+
+
+def test_feasible_result_is_not_a_fallback():
+    assert _reason({"routes": [["a"]], "total_cost": 7.5, "num_vehicles": 1}) is None
+    assert _reason({"routes": [], "total_cost": 0, "num_vehicles": 0}) is None

@@ -125,12 +125,10 @@ H2_ARCS = {
 def _h2_request(**overrides):
     # Audit H2: target 08:30, offset 15, both students window 08:00-08:30
     # (pickup_time 08:30). Every departure reaches the school at 08:40 or later.
+    params = dict(use_time_windows=True, target_time="08:30", offset_minutes=15)
+    params.update(overrides)
     return _request(
-        [_student("LA", pickup="08:30"), _student("LB", pickup="08:30")],
-        use_time_windows=True,
-        target_time="08:30",
-        offset_minutes=15,
-        **overrides,
+        [_student("LA", pickup="08:30"), _student("LB", pickup="08:30")], **params
     )
 
 

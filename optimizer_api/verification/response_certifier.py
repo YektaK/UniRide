@@ -23,7 +23,19 @@ from uniride_core.adapters.demand_builder import (
     student_occurrence_keys,
 )
 from uniride_core.algorithms.distance import tsplib_distance_by_type
+from uniride_core.algorithms.route_schedule import (
+    DEADLINE,
+    END_AFTER_DAY,
+    RouteSchedule,
+    START_BEFORE_DAY,
+    WINDOW,
+    simulate_school_dropoff,
+    simulate_school_pickup,
+)
 from uniride_core.algorithms.feasibility_certificate import (
+    DURATION_VIOLATION,
+    RIDE_TIME_VIOLATION,
+    TIME_WINDOW_VIOLATION,
     Violation,
     check_capacity_vectors,
     check_depot_closure,
@@ -159,6 +171,196 @@ def _sanitize_certify_error(exc: Exception) -> str:
 
 def _route_duration_tolerance(num_steps: int) -> float:
     return _ROUNDING_TOLERANCE_STEP * (num_steps + 1)
+
+
+def _parse_anchor_minutes(target_time: Any) -> Optional[int]:
+    """``HH:MM`` -> minutes from midnight; ``None`` when absent or malformed."""
+    if not target_time:
+        return None
+    try:
+        hours, minutes = str(target_time).split(":")
+        return int(hours) * 60 + int(minutes)
+    except ValueError:
+        return None
+
+
+def _group_stops(route: List[int], node_codes: List[str]) -> List[List[int]]:
+    """Split a route into physical stops.
+
+    Students sharing a location are separate occurrence nodes joined by
+    zero-length arcs; a maximal run of consecutive nodes with the same location
+    code is one stop (one dwell, one wait, one ride time).
+    """
+    stops: List[List[int]] = []
+    for node in route:
+        if stops and node_codes[stops[-1][-1]] == node_codes[node]:
+            stops[-1].append(node)
+        else:
+            stops.append([node])
+    return stops
+
+
+def _fmt(minutes: float) -> str:
+    return f"{minutes:.2f}"
+
+
+def _schedule_violations(
+    request: Any,
+    routes: List[List[int]],
+    matrix: Any,
+    depot: int,
+    node_codes: List[str],
+    demands: List[List[int]],
+    occurrence_keys: List[str],
+    anchor: int,
+    *,
+    typed: bool,
+    use_windows: bool,
+    core_duration_routes: set,
+    core_ride_routes: set,
+) -> List[Violation]:
+    """MT1-02 (audit H2): judge every route on a simulated schedule.
+
+    The route is simulated on the captured authoritative arcs with
+    ``simulate_school_pickup`` (deadline = ``target_time - offset_minutes``) or
+    ``simulate_school_dropoff`` (ready = ``target_time + offset_minutes``). The
+    return arc to school, waiting and service count. Reported as
+    ``time_window_violation`` (deadline, window, day bounds), ``duration_violation``
+    (tour including waits and service against ``max_travel_time``) and
+    ``ride_time_violation`` (per stop, waits and service aboard included, against
+    ``max_ride_time``). A route the core travel-only checks already flagged is not
+    reported a second time. Typed requests gain only the deadline check.
+    """
+    direction = str(getattr(request.direction, "value", request.direction)).lower()
+    pickup = direction == "pickup"
+    offset = getattr(request, "offset_minutes", 15)
+    offset = 15 if offset is None else offset
+    dwell = float(getattr(request, "stop_dwell_minutes", 0) or 0)
+    sw_boarding = float(getattr(request, "sw_boarding_minutes", 0) or 0)
+    tw_by_key = request.get_time_windows() if (use_windows and not typed) else {}
+    max_travel = getattr(request, "max_travel_time", None)
+    max_ride = getattr(request, "max_ride_time", None)
+
+    out: List[Violation] = []
+    for idx, route in enumerate(routes):
+        if not route:
+            continue
+        stops = _group_stops(route, node_codes)
+        ins = [depot] + [stop[0] for stop in stops]
+        outs = [depot] + [stop[-1] for stop in stops]
+
+        def arc(i: int, j: int, _ins=ins, _outs=outs) -> float:
+            return float(matrix[_outs[i]][_ins[j]])
+
+        windows: Dict[int, Tuple[float, float]] = {}
+        for position, stop in enumerate(stops, start=1):
+            found = [
+                tw_by_key[occurrence_keys[node - 1]]
+                for node in stop
+                if occurrence_keys[node - 1] in tw_by_key
+            ]
+            if not found:
+                continue
+            earliest = max(float(w.earliest) for w in found)
+            latest = min(float(w.latest) for w in found)
+            if earliest > latest:
+                out.append(Violation(
+                    type=TIME_WINDOW_VIOLATION,
+                    severity="error",
+                    details=(
+                        f"Route {idx} node {stop[0]} students sharing the stop have "
+                        f"disjoint time windows (opens {_fmt(earliest)}, closes {_fmt(latest)})"
+                    ),
+                    route_index=idx,
+                    node=stop[0],
+                ))
+                continue
+            windows[position] = (earliest, latest)
+        service = {position: dwell for position in range(1, len(stops) + 1)}
+        sw_counts = {
+            position: sum(1 for node in stop if demands[node][0] > 0)
+            for position, stop in enumerate(stops, start=1)
+        }
+
+        if pickup:
+            limit = float(anchor) - float(offset)
+            schedule: RouteSchedule = simulate_school_pickup(
+                list(range(1, len(stops) + 1)), arc, deadline=limit, windows=windows,
+                service=service, sw_boarding=sw_boarding, sw_counts=sw_counts,
+            )
+        else:
+            limit = float(anchor) + float(offset)
+            schedule = simulate_school_dropoff(
+                list(range(1, len(stops) + 1)), arc, ready=limit, windows=windows,
+                service=service, sw_boarding=sw_boarding, sw_counts=sw_counts,
+            )
+
+        for item in schedule.violations:
+            if typed and item.kind != DEADLINE:
+                continue
+            node = stops[item.position - 1][0] if item.position is not None else None
+            if item.kind == DEADLINE:
+                details = (
+                    f"Route {idx} reaches the school at {_fmt(item.actual)}, after the "
+                    f"deadline {_fmt(item.limit)} (target_time minus offset_minutes)"
+                )
+            elif item.kind == WINDOW:
+                details = (
+                    f"Route {idx} node {node} service starts at {_fmt(item.actual)}, "
+                    f"after the window closes at {_fmt(item.limit)}"
+                )
+            elif item.kind == START_BEFORE_DAY:
+                details = (
+                    f"Route {idx} cannot start early enough: departure "
+                    f"{_fmt(item.actual)} is before the start of the day"
+                )
+            elif item.kind == END_AFTER_DAY:
+                details = (
+                    f"Route {idx} returns to the school at {_fmt(item.actual)}, after "
+                    f"the end of the day"
+                )
+            else:  # pragma: no cover - a new simulator kind must be mapped here
+                details = f"Route {idx} schedule violation {item.kind}"
+            out.append(Violation(
+                type=TIME_WINDOW_VIOLATION,
+                severity="error",
+                details=details,
+                route_index=idx,
+                node=node,
+            ))
+
+        if typed:
+            continue
+        if (
+            max_travel is not None
+            and idx not in core_duration_routes
+            and schedule.tour > float(max_travel) + _FLOAT_EPSILON
+        ):
+            out.append(Violation(
+                type=DURATION_VIOLATION,
+                severity="error",
+                details=(
+                    f"Route {idx} duration {schedule.tour:.1f} (waiting and service "
+                    f"included) exceeds max {max_travel}"
+                ),
+                route_index=idx,
+            ))
+        if max_ride is not None and idx not in core_ride_routes and schedule.ride_times:
+            worst = max(range(len(stops)), key=lambda p: schedule.ride_times[p])
+            ride = schedule.ride_times[worst]
+            if ride > float(max_ride) + _FLOAT_EPSILON:
+                out.append(Violation(
+                    type=RIDE_TIME_VIOLATION,
+                    severity="error",
+                    details=(
+                        f"Route {idx} {'pickup' if pickup else 'dropoff'} ride time "
+                        f"{ride:.1f} (waiting and service aboard included) exceeds max "
+                        f"{max_ride} (node {stops[worst][0]})"
+                    ),
+                    route_index=idx,
+                    node=stops[worst][0],
+                ))
+    return out
 
 
 def _fleet_assignment_violations(
@@ -642,20 +844,25 @@ def _certify_optimization_response(
             ),
         })
 
+    # MT1-02: with a target_time the routes are simulated (deadline, windows,
+    # waits and service count). Only a windowed request that carries no usable
+    # target_time (the API refuses it with 422, MT1-08) still takes the legacy
+    # core check, so a duck-typed request is never judged more leniently.
+    use_windows = bool(getattr(request, "use_time_windows", False))
+    raw_target = getattr(request, "target_time", None)
+    anchor = _parse_anchor_minutes(raw_target)
+    if raw_target and anchor is None:
+        pre_violations.append({
+            "type": TIME_WINDOW_VIOLATION, "severity": "error",
+            "details": f"Request target_time {raw_target!r} is not a valid HH:MM time",
+        })
     time_windows = None
-    target_minutes = None
-    if getattr(request, "use_time_windows", False):
+    if use_windows and not raw_target:
         tw_by_key = request.get_time_windows()
         time_windows = [(0, 1440)]
         for key in occurrence_keys:
             window = tw_by_key.get(key)
             time_windows.append((window.earliest, window.latest) if window else (0, 1440))
-        if request.target_time:
-            try:
-                hours, minutes = request.target_time.split(":")
-                target_minutes = int(hours) * 60 + int(minutes)
-            except (ValueError, AttributeError):
-                target_minutes = None
 
     violations = []
     violations.extend(check_depot_closure(routes, depot, dimension))
@@ -682,11 +889,24 @@ def _certify_optimization_response(
             getattr(request.direction, "value", request.direction),
             tolerance=_FLOAT_EPSILON,
         ))
-    if time_windows is not None:
+    if anchor is not None:
+        violations.extend(_schedule_violations(
+            request, routes, matrix, depot, node_codes, demands, occurrence_keys,
+            anchor,
+            typed=typed,
+            use_windows=use_windows,
+            core_duration_routes={
+                v.route_index for v in violations if v.type == DURATION_VIOLATION
+            },
+            core_ride_routes={
+                v.route_index for v in violations if v.type == RIDE_TIME_VIOLATION
+            },
+        ))
+    elif time_windows is not None:
         violations.extend(check_time_windows(
             routes, matrix, depot, time_windows, None,
             getattr(request.direction, "value", request.direction),
-            target_minutes, getattr(request, "offset_minutes", 15),
+            None, getattr(request, "offset_minutes", 15),
         ))
     violations.extend(check_hard_violation_rejection(
         getattr(response, "success", None), violations

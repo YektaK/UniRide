@@ -275,6 +275,22 @@ class OptimizationRequest(BaseModel):
         description="Content hash of the authoritative matrix snapshot for preview calls",
     )
     offset_minutes: int = 15
+    stop_dwell_minutes: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "MT1-02: service time at every stop, in minutes (default 0). Counts "
+            "in the tour, the ride time and the school deadline."
+        ),
+    )
+    sw_boarding_minutes: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "MT1-02: extra service minutes per Sw student at a stop (default 0), "
+            "on top of stop_dwell_minutes."
+        ),
+    )
     allow_time_shift: bool = False
     slack_window_minutes: int = 60
     vehicles: Optional[List[VehicleConfig]] = None

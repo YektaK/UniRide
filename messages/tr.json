@@ -398,6 +398,7 @@
           "ROUTE_LOAD_MISMATCH": "Rotadaki Sw/So sayıları öğrenci listesiyle uyuşmuyor.",
           "ROUTE_TOTAL_MISMATCH": "Rota toplam süresi adımların toplamıyla uyuşmuyor.",
           "SCHEDULE_DATA_INVALID": "Ders programı veya öğrenci kaydı verisi geçersiz.",
+          "SCHEDULE_MISMATCH": "Rota çözücünün doğruladığı saatler planın kendi hesapladığı saatlerle uyuşmuyor; bu yüzden plan gösterilmiyor.",
           "UNKNOWN_OCCURRENCE": "Rota, bu planda olmayan bir sefere başvuruyor.",
           "UNKNOWN_ROUTE_NODE": "Rota, tanınmayan bir durak içeriyor.",
           "unknown": "Bilinmeyen durum kodu. Teknik ekibe bildirin."

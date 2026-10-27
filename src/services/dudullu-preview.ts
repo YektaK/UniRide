@@ -4,6 +4,14 @@ import { DUDULLU_CAMPUS } from "./dudullu-campus";
 const DEPOT_CODE = DUDULLU_CAMPUS.code;
 const SERVICE_DAY_END_MINUTES = 24 * 60;
 const ASSIGNMENT_SEARCH_NODE_BUDGET = 50_000;
+/**
+ * Tolerance of the plan-vs-server schedule comparison, in minutes. Both sides are sums of the same
+ * authoritative matrix arcs (the server does not round the exact fields), so only float
+ * summation-order noise (~1e-13) can differ; 1e-6 matches the repository's CENTI_TOLERANCE and
+ * the 0.000001 route-total tolerance above, and is far below the 0.01 min (0.6 s) resolution of
+ * any displayed time.
+ */
+const SCHEDULE_TOLERANCE_MINUTES = 1e-6;
 const ADMITTED = new Set(["confirmed", "approved"]);
 
 export interface MatrixArc {
@@ -47,6 +55,13 @@ export interface PreviewRoute {
   readonly sw_count: number;
   readonly so_count: number;
   readonly student_ids: readonly string[];
+  /**
+   * MT1-03/MT1-04: the exact schedule the optimizer simulated and certified, in minutes from
+   * midnight (not rounded). Absent on older optimizers; when present it must equal the plan's own
+   * interval (SCHEDULE_MISMATCH otherwise).
+   */
+  readonly schedule_start_minutes?: number;
+  readonly schedule_end_minutes?: number;
 }
 
 export interface PreviewOptimizationResult {
@@ -116,6 +131,7 @@ export type PreviewReasonCode =
   | "ROUTE_LOAD_MISMATCH"
   | "ROUTE_TOTAL_MISMATCH"
   | "SCHEDULE_DATA_INVALID"
+  | "SCHEDULE_MISMATCH"
   | "UNKNOWN_OCCURRENCE"
   | "UNKNOWN_ROUTE_NODE";
 
@@ -520,6 +536,19 @@ function validateRoute(
     endMinutes > SERVICE_DAY_END_MINUTES
   ) {
     fail("ROUTE_OUTSIDE_SERVICE_DAY");
+  }
+
+  // MT1-04: when the optimizer reports the schedule it certified, it must be the plan's own
+  // interval. Each reported field is compared on its own; an absent field (older optimizer) is
+  // skipped, a present but non-finite or different one blocks the plan.
+  for (const [reported, own] of [
+    [route.schedule_start_minutes, startMinutes],
+    [route.schedule_end_minutes, endMinutes],
+  ] as const) {
+    if (reported === undefined) continue;
+    if (typeof reported !== "number" || !Number.isFinite(reported) || Math.abs(reported - own) > SCHEDULE_TOLERANCE_MINUTES) {
+      fail("SCHEDULE_MISMATCH");
+    }
   }
 
   return {

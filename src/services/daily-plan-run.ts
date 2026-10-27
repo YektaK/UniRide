@@ -92,6 +92,8 @@ const optimizerResultSchema = z.object({
     route_details: z.array(z.object({ location1: z.string(), location2: z.string(), duration: z.number(), distance: z.number() })),
     total_duration_minutes: z.number(), total_distance_km: z.number().optional(),
     sw_count: z.number(), so_count: z.number(), student_ids: z.array(z.string()),
+    // MT1-03: the exact certified schedule (absent on older optimizers; compared in the preview).
+    schedule_start_minutes: z.number().optional(), schedule_end_minutes: z.number().optional(),
   })),
   total_duration_minutes: z.number().optional(), feasibility_certificate: z.unknown().optional(),
   // H17 provenance (optional on older optimizers). A malformed value is dropped on its own and
@@ -654,7 +656,9 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
           algorithm: "ga_split", mode: "sandbox", service_date: serviceDate,
           direction: first.direction, target_time: exactClock(first.anchorMinutes),
           expected_matrix_sha256: matrix.sha256, use_time_windows: false,
-          is_asymmetric: true,
+          // MT1 (plan 3.1): the anchor already holds the W01 buffer, so the offset is 0 (the
+          // server default is 15 and would shift the certified schedule by another 15 minutes).
+          offset_minutes: 0, is_asymmetric: true,
           max_travel_time: maxTourMinutes, max_ride_time: maxRideTimeMinutes,
           sw_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.swCapacity)),
           so_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.soCapacity)),

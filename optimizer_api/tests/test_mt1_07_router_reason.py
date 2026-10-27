@@ -73,7 +73,11 @@ def test_certificate_json_error_message_is_not_duplicated_as_strategy_error():
     assert json.loads(optimization._failure_json(cert, None)) == cert.model_dump(
         exclude_none=True
     )
-    assert json.loads(optimization._failure_json(cert, "boom"))["strategy_error"] == "boom"
+    assert (
+        json.loads(optimization._failure_json(cert, "no_feasible_split: boom"))["strategy_error"]
+        == "no_feasible_split: boom"
+    )
+    assert "strategy_error" not in json.loads(optimization._failure_json(cert, "boom"))
 
 
 # -- only fixed reason codes are forwarded (no internal-error leakage, M5/A16) ---

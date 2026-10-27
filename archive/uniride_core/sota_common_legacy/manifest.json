@@ -1,0 +1,71 @@
+{
+  "archive_id": "sota_common_legacy",
+  "archive_root": "archive/uniride_core/sota_common_legacy",
+  "entries": [
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/__init__.py",
+      "byte_size": 1937,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/__init__.py",
+      "sha256": "97788d18d061c106e22c0f46188d4339df5f09721dcc520e7614386d6b31359f"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/__main__.py",
+      "byte_size": 5900,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/__main__.py",
+      "sha256": "3fc57fd5f0dee5f49f70dd6acbee13b5caece672ab9d8094fad6c1876a0d6017"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/acceptance_criteria.py",
+      "byte_size": 8497,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/acceptance_criteria.py",
+      "sha256": "99be80d8a1bbeefcf1392cc967a5a69ccefa69e09374853082e0a5ce95f2ee5b"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/destroy_operators.py",
+      "byte_size": 10941,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/destroy_operators.py",
+      "sha256": "24c34e430fd425cc8fb919ba6fe56d82bbf6dd477a8f9a6674d9f0b7a4439bb7"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/diversity_controller.py",
+      "byte_size": 9747,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/diversity_controller.py",
+      "sha256": "738d527b815bfdd4f34b28892de644918dcf1cbfcc728a9357493228b3ecb54f"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/multi_layer_ls.py",
+      "byte_size": 13004,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/multi_layer_ls.py",
+      "sha256": "f6c77fc675e26debc058af317aaa97fbf70d465f78a44632b60d10326edace58"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/multi_start_initializer.py",
+      "byte_size": 14628,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/multi_start_initializer.py",
+      "sha256": "975f669ee1cd375d3d8c19f6c718dc6e54d41d02444feec925feba510a9a4042"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/penalty_manager.py",
+      "byte_size": 7161,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/penalty_manager.py",
+      "sha256": "32837086b1c1f6ba9a9e4c7834e6af6f62a5c4a3db5351bdf1110a0012db92a2"
+    },
+    {
+      "archive_path": "archive/uniride_core/sota_common_legacy/repair_operators.py",
+      "byte_size": 11277,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "uniride_core/algorithms/sota_common/repair_operators.py",
+      "sha256": "4997e9163d7d2f2f25dfc141eeb0ba6b6e19ba9d87c94acac84f2ae27b5b3bc0"
+    }
+  ],
+  "schema_version": "uniride-archive/v1",
+  "source_root": "uniride_core/algorithms/sota_common"
+}

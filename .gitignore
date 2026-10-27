@@ -118,6 +118,10 @@ archive/academic_benchmark/*
 !archive/academic_benchmark/yaem2026_legacy/**
 !archive/academic_benchmark/bildiri2026_legacy/
 !archive/academic_benchmark/bildiri2026_legacy/**
+!archive/uniride_core/
+archive/uniride_core/*
+!archive/uniride_core/sota_common_legacy/
+!archive/uniride_core/sota_common_legacy/**
 scratch/
 
 # Tool / editor state — regenerable, not source code

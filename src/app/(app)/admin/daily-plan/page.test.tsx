@@ -391,6 +391,25 @@ describe("DailyPlanPage", () => {
     expect(screen.queryAllByTestId("vehicle-row")).toHaveLength(0);
   });
 
+  it("says plainly that no plan was computed when the live fleet has no active vehicle", async () => {
+    await generate(blockedResponse(["NO_ACTIVE_VEHICLES"]));
+
+    const notes = screen.getByTestId("status-notes").textContent ?? "";
+    expect(notes).toContain("Canlı filoda aktif araç yok; plan hesaplanmadı.");
+    expect(notes).not.toContain("hesaplanan rotalara");
+    expect(screen.queryByTestId("fleet-shortage")).toBeNull();
+  });
+
+  it("shows the English no-active-vehicle text", async () => {
+    testLocale = "en";
+    mocks.run.mockResolvedValue(blockedResponse(["NO_ACTIVE_VEHICLES"]));
+    render(<DailyPlanPage />);
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
+    await screen.findByTestId("preview-banner");
+    expect(screen.getByTestId("status-notes").textContent).toContain("The live fleet has no active vehicle; no plan was computed.");
+  });
+
   it("shows blocked data with plain Turkish reasons and no waves", async () => {
     await generate(blockedResponse(["MATRIX_UNAVAILABLE", "SCHEDULE_DATA_INVALID"]));
 

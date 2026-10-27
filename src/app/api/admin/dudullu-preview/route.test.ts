@@ -243,7 +243,10 @@ describe("POST /api/admin/dudullu-preview", () => {
     expect(optimizerFetchMock).not.toHaveBeenCalled();
     expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
     expect(body.vehicleSummary).toBeNull();
-    expect(body.reasonCodes).toContain("FLEET_SHORTAGE");
+    // No route was computed and there is no vehicle: its own reason, not the computed-routes FLEET_SHORTAGE.
+    expect(body.reasonCodes).toContain("NO_ACTIVE_VEHICLES");
+    expect(body.reasonCodes).not.toContain("FLEET_SHORTAGE");
+    expect(body.fleetShortage).toBeUndefined();
     expect(client.queries.map((query) => query.table)).toContain("vehicles");
   });
 

@@ -48,6 +48,14 @@ Paths are relative to `archive/`; the original internal `docs/` structure was pr
   managers, orchestration scripts, tuned databases, and benchmark outputs are
   not executable guidance or active scientific evidence.
 
+## Archived on 2026-10-27
+
+- `uniride_core/sota_common_legacy/` — the unused `uniride_core/algorithms/sota_common`
+  package (9 files, all `REFERENCE_ONLY`; audit L3-e/L3-i, plan MT6F-01).
+  Manifest: `uniride_core/sota_common_legacy/manifest.json`. No active code imports it;
+  production SOTA solvers use `uniride_core/algorithms/sota_tsp/`. Its `_layer_3opt`
+  is a 2-opt, not the canonical 3-opt.
+
 ## Use Policy
 
 - Cite archived material only as dated historical evidence.

@@ -4,14 +4,12 @@ E²BSO Strategy — Enhanced Entropy-Balanced Swarm Optimization (FAZ 1)
 Web-facing BaseRoutingStrategy wrapper for the E²BSO meta-heuristic.
 Wraps the standalone E²BSO solver to work with the UniRide optimization API.
 
-The E²BSO algorithm integrates all 7 FAZ 0 infrastructure modules:
-- MultiStartInitializer (DNA #6)
-- MultiLayerLS (DNA #3)
-- PenaltyManager (DNA #9) — available but not used in TSP mode
-- LateAcceptanceHC (DNA #7)
-- DestroyOperators: Random, Worst, Shaw, Related (DNA #1, #2)
-- RepairOperators: Greedy, Regret-2, Regret-3 (DNA #1, #2)
-- DiversityController (DNA #8)
+The solver itself lives in ``uniride_core/algorithms/sota_tsp/`` (``e2bso_tsp.py``, ``E2BSO_TSP``).
+It uses that package's ``ls_engine`` (``MultiLayerLS``, ``improve_2opt``), ``destroy_ops``
+(Random, Worst, Shaw removal) and ``repair_ops`` (Greedy, Regret-2, Regret-3 insertion). It does NOT use the former ``sota_common`` package (``MultiStartInitializer``,
+``MultiLayerLS``, ``PenaltyManager``, ``DiversityController`` ...): that package was never imported
+by a solver and was archived on 2026-10-27 under
+``archive/uniride_core/sota_common_legacy/`` (audit L3-e, L3-i).
 """
 
 import time

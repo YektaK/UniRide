@@ -16,7 +16,7 @@ Son güncelleme: 2026-10-27 (MT1 planı onaylandı). Kararlar `docs/DECISION_LOG
 ## Makale ölçeğinde koşudan önce zorunlu
 
 - Yazılım ön koşulları TAMAM. Kalanlar donanım ve sahip işleri:
-- D-04b2 güçlü bilgisayarda (tam test koşusu dahil).
+- D-04b2 güçlü bilgisayarda (tam test koşusu dahil). 2026-10-27: güçlü bilgisayardaki ayrı oturuma istem verildi (`docs/handoff/2026-10-27-guclu-pc-d04b2-istem.md`); sonucu `results/d04b2-strong-pc` dalına yazacak, `WIP`'e yalnızca şef birleştirir.
 - Şefin ön-onay commit'i: OQ-1/3/4/16 değerlerinin profillere yazılması (30 koşu, native 1000; A20 L11), `.gitattributes` ile JSON satır sonlarının sabitlenmesi (A20 L6 d), D-10 şablonuyla doldurulmuş ve sahibin onayladığı koşu planı.
 - Kural (A21 OQ-F7): onay commit'i ile kampanya arasında birleştirme yok.
 

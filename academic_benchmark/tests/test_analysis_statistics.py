@@ -514,7 +514,7 @@ def test_wilcoxon_auto_method_labels_follow_scipy():
     units with ties or zeros; asymptotic above that. Each label is checked against the explicit method's p-value."""
     from scipy import stats as sps
     from academic_benchmark.analysis.statistics import wilcoxon_method_used
-    x14 =[float(v) for v in range(14)]
+    x14 = [float(v) for v in range(14)]
     y14 = [v + 1.0 for v in x14]  # 14 units, all |d| equal: ties, more than 13 units
     assert wilcoxon_method_used(x14, y14, "auto") == "asymptotic"
     assert sps.wilcoxon(x14, y14, zero_method="pratt", method="auto").pvalue == pytest.approx(

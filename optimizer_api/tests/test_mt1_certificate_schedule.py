@@ -398,3 +398,206 @@ def test_disjoint_windows_at_one_stop_are_a_violation():
     assert not certificate["is_feasible"]
     assert "time_window_violation" in _types(certificate)
     assert "certify_error" not in certificate
+
+
+# ---------------------------------------------------------------------------
+# DUZELT round 1
+# ---------------------------------------------------------------------------
+
+STOP3_ARCS = {("D", "LA"): 5.0, ("LA", "LB"): 5.0, ("LB", "D"): 5.0}
+
+
+def _window_violations(certificate):
+    return [v for v in certificate["violations"] if v["type"] == "time_window_violation"]
+
+
+def test_window_missed_after_an_earlier_wait_names_the_late_stop():
+    # Drop-off, ready 14:00. A opens 14:30 (wait 25), so B (window closes 14:30,
+    # node 2) is reached at 875 > 870. The violation belongs to B, not to A.
+    request = _request(
+        [_student("LA", dropoff="14:30"), _student("LB", dropoff="14:00")],
+        use_time_windows=True, target_time="14:00", offset_minutes=0,
+        direction="dropoff",
+    )
+    found = _window_violations(_certify(request, ["LA", "LB"], STOP3_ARCS))
+    assert len(found) == 1, found
+    assert found[0]["node"] == 2
+    assert "node 2" in found[0]["details"]
+    assert found[0]["route_index"] == 0
+
+
+def test_window_missed_at_the_first_stop_names_the_first_stop():
+    # ready = 14:00 + 30 = 870; A closes 870, reached at 875; B opens 870.
+    request = _request(
+        [_student("LA", dropoff="14:00"), _student("LB", dropoff="14:30")],
+        use_time_windows=True, target_time="14:00", offset_minutes=30,
+        direction="dropoff",
+    )
+    found = _window_violations(_certify(request, ["LA", "LB"], STOP3_ARCS))
+    assert len(found) == 1, found
+    assert found[0]["node"] == 1
+    assert "node 1" in found[0]["details"]
+
+
+def test_pickup_deadline_depends_on_offset_minutes():
+    # H2 route reaches the school at 520. Target 08:45: deadline 525 at offset 0
+    # (feasible), 510 at offset 15 (violation).
+    def request(offset):
+        return _request(
+            [_student("LA", pickup="08:30"), _student("LB", pickup="08:30")],
+            use_time_windows=True, target_time="08:45", offset_minutes=offset,
+        )
+
+    assert _certify(request(0), ["LA", "LB"], H2_ARCS)["is_feasible"]
+    late = _certify(request(15), ["LA", "LB"], H2_ARCS)
+    assert not late["is_feasible"]
+    assert any("deadline" in v["details"] for v in _window_violations(late))
+
+
+def test_dropoff_ready_time_is_target_plus_offset():
+    # Window closes 14:30 (870). D->LA is 20: arrival 860 at offset 0 (met),
+    # 875 at offset 15 (ready = 855, missed).
+    arcs = {("D", "LA"): 20.0, ("LA", "D"): 20.0}
+
+    def request(offset):
+        return _request(
+            [_student("LA", dropoff="14:00")],
+            use_time_windows=True, target_time="14:00", offset_minutes=offset,
+            direction="dropoff",
+        )
+
+    assert _certify(request(0), ["LA"], arcs)["is_feasible"]
+    late = _certify(request(15), ["LA"], arcs)
+    found = _window_violations(late)
+    assert len(found) == 1 and found[0]["node"] == 1, late
+
+
+@pytest.mark.parametrize("bad", ["25:99", "24:00", "-1:30", "8:xx", "0830", "08:30:00"])
+def test_unparseable_target_time_reaching_the_certifier_is_a_violation(bad):
+    valid = _request(_demo_students(), target_time="08:15", offset_minutes=0)
+    request = valid.model_copy(update={"target_time": bad})  # no validation
+    certificate = _certify(request, ["L1", "L2"], DEMO_ARCS)
+    assert not certificate["is_feasible"]
+    found = _window_violations(certificate)
+    assert len(found) == 1 and "target_time" in found[0]["details"], certificate
+
+
+def test_unknown_direction_is_a_violation_not_a_dropoff():
+    valid = _request(_demo_students(), target_time="08:15", offset_minutes=0)
+    request = valid.model_copy(update={"direction": "sideways"})
+    certificate = _certify(request, ["L1", "L2"], DEMO_ARCS)
+    assert not certificate["is_feasible"]
+    found = _window_violations(certificate)
+    assert len(found) == 1 and "direction" in found[0]["details"], certificate
+
+
+def _typed_response(request, order, arcs):
+    response = _response(request, order, arcs)
+    response.routes[0].vehicle_type = "large"
+    response.fleet_mix = {"large": 1}
+    return response
+
+
+def _typed_request(students, **overrides):
+    return _request(
+        students,
+        algorithm="ga_split_hf",
+        vehicle_types=[dict(type_id="large", sw_capacity=4, so_capacity=5)],
+        **overrides,
+    )
+
+
+def test_typed_request_gets_only_the_deadline_check():
+    # Target 00:20 with a 29.75 minute tour: a pickup departing before midnight.
+    # Non-typed requests report it; typed requests judge only the deadline,
+    # which the latest-start schedule meets.
+    arcs = DEMO_ARCS
+    plain = _request(_demo_students(), target_time="00:20", offset_minutes=0)
+    assert any(
+        "start of the day" in v["details"]
+        for v in _window_violations(_certify(plain, ["L1", "L2"], arcs))
+    )
+    typed = _typed_request(_demo_students(), target_time="00:20", offset_minutes=0)
+    certificate = certify_optimization_response(
+        typed, _typed_response(typed, ["L1", "L2"], arcs), arc_lookup=_lookup(arcs)
+    )
+    assert certificate["is_feasible"], certificate
+
+
+def test_typed_request_service_does_not_become_a_tour_or_ride_violation():
+    # Dwell 10 per stop makes the simulated tour 49.75 > max 40 and the ride
+    # longer than max_ride_time 35; typed tour/ride limits stay travel-only.
+    arcs = DEMO_ARCS
+    kwargs = dict(
+        target_time="08:15", offset_minutes=0, max_travel_time=40, max_ride_time=35,
+        stop_dwell_minutes=10,
+    )
+    plain = _request(_demo_students(), **kwargs)
+    assert set(_types(_certify(plain, ["L1", "L2"], arcs))) == {
+        "duration_violation", "ride_time_violation"
+    }
+    typed = _typed_request(_demo_students(), **kwargs)
+    certificate = certify_optimization_response(
+        typed, _typed_response(typed, ["L1", "L2"], arcs), arc_lookup=_lookup(arcs)
+    )
+    assert certificate["is_feasible"], certificate
+
+
+# --- audit H4 scenario through the certifier ---------------------------------
+
+
+def test_h4_scenario_certifies_feasible_on_the_latest_start_schedule():
+    # target 08:15, offset 0, arcs 10.9/10.9/10.2, A closes 07:53 (473). The
+    # latest departure is 462.1: A at 473.0, B 483.9, school 494.1. The legacy
+    # check departed at 463 and rejected A at 473.9 > 473.
+    arcs = {("D", "LA"): 10.9, ("LA", "LB"): 10.9, ("LB", "D"): 10.2}
+    request = _request(
+        [_student("LA", pickup="07:53"), _student("LB")],
+        use_time_windows=True, target_time="08:15", offset_minutes=0,
+    )
+    certificate = _certify(request, ["LA", "LB"], arcs)
+    assert certificate["is_feasible"], certificate
+
+
+# --- service fields need an anchor (lead decision) ---------------------------
+
+SERVICE_REFUSAL = "stop_dwell_minutes and sw_boarding_minutes require target_time"
+
+
+@pytest.mark.parametrize("field", ["stop_dwell_minutes", "sw_boarding_minutes"])
+def test_service_field_without_target_time_is_refused(field):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match=SERVICE_REFUSAL):
+        _request([_student("L1")], **{field: 1})
+
+
+@pytest.mark.parametrize("field", ["stop_dwell_minutes", "sw_boarding_minutes"])
+def test_service_field_zero_or_with_target_time_is_accepted(field):
+    assert _request([_student("L1")], **{field: 0}).model_dump()[field] == 0
+    assert _request([_student("L1")]).model_dump()[field] == 0
+    ok = _request([_student("L1")], target_time="08:15", **{field: 3})
+    assert ok.model_dump()[field] == 3
+
+
+@pytest.mark.parametrize("field", ["stop_dwell_minutes", "sw_boarding_minutes"])
+def test_service_field_without_target_time_is_http_422(field, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from routers import optimization
+
+    monkeypatch.setenv("UNIRIDE_DISABLE_AUTH", "1")
+    from optimizer_api import rate_limit
+
+    rate_limit._buckets.clear()
+    app = FastAPI()
+    app.include_router(optimization.router)
+    payload = {
+        "algorithm": "ga_split",
+        "students": [{"id": "s1", "location_code": "L1", "disability_type": "So"}],
+        "depot": {"id": "D", "lat": 0.0, "lng": 0.0},
+        field: 2,
+    }
+    response = TestClient(app).post("/api/v1/optimize", json=payload)
+    assert response.status_code == 422
+    assert SERVICE_REFUSAL in response.text

@@ -133,13 +133,13 @@ pytest summary line: `25 failed, 9109 passed, 169 skipped, 42 deselected, 47 war
 
 ### Failures (not fixed; name, first error line, probable cause)
 
-Ignored leftover directories in the main checkout (environment, 9):
+Ignored leftover directories in the main checkout (environment, 7) and the local `tsplib.db` (environment, 2):
 - `TestPostArchivalBoundary.test_bildiri_source_tree_and_active_legacy_files_are_absent`: `Bildiri source tree still exists: ...\academic_benchmark\bildiri2026`.
 - `TestPostArchivalBoundary.test_distribution_package_discovery_excludes_archive_and_bildiri`: `find_spec('bildiri2026', ...)` returns a namespace spec for `academic_benchmark\bildiri2026`.
 - `test_legacy_yaem_package_is_absent_and_not_importable`: `academic_benchmark/yaem2026` exists.
 - `test_distribution_discovery_excludes_archive_and_yaem`: `assert not True` (discovery finds the leftover directory).
-- `test_the_real_instance_set_is_the_16_tsp_plus_ft53`: `At index 10 diff: 'rat99' != 'kroa100'`; untracked `rat99.tsp` exists in `academic_benchmark/bildiri2026/data/tsplib/` and `academic_benchmark/yaem2026/data/tsplib/`.
-- `test_without_ampl_the_runner_exits_with_code_3_and_writes_nothing`: exit 1 instead of 3, instance-set message (same cause, probable).
+- `test_the_real_instance_set_is_the_16_tsp_plus_ft53`: `At index 10 diff: 'rat99' != 'kroa100'` (cause corrected in the rerun section below: the local `tsplib.db`, not these directories).
+- `test_without_ampl_the_runner_exits_with_code_3_and_writes_nothing`: exit 1 instead of 3, instance-set message (same cause as the line above).
 - `test_sota_common_cannot_be_imported[uniride_core.algorithms.sota_common]` and `[optimizer_api.strategies.sota_common]`: namespace specs found for the leftover directories (9 ignored files each).
 - `test_shim_directory_is_gone`: `optimizer_api/strategies/sota_common` exists.
 
@@ -155,6 +155,15 @@ PyVRP 0.14.1 API (environment: `pyvrp>=0.9.0` is not pinned; 6):
 
 Windows symlink privilege (environment, 1):
 - `test_cli_filename_cannot_follow_symlink_outside_result_roots`: `OSError: [WinError 1314]` (symlink creation needs a privilege this user does not have).
+
+### Rerun after environment fixes (2026-10-28, owner approval)
+
+Changes to this PC only (no repository file changed): the four ignored leftover directories moved out of the repository to `C:\wt\leftover-backup-2026-10-27\` (not deleted); `npm ci` (exit 0; `node_modules/server-only` present); `pyvrp` 0.14.1 -> 0.13.4 in `.venv-jit` (0.14.0 replaced `x`/`y` in `Model.add_depot` with `location`; `pip check` clean).
+
+Rerun of the nine files that held the 25 failures (`test_bildiri_quarantine_boundary.py`, `test_yaem_quarantine_boundary.py`, `test_exact_day_joint_runner.py`, `test_phase0_containment.py`, `test_exact_tsp_runner.py`, `test_exact_union_day_runner.py`, `test_holistic_matrix_engine.py`, `test_mt6f_sota_common_retired.py`, `test_pyvrp_cvrp_engine.py`), same flags: `3 failed, 212 passed, 5 warnings in 96.63s`.
+
+- `test_cli_filename_cannot_follow_symlink_outside_result_roots`: `WinError 1314`, unchanged (Windows privilege).
+- `test_the_real_instance_set_is_the_16_tsp_plus_ft53` and `test_without_ampl_the_runner_exits_with_code_3_and_writes_nothing`: unchanged, `'rat99' != 'kroa100'`. Correction to the cause given above: the instance set is read from `academic_benchmark/tsplib_data/tsplib.db` (`scripts/run_exact_tsp_reference.py:215-226`, TSP with `optimal` not null and dimension <= 100), not from the leftover data directories. The `tsplib.db` on this PC is 2,906,341,376 bytes, dated 2026-06-30 (file listing only; contents not read).
 
 ### Skips (169)
 

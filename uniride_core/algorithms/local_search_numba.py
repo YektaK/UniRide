@@ -22,7 +22,6 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Optional, Callable, Any
 from enum import Enum
 import os
-import random
 import threading as _threading
 import time
 import weakref
@@ -851,7 +850,6 @@ class HybridLocalSearch(BaseLocalSearch):
         self,
         methods: Optional[List[LocalSearchType]] = None,
         max_iterations: int = 5,
-        use_random_order: bool = False,
         include_cross_exchange: bool = True,
         include_time_window: bool = True,
         iteration_limits: Optional[Dict[LocalSearchType, int]] = None,
@@ -869,11 +867,9 @@ class HybridLocalSearch(BaseLocalSearch):
         else:
             self.methods = methods
         self.max_iterations = max_iterations
-        self.use_random_order = use_random_order
         self.include_cross_exchange = include_cross_exchange
         self.include_time_window = include_time_window
         self.iteration_limits = {**self.DEFAULT_ITERATION_LIMITS, **(iteration_limits or {})}
-        self.rng = random.Random()
 
     def improve(
         self,
@@ -893,9 +889,6 @@ class HybridLocalSearch(BaseLocalSearch):
 
         if not has_time_windows:
             methods = [m for m in methods if m != LocalSearchType.TIME_WINDOW_AWARE]
-
-        if self.use_random_order:
-            self.rng.shuffle(methods)
 
         for iteration in range(self.max_iterations):
             improved_this_round = False

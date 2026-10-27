@@ -24,7 +24,6 @@ Reference:
 from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Optional, Callable, Any
 from enum import Enum
-import random
 import time
 
 from uniride_core.algorithms.three_opt import improve_path_three_opt
@@ -661,7 +660,6 @@ class HybridLocalSearch(BaseLocalSearch):
         self,
         methods: Optional[List[LocalSearchType]] = None,
         max_iterations: int = 100,
-        use_random_order: bool = False,
         include_cross_exchange: bool = True,
         include_time_window: bool = True
     ):
@@ -671,7 +669,6 @@ class HybridLocalSearch(BaseLocalSearch):
         Args:
             methods: List of local search methods to use (default: optimized order)
             max_iterations: Maximum total iterations across all methods
-            use_random_order: If True, randomize order of methods
             include_cross_exchange: Include Cross Exchange for CVRP (default: True)
             include_time_window: Include Time Window Aware for CVRPTW (default: True)
         """
@@ -689,10 +686,8 @@ class HybridLocalSearch(BaseLocalSearch):
         else:
             self.methods = methods
         self.max_iterations = max_iterations
-        self.use_random_order = use_random_order
         self.include_cross_exchange = include_cross_exchange
         self.include_time_window = include_time_window
-        self.rng = random.Random()
 
     def improve(
         self,
@@ -726,9 +721,6 @@ class HybridLocalSearch(BaseLocalSearch):
         # Skip TIME_WINDOW_AWARE if no time window data
         if not has_time_windows:
             methods = [m for m in methods if m != LocalSearchType.TIME_WINDOW_AWARE]
-
-        if self.use_random_order:
-            self.rng.shuffle(methods)
 
         # Iteration limits per method (optimized for hybrid)
         # Fast methods get more iterations, slow methods get fewer

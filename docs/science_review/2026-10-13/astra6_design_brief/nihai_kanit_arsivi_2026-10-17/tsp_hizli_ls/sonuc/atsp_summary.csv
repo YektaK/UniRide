@@ -1,0 +1,4 @@
+arm,runs,n_opt,mean_gap,mean_wall,max_wall,mean_t_best,max_t_best,mean_kps,reversals
+ils_fast,10,10,0,10.009,10.017,0.078343,0.18513,6542.2,0
+lkh_atsp_2n,1,1,0,0.36187,0.36187,,,,0
+lkh_atsp_native,3,3,0,0.38798,0.5023,,,,0

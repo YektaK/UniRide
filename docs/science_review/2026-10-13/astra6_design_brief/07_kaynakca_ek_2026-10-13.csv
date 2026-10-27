@@ -1,0 +1,21 @@
+etiket,yazarlar,yil,baslik,yayin_yeri,doi,dogrulama
+LinKernighan1973,Lin; Kernighan,1973,An Effective Heuristic Algorithm for the Traveling-Salesman Problem,Operations Research,10.1287/opre.21.2.498,CrossRef 2026-10-13
+Tinos2018_GPX2,Tinós; Whitley; Ochoa,2020,A New Generalized Partition Crossover for the Traveling Salesman Problem: Tunneling between Local Optima,Evolutionary Computation,10.1162/evco_a_00254,CrossRef 2026-10-13
+Whitley2010_GPXGA,Whitley; Hains; Howe,2010,A Hybrid Genetic Algorithm for the Traveling Salesman Problem Using Generalized Partition Crossover,"Parallel Problem Solving from Nature, PPSN XI",10.1007/978-3-642-15844-5_57,CrossRef 2026-10-13
+Sanches2017_EAXGPX,Sanches; Whitley; Tinós,2017,Building a better heuristic for the traveling salesman problem,Proceedings of the Genetic and Evolutionary Computation Conf,10.1145/3071178.3071305,CrossRef 2026-10-13
+Li2014_FRRMAB,Li; Fialho; Kwong; Zhang,2014,Adaptive Operator Selection With Bandits for a Multiobjective Evolutionary Algorithm Based on Decomposition,IEEE Transactions on Evolutionary Computation,10.1109/tevc.2013.2239648,CrossRef 2026-10-13
+Hains2011_bigvalley,Hains; Whitley; Howe,2011,Revisiting the big valley search space structure in the TSP,Journal of the Operational Research Society,10.1057/jors.2010.116,CrossRef 2026-10-13
+Boese1994_bigvalley,Boese; Kahng; Muddu,1994,A new adaptive multi-start technique for combinatorial global optimizations,Operations Research Letters,10.1016/0167-6377(94)90065-5,CrossRef 2026-10-13
+Ochoa2018_landscape,Ochoa; Veerapen,2017,Mapping the global structure of TSP fitness landscapes,Journal of Heuristics,10.1007/s10732-017-9334-0,CrossRef 2026-10-13
+Stutzle2019_autodesign,Stützle; López-Ibáñez,2018,Automated Design of Metaheuristic Algorithms,International Series in Operations Research &amp; Management,10.1007/978-3-319-91086-4_17,CrossRef 2026-10-13
+Whitley2009,Whitley; Hains; Howe,2009,Tunneling between optima,Proceedings of the 11th Annual conference on Genetic and evo,10.1145/1569901.1570026,CrossRef 2026-10-13
+Lourenco_ILS,Lourenço; Martin; Stützle,2003,Iterated Local Search,International Series in Operations Research &amp; Management,10.1007/0-306-48056-5_11,CrossRef 2026-10-13 (kayıtta yıl alanı yok; yıl bildiri/kitap baskısından)
+Johnson1990_LO,Johnson,1990,Local optimization and the Traveling Salesman Problem,Lecture Notes in Computer Science,10.1007/bfb0032050,CrossRef 2026-10-13 (kayıtta yıl alanı yok; yıl bildiri/kitap baskısından)
+Varadarajan2021_PEGA,Varadarajan; Whitley,2021,A parallel ensemble genetic algorithm for the traveling salesman problem,GECCO,10.1145/3449639.3459281,CrossRef + OpenAlex 2026-10-13
+Chicano2021_DPX,Chicano; Ochoa; Whitley; Tinós,2021,Dynastic Potential Crossover Operator,Evolutionary Computation,10.1162/evco_a_00305,CrossRef + OpenAlex 2026-10-13
+Pei2023_LOCAOS,Pei; Tong; Liu; Mei; Yao,2023,Local Optima Correlation Assisted Adaptive Operator Selection,GECCO,10.1145/3583131.3590399,CrossRef + OpenAlex 2026-10-13
+Wang2025_MABBackboneLKH,Wang; Zheng; Xiong; He,2025,Multi-armed Bandit and Backbone boost Lin-Kernighan-Helsgaun Algorithm for the Traveling Salesman Problems,arXiv (ön baskı),10.48550/arxiv.2501.04072,OpenAlex 2026-10-13 (hakemsiz)
+Ammann2026_LKHspeedup,Ammann; Ostermann; Stiller; de Wolff,2026,A speed-up for Helsgaun's TSP heuristic by relaxing the positive gain criterion,Computers & Operations Research,10.1016/j.cor.2026.107443,CrossRef 2026-10-13
+Heins2025_EAXABcycles,Heins; Whitley; Kerschke,2025,To Repair or Not to Repair? Investigating the Importance of AB-Cycles for the State-of-the-Art TSP Heuristic EAX,arXiv:2505.00803 (ön baskı),,arXiv API 2026-10-13 (hakemsiz)
+Kanellakis1980_ATSPLS,Kanellakis; Papadimitriou,1980,Local Search for the Asymmetric Traveling Salesman Problem,Operations Research,10.1287/opre.28.5.1086,CrossRef 2026-10-13
+Kendall2016_GLP,Kendall; Bai; Błazewicz; De Causmaecker; Gendreau; John et al.,2016,Good Laboratory Practice for optimization research,Journal of the Operational Research Society,10.1057/jors.2015.77,CrossRef 2026-10-13

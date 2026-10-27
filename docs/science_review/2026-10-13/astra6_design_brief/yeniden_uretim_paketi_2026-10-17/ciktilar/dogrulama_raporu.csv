@@ -1,0 +1,62 @@
+id,aciklama,hesaplanan,belgede,tolerans,sonuc
+§2a,temel dalga sayısı,57,57,0.0,GEÇTİ
+§2b,4 R'de yolcu kümesi aynı olan temel dalga,57,57,0.0,GEÇTİ
+§2c,farklı durak sayısı,28,28,0.0,GEÇTİ
+§2d,örnek matris yay sayısı / tamsayı / en büyük,"(756, 1, 57)","(756, 1, 57)",0.0,GEÇTİ
+U1a,OPTIMAL hücre (birleşik kayıt),228,228,0.0,GEÇTİ
+U1b,sertifika ihlali toplamı,0,0,0.0,GEÇTİ
+U1c,en uzun sayım süresi (s),8.64,8.64,0.0,GEÇTİ
+U1d,en büyük kolon sayısı,45170,45170,0.0,GEÇTİ
+U1e,ham kayıt: highs OPTIMAL / cpsat FEASIBLE,"(226, 2)","(226, 2)",0.0,GEÇTİ
+U1f,iki aşamalı yeniden çözülen hücre,2,2,0.0,GEÇTİ
+§2e,n>=6 hücre / temel dalga,"(36, 9)","(36, 9)",0.0,GEÇTİ
+U2a,GA suboptimal hücre / temel dalga,"(19, 7)","(19, 7)",0.0,GEÇTİ
+U2b,GA fazla rotalı hücre / temel dalga,"(4, 2)","(4, 2)",0.0,GEÇTİ
+U2c,haftalık dakika farkı R=50/60/70/90,"[19, 81, 25, 49]","[19, 81, 25, 49]",0.0,GEÇTİ
+U2d,haftalık fazla rota (her R),"[1, 1, 1, 1]","[1, 1, 1, 1]",0.0,GEÇTİ
+U3,ESN-SP v2 optimum hücre,227,227,0.0,GEÇTİ
+U4a,ESN-SP v3 iki koşuda aynı sonuç (15 örnek),12,12,0.0,GEÇTİ
+U4b,S2 koşu 1 kazanç/beraberlik/kayıp,"(5, 0, 0)","(5, 0, 0)",0.0,GEÇTİ
+U4c,S2 koşu 2 kazanç/beraberlik/kayıp,"(4, 0, 1)","(4, 0, 1)",0.0,GEÇTİ
+U5,sıralı kesin plan GA'dan az araç (hücre),2,2,0.0,GEÇTİ
+U6a,haftalık filo ortak R=50/60/70/90,"[6, 5, 5, 4]","[6, 5, 5, 4]",0.0,GEÇTİ
+U6b,haftalık filo sıralı / GA,"[6, 6, 6, 4, 6, 6, 6, 4]","[6, 6, 6, 4, 6, 6, 6, 4]",0.0,GEÇTİ
+U6c,ortak < sıralı (hücre),9,9,0.0,GEÇTİ
+U6d,ortak < GA (hücre),11,11,0.0,GEÇTİ
+U6e,üç aşaması OPTIMAL hücre,19,19,0.0,GEÇTİ
+U6f,Pazartesi R=90 s1 durumu / sıralı=LB0=3,"(1, 3, 3)","(1, 3, 3)",0.0,GEÇTİ
+U7a,ortak - sıralı rota R=50/60/70/90,"[3.0, 1.0, 4.0, 2.0]","[3, 1, 4, 2]",0.0,GEÇTİ
+U7b,ortak - sıralı dakika,"[47.0, 30.0, 86.0, 31.0]","[47, 30, 86, 31]",0.0,GEÇTİ
+U7c,haftalık dakika ortak (Pzt R90 sıralı),"[6850.0, 6399.0, 6114.0, 5844.0]","[6850, 6399, 6114, 5844]",0.0,GEÇTİ
+U7d,haftalık dakika sıralı,"[6803, 6369, 6028, 5813]","[6803, 6369, 6028, 5813]",0.0,GEÇTİ
+U8,LB0'a eşit: sıralı / ortak,"(4, 6)","(4, 6)",0.0,GEÇTİ
+U9,L=3 haftalık sedan kesin + kampanya,"[3.0, 2.0, 2.0, 1.0, 4.0, 3.0, 3.0, 1.0]","[3, 2, 2, 1, 4, 3, 3, 1]",0.0,GEÇTİ
+T1a,R2DMA ILS'ten kötü (çift) / Holm p,"(27, np.float64(0.000156))","(27, 0.000156)",1e-06,GEÇTİ
+T1b,E2BSO-ILS kazanç/beraberlik/kayıp,"(8, 6, 16)","(8, 6, 16)",0.0,GEÇTİ
+T1c,P-AOEA = P-AOEA-noevo (beraberlik),30,30,0.0,GEÇTİ
+T1d,LKH optimum,30,30,0.0,GEÇTİ
+T2a,ILS-fast optimum / ortalama açık %,"(36, np.float64(0.058))","(36, 0.058)",1e-09,GEÇTİ
+T2b,repo ILS optimum (40) / ortalama açık %,"(15, np.float64(2.02))","(15, 2.02)",1e-09,GEÇTİ
+T2c,ILS-fast vs repo ILS koşu düzeyi k/b/k,"(25, 15, 0)","(25, 15, 0)",0.0,GEÇTİ
+T2d,Holm p (koşu düzeyi),2.4e-05,2.4e-05,1e-06,GEÇTİ
+T2e,örnek düzeyi: daha iyi / eşit / kötü,"(6, 2, 0)","(6, 2, 0)",0.0,GEÇTİ
+T2f,LKH'ye kayıp koşu (hepsi n>=318 örnekte),"(14, 1)","(14, 1)",0.0,GEÇTİ
+T3,ft53 ILS-fast optimum koşu,"(10, 10)","(10, 10)",0.0,GEÇTİ
+T5,GPX açık-kapalı k/b/k ve p,"(7, 5, 8, np.float64(0.776))","(7, 5, 8, 0.776)",1e-09,GEÇTİ
+T6a,U+3NN vs K10 k/b/k,"(11, 1, 8)","(11, 1, 8)",0.0,GEÇTİ
+T6b,U+3NN vs K10 Wilcoxon p (açık ölçeği),0.79,0.79,1e-09,GEÇTİ
+T6c,K5 vs K10 k/b/k,"(4, 1, 15)","(4, 1, 15)",0.0,GEÇTİ
+T7,tüm elitlerde ortak kenar = optimumdaki,"[44, 27, 42, 133]","[44, 27, 42, 133]",0.0,GEÇTİ
+T7b,ortak kenar sayısı,"[44, 27, 42, 133]","[44, 27, 42, 133]",0.0,GEÇTİ
+O1a,"ardıl yay AUC: GBM-geo, LR-geo, MUTUAL, DETOUR, GEO, FREQ","[np.float64(0.909), np.float64(0.893), np.float64(0.855), np.float64(0.807), np.float64(0.764), np.float64(0.714)]","[0.909, 0.893, 0.855, 0.807, 0.764, 0.714]",1e-09,GEÇTİ
+O1b,"aynı rota AUC: GBM-geo, GEO","[np.float64(0.812), np.float64(0.719)]","[0.812, 0.719]",1e-09,GEÇTİ
+O1c,"Recall@5: MUTUAL, GBM-geo, GEO / ardıl sayısı","[np.float64(0.956), np.float64(0.944), np.float64(0.896), np.float64(270.0)]","[0.956, 0.944, 0.896, 270]",1e-09,GEÇTİ
+O2,ileri zincirleme GBM-geo min/max ve 4/4 gün üstün,"[np.float64(0.863), np.float64(0.921), 4]","[0.863, 0.921, 4]",1e-09,GEÇTİ
+O3,öncelik doğruluğu LR-geo/RADIAL/FREQ,"[np.float64(0.779), np.float64(0.72), np.float64(0.62)]","[0.779, 0.72, 0.62]",1e-09,GEÇTİ
+O4,fazla rota: öğrenilmiş GBM-geo / CW (yeniden sıralamalı),"[9, 3]","[9, 3]",0.0,GEÇTİ
+O5a,"GBM-geo k=4: optimum/36, rota/36, kolon payı","[30, 36, np.float64(0.22)]","[30, 36, 0.22]",1e-09,GEÇTİ
+O5b,"GEO k=4: optimum/36, rota/36, kolon payı","[27, 34, np.float64(0.32)]","[27, 34, 0.32]",1e-09,GEÇTİ
+O5c,temel dalga düzeyi tam optimum / toplam fark dk / en büyük fark,"[5, 13, 5]","[5, 13, 5]",0.0,GEÇTİ
+O6,v3L vs v3 öğrenilmiş iyi / eşit / mesafe iyi,"[5, 5, 5]","[5, 5, 5]",0.0,GEÇTİ
+S1,"alt küme / sıralı dizi (n=20, en çok 9)","(431909, 66449027200)","(431909, 66449027200)",0.0,GEÇTİ
+S3,n*T < W (dakika),1,1,0.0,GEÇTİ

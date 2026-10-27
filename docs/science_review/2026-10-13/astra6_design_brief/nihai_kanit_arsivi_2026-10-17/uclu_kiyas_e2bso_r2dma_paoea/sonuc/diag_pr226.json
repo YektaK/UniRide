@@ -1,0 +1,40 @@
+{
+ "instance": "pr226",
+ "n": 226,
+ "lo_gap_mean": 5.961046340421467,
+ "resonance_identical": 0.8500000000000001,
+ "resonance_rotated_same_tour": 0.7439769495216149,
+ "resonance_reversed_same_tour": 0.3958869325935702,
+ "resonance_random_pairs": {
+  "mean": 0.282126546079044,
+  "min": 0.2752553557648897,
+  "max": 0.29068518865355114
+ },
+ "resonance_lo_pairs": {
+  "mean": 0.427854699165182,
+  "min": 0.31629206234557294,
+  "max": 0.6265852067081772,
+  "frac_lt_0_3": 0.0,
+  "frac_ge_0_7": 0.0
+ },
+ "edge_jaccard_lo_pairs_mean": 0.6470317841868335,
+ "constructive": {
+  "common_edge_preserved_mean": 0.4431535011389936,
+  "child_cost_ratio_before_ls": 13.100923583607347,
+  "child_cost_ratio_after_ls": 0.9690827598823739,
+  "frac_after_ls_better_than_worse_parent": 0.75
+ },
+ "ox_moderate": {
+  "child_cost_ratio_before_ls": 1.2676188904979366,
+  "child_cost_ratio_after_ls": 0.9795517049372006
+ },
+ "random_restart_plus_ls_ratio": 0.9683111410709763,
+ "entropy_identical_P24": 0.6303982091340109,
+ "entropy_lo_P24": 0.6672301156683775,
+ "entropy_floor_formula_P24": 0.6303982091340087,
+ "entropy_identical_P40": 0.5950475770983656,
+ "entropy_lo_P40": 0.629683705625712,
+ "entropy_floor_formula_P40": 0.5950475770983636,
+ "diversity_first7_identical_rest_diverse": 0.0,
+ "diversity_shuffled_order": 0.21934260429835647
+}

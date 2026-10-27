@@ -474,6 +474,7 @@ Each question lists options with pros (+) and cons (-) and a recommendation. The
 3. **Known numbers:** the replay gives the same vehicles and durations as before MT1. For reference, the archive's `summary.csv` holds for 2026-10-05 (27 students, 54 legs, 12 waves): ride limit 50/60/70/90 -> `vehicles_required` 6/5/4/4, `vehicle_count_proven` true, `capacity_floor` 3. The page wording says "this plan uses N" and explains the floor; it says "minimum" only where V01 proves it.
 4. **Windowed sanity set** (the audit H2, H3, H4 and N1 scenarios through `/optimize` with `ga_split`):
    - **4a, after the merge-now set:** H2 rejected by the certificate or refused; H3 times as in MT1-01 test 3; H4 and N1 unchanged (H4 still `success=false` although a feasible plan exists, N1 still more than one vehicle) and recorded as such in the close record.
+     Observed 2026-10-28: see the first close evidence file (`docs/superpowers/plans/2026-10-28-mt1-first-close-evidence.md`, section 3.3).
    - **4b, after lane B (MT1-05/06):** H4 certified; N1 one vehicle; H2 rerouted feasibly or reported infeasible by both search and certificate.
 
 These are acceptance checks, not evidence of algorithm quality; no superiority claim follows from them.

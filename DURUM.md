@@ -1,6 +1,6 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-27 (MT1 planı onaylandı). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L13) ve **A21** (MT6 takip planı, OQ-F1..F8); her biri seçenekler, artı/eksi, seçim, geri alma yolu ile.
+Son güncelleme: 2026-10-28 (MT1 ilk kapanış kaydı). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L13) ve **A21** (MT6 takip planı, OQ-F1..F8); her biri seçenekler, artı/eksi, seçim, geri alma yolu ile.
 
 ## Durum
 
@@ -11,7 +11,7 @@ Son güncelleme: 2026-10-27 (MT1 planı onaylandı). Kararlar `docs/DECISION_LOG
 | MT6 takip planı (sota_common arşivi, shim'ler, denetim L3 ve L10, RUN 3-opt hamlesi) | **KAPANDI** (MT6F-09, `e8851f34`; kanıt `docs/superpowers/plans/2026-10-27-mt6-followup-close-evidence.md`; A21). Yalnız `SOTA-RUN-TSP` sonuçları değişti; Bildiri/YAEM değişmedi. |
 | Makale raporu komutu, üretim çözücü kaydı, analiz cilası 1–2, birikmiş işler 1 | BİRLEŞTİ (A20 L2, L3, L7, L10, L12, L13). |
 | CI: analiz testleri akademik ek paket olmadan toplanıyor | BİRLEŞTİ `13819af5` (D-04a eki; PR #27 kapatıldı). Gece işindeki `UNIRIDE_REQUIRE_ANALYSIS_EXTRA=1` ilk gece koşusunda kontrol edilecek. |
-| MT1 (zaman pencereleri, okula dönüş, dürüst araç sayısı) | PLAN ONAYLANDI 2026-10-27 (O09; plan `docs/superpowers/plans/2026-10-27-mt1-time-window-unification.md`). Şimdi: MT1-01 → 02 → 03 → 04 (sıralı) ve 07, 08, 10 (paralel) + H16 pano notu. Kampanyadan sonra: 05, 06, 09, 11, 12 (çalışma yolunun içe aktardığı modüller). |
+| MT1 (zaman pencereleri, okula dönüş, dürüst araç sayısı) | KISMEN BİRLEŞTİ (O09; plan `docs/superpowers/plans/2026-10-27-mt1-time-window-unification.md`). Hemen-birleşecek küme BİRLEŞTİ: MT1-10 `8ad1b94b`, 08 `0fc7bc7b`, 07 `a74aff76`, 01 `7584f2fa`, 02 `8513c2b6`, 03 `f9bf58f6`, 04 `ac22a383`. İlk kapanış kaydı + demo kabulü (228/228 dalga öncesi/sonrası/arşiv aynı): `docs/superpowers/plans/2026-10-28-mt1-first-close-evidence.md`; H16 pano notu `docs/mt1-13-first-close` dalında. Kampanyadan sonra: 05, 06, 09, 11, 12 (çalışma yolunun içe aktardığı modüller) ve 4b koşusu; sonra MT1-13 ikinci kayıt. Açık: windowed `ga_split` ofset 0'da H3 senaryosunda başarısız; nedeni doğrulanmadı (varsayım: kod çözücü, MT1-05 ile ele alınacak), `arrival_minutes` anlamı (sahip sorusu). |
 
 ## Makale ölçeğinde koşudan önce zorunlu
 

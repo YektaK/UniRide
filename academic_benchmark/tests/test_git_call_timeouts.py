@@ -252,20 +252,44 @@ def test_quarantine_rolls_back_when_reading_the_index_bytes_times_out(tmp_path: 
 # ``git cat-file`` exits 128: the exit status and the message alone cannot tell the two apart, so the
 # code asks ``git rev-parse --git-dir`` first (review round 1, 2026-10-15).
 
-def _distrusted(monkeypatch):
+def _distrusted(monkeypatch, tmp_path: Path):
+    """Make git refuse every repository as "dubious ownership", whatever the machine's git configuration says.
+
+    The switch alone is not enough: a ``safe.directory = *`` in the system or global git configuration (GitHub's Ubuntu runners
+    have one) trusts every directory again, and the three tests below then saw no refusal (nightly CI failure 2026-10-23..27).
+    The global file is therefore replaced by an empty one, the system file is skipped and configuration passed through the
+    environment is dropped, so the only source of ``safe.directory`` is the test's own (none)."""
+    empty = tmp_path / "empty.gitconfig"
+    empty.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    for key in ("GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS"):
+        monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")
 
 
-def test_the_dubious_ownership_switch_reaches_git_through_the_isolated_environment(monkeypatch):
-    _distrusted(monkeypatch)
+def test_the_dubious_ownership_switch_reaches_git_through_the_isolated_environment(monkeypatch, tmp_path: Path):
+    _distrusted(monkeypatch, tmp_path)
     assert cb.git_environment()["GIT_TEST_ASSUME_DIFFERENT_OWNER"] == "1"
+
+
+def test_a_global_safe_directory_wildcard_does_not_hide_the_distrust_setup(tmp_path: Path, monkeypatch):
+    # what a CI runner has: every directory trusted by the global configuration
+    trusting = tmp_path / "trusting.gitconfig"
+    trusting.write_text("[safe]\n\tdirectory = *\n", encoding="utf-8")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(trusting))
+    repo = _committed_source_repo(tmp_path)
+    assert cb.index_has_blob(repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py") is True
+    _distrusted(monkeypatch, tmp_path)
+    with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
+        cb.index_has_blob(repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py")
 
 
 def test_working_copy_drift_never_reports_no_drift_for_a_repository_git_distrusts(tmp_path: Path, monkeypatch):
     repo = _committed_source_repo(tmp_path)
     (repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py").write_bytes(b"VALUE = 999\n")  # a real hand edit
     assert cb.working_copy_drift(repo / Path(*SOURCE_ROOT.parts)) == ["core/solver.py"]  # git can see it
-    _distrusted(monkeypatch)
+    _distrusted(monkeypatch, tmp_path)
     with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
         cb.working_copy_drift(repo / Path(*SOURCE_ROOT.parts))
 
@@ -274,7 +298,7 @@ def test_committed_bytes_and_index_has_blob_do_not_fall_back_for_a_repository_gi
     repo = _committed_source_repo(tmp_path)
     target = repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py"
     assert cb.index_has_blob(target) is True
-    _distrusted(monkeypatch)
+    _distrusted(monkeypatch, tmp_path)
     with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
         cb.committed_bytes(target)
     with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
@@ -287,7 +311,7 @@ def test_verify_manifest_is_never_clean_for_a_repository_git_distrusts(tmp_path:
     archive = repo / Path(*ARCHIVE_ROOT.parts)
     _git(repo, "add", "-A")
     (archive / "core" / "solver.py").write_bytes(b"VALUE = 999\n")  # hand-edited archive file
-    _distrusted(monkeypatch)
+    _distrusted(monkeypatch, tmp_path)
     errors = verify_manifest(manifest, archive, repo_root=repo)
     assert errors and all("cannot" in error for error in errors)
 

@@ -80,6 +80,10 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: test_gate_d_docs_consistency checks that the commit named in the workstate is an ancestor of HEAD,
+          # which a depth-1 checkout cannot answer. The per-push `python` job runs a focused list without that test.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"

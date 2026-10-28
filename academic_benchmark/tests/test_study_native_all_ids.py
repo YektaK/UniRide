@@ -1,10 +1,17 @@
-"""Every algorithm ID of both study profiles can run natively and pass native validation (A18 OQ-4).
+"""Every algorithm ID of both study profiles can run natively and pass native validation (A18 OQ-4, D-10).
 
-The committed profiles are not touched. A copy of each profile is built in ``tmp_path`` with
-``secondary_protocol.algorithm_ids = null`` (every study ID) and a small ``termination``; the native rows
-of the smallest instance (eil51, one replicate) run through the smoke service that the paper service
-reuses (``run_study_smoke`` with the committed-artifact loader), so the native contract validation of
-``_native_result_record`` and the composite check of the exported row both run for every ID.
+The committed profiles are not touched. Since the D-10 Prepare step they list every study ID (ten for Bildiri) in
+``secondary_protocol.algorithm_ids`` and carry ``termination = {"max_iterations": 1000}``. A copy of each profile is
+built in ``tmp_path`` with ``secondary_protocol.algorithm_ids = null`` (null means every study ID) and one of two
+terminations, and the native rows of the smallest instance (eil51, one replicate) run through the smoke service that the
+paper service reuses (``run_study_smoke`` with the committed-artifact loader), so the native contract validation of
+``_native_result_record`` and the composite check of the exported row both run for every ID:
+
+* the committed 1000-iteration form, for every ID except the 3-opt based ones (about 20 s each at 1000);
+* a 3-iteration form for every ID, including the 3-opt based ones.
+
+The test pins that each profile has one native row per study ID, in study order, and that no row carries an evaluation
+budget (native termination is a separate protocol from the fixed-budget one).
 """
 from __future__ import annotations
 

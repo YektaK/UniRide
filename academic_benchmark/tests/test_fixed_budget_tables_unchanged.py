@@ -49,8 +49,8 @@ RUNTIME = RuntimeBackendAvailability(True, True, "deterministic golden fixture")
 _VOLATILE_KEYS = {"created_at", "updated_at", "timestamp", "started_at", "finished_at", "created", "updated", "ts", "time"}
 
 # sha256 of committed exact evidence, captured at the base commit. The exact result trees are ``-text`` in
-# .gitattributes, so their raw bytes are pinned; ``study.json`` has no attribute (a Windows checkout with
-# core.autocrlf holds CRLF), so its bytes are pinned after a CRLF -> LF normalisation.
+# .gitattributes, so their raw bytes are pinned; ``study.json`` is ``text eol=lf`` there (A20 L6 d), so every checkout
+# holds LF bytes and the CRLF -> LF step in ``_pinned_sha`` is a no-op safeguard kept for a checkout made before that rule.
 PINNED_FILES = {
     "docs/paper/results/tsplib-exact-reference/stage1-verification/README.md": "raw",
     "docs/paper/results/tsplib-exact-reference/stage1-verification/manifest.json": "raw",
@@ -177,8 +177,25 @@ def _native_config() -> dict:
 
 
 # ------------------------------------------------------------------------------------------ rendering
+_TEXT_MODE_SUFFIXES = {".json", ".jsonl"}  # written by the pilots with ``Path.write_text``: the host's newline
+
+
+def _read_output(path: Path) -> str:
+    """The bytes of one pilot output file, as the Windows machine that captured the golden wrote them.
+
+    ``manifest.json``, ``validation.json`` and ``runs.jsonl`` are written with ``Path.write_text`` (text mode), which turns
+    ``\\n`` into ``\\r\\n`` on Windows and leaves ``\\n`` on Linux; the golden holds the Windows bytes, so on every host these
+    files are compared in that form (the content, key order and every character stay exact; only the newline the OS adds is
+    made the same). ``aggregate.csv`` is written with ``newline=""`` and the ``csv`` module's own ``\\r\\n``, the same on every
+    OS, and is compared raw."""
+    data = path.read_bytes()
+    if path.suffix in _TEXT_MODE_SUFFIXES:
+        data = data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    return data.decode("utf-8")
+
+
 def _read_dir(path: Path) -> dict:
-    return {p.name: p.read_bytes().decode("utf-8") for p in sorted(path.iterdir())}
+    return {p.name: _read_output(p) for p in sorted(path.iterdir())}
 
 
 def _strip_volatile(value: Any) -> Any:
@@ -316,6 +333,19 @@ def capture_golden(tmp_path: Path) -> None:
 def test_fixed_budget_and_native_outputs_are_byte_identical(tmp_path):
     rendered = render_all(tmp_path).encode("utf-8")
     assert rendered == GOLDEN.read_bytes()
+
+
+def test_pilot_output_files_are_compared_in_the_windows_newline_form_on_every_host(tmp_path):
+    # a Linux-written manifest (LF) and a Windows-written one (CRLF) read the same; the csv module's CRLF stays raw
+    (tmp_path / "linux.json").write_bytes(b'{\n "a": 1\n}\n')
+    (tmp_path / "windows.json").write_bytes(b'{\r\n "a": 1\r\n}\r\n')
+    (tmp_path / "rows.jsonl").write_bytes(b'{"a": 1}\n{"a": 2}\n')
+    (tmp_path / "aggregate.csv").write_bytes(b"a,b\r\n1,2\r\n")
+    (tmp_path / "mixed.csv").write_bytes(b"a,b\n1,2\n")
+    assert _read_output(tmp_path / "linux.json") == _read_output(tmp_path / "windows.json") == '{\r\n "a": 1\r\n}\r\n'
+    assert _read_output(tmp_path / "rows.jsonl") == '{"a": 1}\r\n{"a": 2}\r\n'
+    assert _read_output(tmp_path / "aggregate.csv") == "a,b\r\n1,2\r\n"
+    assert _read_output(tmp_path / "mixed.csv") == "a,b\n1,2\n"  # a csv is never normalised: a wrong terminator still fails
 
 
 def test_golden_pins_every_declared_committed_file():

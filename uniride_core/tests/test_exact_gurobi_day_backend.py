@@ -378,8 +378,21 @@ def _run_with(monkeypatch, fake, log=()):
     return run_day_stages_gurobi(_typed_cell(), large_limit=1, session=session)
 
 
+def test_a_session_error_class_named_amplexception_is_backend_unavailable_without_amplpy(monkeypatch):
+    # Always runs: the adapter recognises the session error by the class NAME in the MRO (it never imports amplpy at module
+    # level), so a stand-in of that name exercises the same path where amplpy is not installed (CI).
+    class AMPLException(Exception):
+        pass
+
+    secret = "internal token ZX-SECRET-4711 path C:/somewhere/ampl"
+    res = _run_with(monkeypatch, _FakeAmpl(solve_error=AMPLException(secret)))
+    assert res.status == "backend_unavailable" and res.solver == "gurobi"
+    assert res.note == "AMPL session failed during a stage: AMPLException"
+    assert "ZX-SECRET" not in res.note and "somewhere" not in res.note
+
+
 def test_an_ampl_session_error_during_a_stage_is_backend_unavailable_not_raised(monkeypatch):
-    import amplpy  # the real error type of the session's error handler
+    amplpy = pytest.importorskip("amplpy", reason="amplpy is not installed: this test needs the real AMPLException type of the session's error handler")
 
     err = amplpy.AMPLException("file", 3, 1, "Gurobi license expired for licensee someone@example.org")
     res = _run_with(monkeypatch, _FakeAmpl(solve_error=err))
@@ -390,7 +403,7 @@ def test_an_ampl_session_error_during_a_stage_is_backend_unavailable_not_raised(
 
 
 def test_the_session_error_note_records_only_the_exception_type_never_its_text(monkeypatch):
-    import amplpy
+    amplpy = pytest.importorskip("amplpy", reason="amplpy is not installed: this test needs the real AMPLException type of the session's error handler")
 
     secret = "internal token ZX-SECRET-4711 path C:/somewhere/ampl"  # no word the scrubber would catch
     res = _run_with(monkeypatch, _FakeAmpl(solve_error=amplpy.AMPLException("file", 3, 1, secret)))

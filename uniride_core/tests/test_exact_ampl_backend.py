@@ -161,6 +161,9 @@ def test_local_config_file_is_git_ignored():
 
 
 def test_empty_ampl_dir_gives_backend_unavailable_without_raising(tmp_path, monkeypatch):
+    # The directory is only looked at after amplpy is imported; without amplpy (CI installs no exact extra) the note names the
+    # missing package instead, which test_missing_amplpy_gives_backend_unavailable covers.
+    pytest.importorskip("amplpy", reason="amplpy (optional extra requirements-exact.txt) is not installed: the UNIRIDE_AMPL_DIR lookup runs after the import")
     from uniride_core.exact import ampl_backend
 
     monkeypatch.setenv("UNIRIDE_AMPL_DIR", str(tmp_path))

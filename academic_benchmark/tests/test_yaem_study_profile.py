@@ -29,6 +29,7 @@ from academic_benchmark.studies import (
     load_study,
 )
 from academic_benchmark.studies.smoke import run_study_smoke
+from academic_benchmark.tests.profile_status import assert_real_status
 from uniride_core.algorithms.capabilities import ExecutionProtocol
 from uniride_core.algorithms.distance import tsplib_distance_by_type
 from uniride_core.algorithms.tsplib_parser import parse_tsplib_text
@@ -74,7 +75,7 @@ def plan():
 def test_profile_loads_through_the_study_service_and_passes_preflight(plan):
     study = plan.study
     assert study.study_id == "yaem2026"
-    assert study.status == "draft"
+    assert_real_status(study.status)  # draft until the approval commit, active after it
     assert study.title == "YAEM 2026 Canonical TSP Profile"
     assert study.analysis_plan_id == "yaem2026-v1"
     assert study.paper_metadata.venue == "YAEM 2026"
@@ -295,4 +296,4 @@ def test_yaem_and_bildiri_profiles_do_not_share_a_base_seed(payload):
     bildiri = json.loads((REPOSITORY_ROOT / BILDIRI_STUDY).read_text(encoding="utf-8"))
     assert payload["base_seed"] != bildiri["base_seed"]
     assert payload["base_seed"] == 2027  # draft placeholder chosen by the lead, owner-approved
-    assert payload["status"] == "draft"
+    assert_real_status(payload["status"])

@@ -22,6 +22,7 @@ from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.contracts.run_index import RunIndexV2
 from academic_benchmark.fairness import normalize_problem
 from academic_benchmark.studies.service import load_study_with_plan
+from academic_benchmark.tests.profile_status import assert_real_status
 
 REPO = Path(__file__).resolve().parents[2]
 FAIR_V2 = "uniride-fair-tsp-v2"
@@ -29,7 +30,9 @@ COMMIT = "a" * 40
 INDEX_SHA256 = "e" * 64  # the fixed run-index sha256 of the tests that build no campaign (A20 L7: analyse_family requires it)
 PER_INSTANCE = "per-instance-independent"
 ACROSS = "across-instances-tsp-matched"
-_BILDIRI = load_study_with_plan("academic_benchmark/studies/bildiri2026/study.json", repository_root=REPO, mode="smoke").study
+_BILDIRI_REAL = load_study_with_plan("academic_benchmark/studies/bildiri2026/study.json", repository_root=REPO, mode="smoke").study
+assert_real_status(_BILDIRI_REAL.status)
+_BILDIRI = _BILDIRI_REAL.model_copy(update={"status": "draft"})  # the draft banner and smoke behaviour hold before and after the approval commit
 STUDY3 = _BILDIRI.model_copy(update={"algorithm_ids": ["Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP-Pure"]})  # the three algorithms of the fixtures
 CROSS_INSTANCES = ["berlin52", "eil51", "st70", "kroA100", "rd100", "eil76"]
 SEPARATED = {"Core-GA-TSP": [1, 2, 3, 4, 5], "Core-PSO-TSP": [6, 7, 8, 9, 10], "Core-GWO-TSP-Pure": [11, 12, 13, 14, 15]}
@@ -165,12 +168,25 @@ def cross_items(shift=0.0, problems=CROSS_INSTANCES, algorithms=ALGORITHMS, *, c
     return items
 
 
+def as_draft(plan):
+    """The real plan with its status forced to ``draft`` (every other field is the committed one).
+
+    The committed status is ``draft`` before the approval commit and ``active`` after it; the tests that exercise the draft
+    behaviour (inference refused, draft banner) must see a draft plan in both states."""
+    assert_real_status(plan.status)
+    if plan.status == "draft":
+        return plan
+    data = plan.model_dump(mode="json")
+    data["status"] = "draft"
+    return AnalysisPlanV1.model_validate(data)
+
+
 @pytest.fixture(scope="module")
 def draft_plans():
     out = {}
     for study in ("bildiri2026", "yaem2026"):
         loaded = load_study_with_plan(f"academic_benchmark/studies/{study}/study.json", repository_root=REPO, mode="smoke")
-        out[study] = loaded.analysis_plan.plan
+        out[study] = as_draft(loaded.analysis_plan.plan)
     return out
 
 

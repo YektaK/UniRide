@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from academic_benchmark.contracts import DatasetManifestV1, StudyManifestV1
 from academic_benchmark.native_protocol import NATIVE_PROTOCOL
+from academic_benchmark.tests.profile_status import assert_real_status
 from uniride_core.algorithms.tsplib_parser import parse_atsp_text
 
 
@@ -130,15 +131,15 @@ class TestStudyManifest:
     def test_profile_identity_and_scope(self, study_manifest: StudyManifestV1):
         assert study_manifest.schema_version == "uniride-study/v1"
         assert study_manifest.study_id == "bildiri2026"
-        assert study_manifest.status == "draft"
+        assert_real_status(study_manifest.status)  # draft until the approval commit, active after it
         assert study_manifest.problem_families == ["TSP", "ATSP"]
         assert study_manifest.run_count == 30  # A18 OQ-1 a (owner 2026-10-26); smoke caps replicates at 3 (SMOKE_MAX_REPLICATES)
         assert study_manifest.seed_protocol_version == "sha256-seed-v1"
         assert study_manifest.output_policy.repository_outputs == "smoke_only"
 
-    def test_paper_venue_is_the_congress_name_while_status_stays_draft(self, study_manifest: StudyManifestV1):
-        # D-10 Prepare step (owner 2026-10-28): the venue is named, the status is not flipped yet.
-        assert study_manifest.status == "draft"
+    def test_paper_venue_is_the_congress_name(self, study_manifest: StudyManifestV1):
+        # D-10 Prepare step (owner 2026-10-28): the venue is named; the status is draft until the approval commit, active after it.
+        assert_real_status(study_manifest.status)
         assert study_manifest.paper_metadata.venue == "14. Uluslararası Göbeklitepe Bilimsel Çalışmalar Kongresi"
         assert study_manifest.paper_metadata.year == 2026
         assert "draft" not in study_manifest.paper_metadata.venue.lower()

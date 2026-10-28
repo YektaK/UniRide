@@ -63,8 +63,8 @@ PINNED_FILES = {
 }
 
 
-def _pinned_sha(rel: str) -> str:
-    data = (REPO_ROOT / rel).read_bytes()
+def _pinned_sha(rel: str, root: Path = REPO_ROOT) -> str:
+    data = (root / rel).read_bytes()
     if PINNED_FILES[rel] == "lf":
         data = data.replace(bytes([13, 10]), bytes([10]))
     return hashlib.sha256(data).hexdigest()

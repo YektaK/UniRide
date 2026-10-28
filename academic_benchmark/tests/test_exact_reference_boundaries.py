@@ -177,10 +177,15 @@ def test_the_reader_refuses_archive_paths_at_run_time(bad):
 
 
 # ---------------------------------------------------------------- unchanged study profile and schemas
+def lf_sha256_of(root: Path, relative: str) -> str:
+    """sha256 of the LF bytes of ``root / relative`` (the value ``PINNED_LF_SHA256`` pins)."""
+    data = (root / relative).read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(data).hexdigest()
+
+
 @pytest.mark.parametrize("relative", sorted(PINNED_LF_SHA256))
 def test_study_profile_and_existing_schemas_are_byte_identical_to_the_base(relative):
-    data = (REPO / relative).read_bytes().replace(b"\r\n", b"\n")
-    assert hashlib.sha256(data).hexdigest() == PINNED_LF_SHA256[relative]
+    assert lf_sha256_of(REPO, relative) == PINNED_LF_SHA256[relative]
 
 
 # Study code may use the pooling API of the shared protocol registry (Gate C C-12 refuses mixed-pooling files, Package D

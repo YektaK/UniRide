@@ -20,6 +20,7 @@ import pytest
 
 from academic_benchmark import archive_manifest
 from academic_benchmark.exact_reference.reader import ExactReferenceRefused, load_exact_reference
+from academic_benchmark.tests.profile_status import draft_normalised_bytes
 
 REPO = Path(__file__).resolve().parents[2]
 PKG = REPO / "academic_benchmark"
@@ -177,9 +178,17 @@ def test_the_reader_refuses_archive_paths_at_run_time(bad):
 
 
 # ---------------------------------------------------------------- unchanged study profile and schemas
+STATUS_NORMALISED = {"academic_benchmark/studies/bildiri2026/study.json"}  # pinned in the draft form; "active" is the approval commit's one-line edit
+
+
 def lf_sha256_of(root: Path, relative: str) -> str:
-    """sha256 of the LF bytes of ``root / relative`` (the value ``PINNED_LF_SHA256`` pins)."""
+    """sha256 of the LF bytes of ``root / relative`` (the value ``PINNED_LF_SHA256`` pins).
+
+    The study profile is hashed with its status line normalised to ``draft`` (one shared helper, loud on any other shape), so
+    the pin holds in the draft and in the activated state and still covers every other byte."""
     data = (root / relative).read_bytes().replace(b"\r\n", b"\n")
+    if relative in STATUS_NORMALISED:
+        data = draft_normalised_bytes(data)
     return hashlib.sha256(data).hexdigest()
 
 

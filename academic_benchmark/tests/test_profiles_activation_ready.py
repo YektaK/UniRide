@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from academic_benchmark.tests.profile_status import assert_real_status, draft_normalised_bytes, draft_normalised_sha256
 from academic_benchmark.tests.test_exact_reference_boundaries import PINNED_LF_SHA256, lf_sha256_of
 from academic_benchmark.tests.test_fixed_budget_tables_unchanged import GOLDEN, PINNED_FILES, _pinned_sha
 
@@ -48,6 +49,38 @@ def test_the_activation_edit_changes_exactly_one_line_per_file(activated):
         assert edited.count(ACTIVE) == 1 and edited.count(DRAFT) == 0
         assert edited.replace(ACTIVE, DRAFT, 1) == real.replace(ACTIVE, DRAFT, 1)  # every other byte is the real file's
         assert json.loads(edited)["status"] == "active"
+
+
+def test_the_normalisation_helper_is_loud_on_any_unexpected_shape():
+    ok_draft, ok_active = b'{\n  "status": "draft",\n  "x": 1\n}', b'{\n  "status": "active",\n  "x": 1\n}'
+    assert draft_normalised_bytes(ok_draft) == ok_draft
+    assert draft_normalised_bytes(ok_active) == ok_draft
+    assert draft_normalised_sha256(ok_active) == draft_normalised_sha256(ok_draft)
+    for bad in (
+        b'{"x": 1}',  # no status line
+        b'{"status": "retired"}',  # another status
+        b'{"status": "draft", "n": {"status": "active"}}',  # both forms
+        b'{"status": "active", "n": {"status": "active"}}',  # a repeated line
+        b'{"status": "draft", "n": {"status": "draft"}}',
+        b'{"status":"active"}',  # the exact string only: other spacing is not understood
+    ):
+        with pytest.raises(AssertionError):
+            draft_normalised_bytes(bad)
+
+
+def test_every_other_byte_stays_pinned_a_changed_byte_changes_the_normalised_hash(activated):
+    relative = "academic_benchmark/studies/bildiri2026/study.json"
+    data = (activated / relative).read_bytes()
+    tampered = data.replace(b'"study_id": "bildiri2026"', b'"study_id": "bildiri2027"', 1)
+    assert tampered != data
+    assert draft_normalised_sha256(tampered) != draft_normalised_sha256(data)
+
+
+def test_the_real_files_carry_exactly_draft_or_active():
+    for relative in FOUR_FILES:
+        assert_real_status(json.loads((REPO / relative).read_text(encoding="utf-8"))["status"])
+    with pytest.raises(AssertionError):
+        assert_real_status("retired")
 
 
 def test_the_pinned_bildiri_profile_hash_holds_in_the_activated_state(activated):

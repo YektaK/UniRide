@@ -71,7 +71,7 @@ def _load_plans():
     out = {}
     for name in ("bildiri2026", "yaem2026"):
         loaded = load_study_with_plan(f"academic_benchmark/studies/{name}/study.json", repository_root=fx.REPO, mode="smoke")
-        out[name] = loaded.analysis_plan.plan
+        out[name] = fx.as_draft(loaded.analysis_plan.plan)  # the real plan as a draft, before and after the approval commit
     return out
 
 

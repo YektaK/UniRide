@@ -641,7 +641,8 @@ def test_across_instances_needs_at_least_two_instances(active):
 
 # ---------------------------------------------------------------- guards
 @pytest.mark.requires_analysis_extra
-def test_both_real_plans_are_draft_and_inference_is_refused_with_descriptive_output(draft_plans):
+def test_both_real_plans_as_draft_refuse_inference_with_descriptive_output(draft_plans):
+    # ``draft_plans`` holds the real plans with the status forced to draft, so this holds before and after the approval commit
     for study, plan in draft_plans.items():
         assert plan.status == "draft" and plan.minimum_n_per_cell == 30  # owner 2026-10-28; draft still refuses inference
         result = run(per_instance_items(SEPARATED, study_id=plan.study_id), plan, study_id=plan.study_id)

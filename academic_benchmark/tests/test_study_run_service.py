@@ -28,6 +28,7 @@ from academic_benchmark.studies.smoke import (
     SMOKE_MAX_REPLICATES, StudySmokeError, assert_no_ranking_words, comparable_row, write_rows_file,
 )
 from academic_benchmark.studies.service import fixed_budget_levels_for
+from academic_benchmark.tests.profile_status import copy_real_study_as
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 STUDY = "studies/study.json"
@@ -125,31 +126,24 @@ def _view(out: Path) -> dict:
 
 # ---------------------------------------------------------------------------- paper mode refusals (no execution)
 @pytest.mark.parametrize("study", ["bildiri2026", "yaem2026"])
-def test_paper_mode_refuses_both_real_profiles_naming_the_status(tmp_path, study):
+def test_paper_mode_refuses_both_real_profiles_as_draft_naming_the_status(tmp_path, study):
+    # A draft copy of the real files in a temporary repository: never run paper mode on the real root, because once the
+    # approval commit has made the profile active the call would start the real campaign.
+    root = tmp_path / "repo"
+    path = copy_real_study_as(REPOSITORY_ROOT, study, root, "draft")
     out = tmp_path / "out"
     with pytest.raises(StudyRunError, match="status 'draft'"):
-        run_study(f"academic_benchmark/studies/{study}/study.json", out, mode="paper",
-                  repository_root=REPOSITORY_ROOT, git_provider=CLEAN)
+        run_study(path, out, mode="paper", repository_root=root, git_provider=CLEAN)
     assert not out.exists()
 
 
 @pytest.mark.parametrize("study", ["bildiri2026", "yaem2026"])
 def test_paper_mode_refuses_the_real_draft_analysis_plans_even_when_the_profile_is_active(tmp_path, study):
     root = tmp_path / "repo"
-    source = REPOSITORY_ROOT / "academic_benchmark" / "studies" / study
-    target = root / "academic_benchmark" / "studies" / study
-    target.mkdir(parents=True)
-    profile = json.loads((source / "study.json").read_text("utf-8"))
-    for ref in profile["dataset_manifest_refs"]:
-        (root / ref).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(REPOSITORY_ROOT / ref, root / ref)
-    profile["status"] = "active"  # only the profile is forced; the committed plan stays what it is
-    (target / "study.json").write_text(json.dumps(profile), encoding="utf-8")
-    shutil.copy(source / "analysis_plan.json", target / "analysis_plan.json")
+    path = copy_real_study_as(REPOSITORY_ROOT, study, root, "active", "draft")  # the profile forced active, the plan draft
     out = tmp_path / "out"
     with pytest.raises(StudyRunError, match="analysis plan.*draft"):
-        run_study(f"academic_benchmark/studies/{study}/study.json", out, mode="paper", repository_root=root,
-                  git_provider=CLEAN)
+        run_study(path, out, mode="paper", repository_root=root, git_provider=CLEAN)
     assert not out.exists()
 
 
@@ -461,9 +455,11 @@ def test_artifact_loader_refuses_a_dataset_without_a_known_value(tmp_path):
 
 
 # ------------------------------------------------------------------------------------------------------- CLI
-def test_cli_refuses_a_real_draft_profile_with_exit_code_2_and_prints_the_reason(tmp_path, capsys):
+def test_cli_refuses_a_draft_copy_of_the_real_profile_with_exit_code_2_and_prints_the_reason(tmp_path, capsys):
+    root = tmp_path / "repo"
+    path = copy_real_study_as(REPOSITORY_ROOT, "bildiri2026", root, "draft")  # not the real root: see the note above
     out = tmp_path / "out"
-    code = main(["--study", "academic_benchmark/studies/bildiri2026/study.json", "--mode", "paper", "--out", str(out)])
+    code = main(["--study", path, "--mode", "paper", "--out", str(out), "--repository-root", str(root)])
     assert code == 2 and not out.exists()
     assert "status 'draft'" in capsys.readouterr().err
 
@@ -543,7 +539,9 @@ def test_paper_mode_refuses_any_explicit_replicates_value(tmp_path, capsys):
         with pytest.raises(StudyRunError, match="replicates"):
             _paper(root, tmp_path / "out", git_provider=CLEAN, replicates=value)
     assert not (tmp_path / "out").exists()
-    code = main(["--study", "academic_benchmark/studies/bildiri2026/study.json", "--mode", "paper",
-                 "--out", str(tmp_path / "cli-out"), "--replicates", "3"])
+    real_copy = tmp_path / "real-copy"  # a copy, not the real root: an accepted paper run on the real root would start the campaign
+    study_path = copy_real_study_as(REPOSITORY_ROOT, "bildiri2026", real_copy, "active")
+    code = main(["--study", study_path, "--mode", "paper", "--out", str(tmp_path / "cli-out"), "--replicates", "3",
+                 "--repository-root", str(real_copy)])
     assert code == 2 and "replicates" in capsys.readouterr().err
     assert _paper(root, tmp_path / "ok", git_provider=CLEAN).status == "passed"  # not giving it is fine

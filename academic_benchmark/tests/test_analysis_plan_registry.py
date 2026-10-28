@@ -25,6 +25,7 @@ from academic_benchmark.contracts.analysis_plan import AnalysisPlanV1
 from academic_benchmark.contracts.export_schemas import MODELS, check_schemas, render_schemas
 from academic_benchmark.studies import StudyServiceError, load_study
 from academic_benchmark.studies.service import load_study_with_plan
+from academic_benchmark.tests.profile_status import assert_real_status, copy_real_study_as
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 STUDIES = ("bildiri2026", "yaem2026")
@@ -141,19 +142,19 @@ def test_family_instance_sets_follow_oq8():
 
 
 @pytest.mark.parametrize("study", STUDIES)
-def test_committed_plans_stay_draft_but_are_fully_resolved(study):
+def test_committed_plans_are_fully_resolved(study):
     # Owner 2026-10-28: minimum_n_per_cell = 30 (complete cells only) and the answered items left `unresolved`;
-    # status stays draft until the D-10 approval commit.
+    # status is draft until the D-10 approval commit and active after it.
     plan = AnalysisPlanV1.model_validate(_plan_payload(study))
-    assert plan.status == "draft"
+    assert_real_status(plan.status)
     assert plan.minimum_n_per_cell == 30
     assert plan.unresolved == []
 
 
 @pytest.mark.parametrize("study", STUDIES)
-def test_committed_plans_would_validate_as_active_without_being_active(study):
+def test_committed_plans_validate_as_active(study):
     payload = _plan_payload(study)
-    assert payload["status"] == "draft"  # the committed file is not activated
+    assert_real_status(payload["status"])  # draft before the approval commit, active after it
     payload["status"] = "active"  # a scratch copy only: the contract accepts the resolved plan as activatable
     assert AnalysisPlanV1.model_validate(payload).status == "active"
 
@@ -249,18 +250,36 @@ def test_a_missing_minimum_n_must_be_declared_unresolved():
 
 
 @pytest.mark.parametrize("study", STUDIES)
-def test_committed_profiles_resolve_in_smoke_mode_and_are_labelled_draft(study):
+def test_committed_profiles_resolve_in_smoke_mode_with_their_own_plan(study):
     loaded = load_study_with_plan(_study_rel(study), repository_root=REPOSITORY_ROOT, mode="smoke")
     resolution = loaded.analysis_plan
     assert resolution.plan is not None and resolution.plan.analysis_plan_id == PLAN_IDS[study]
     assert resolution.problem is None
+    assert_real_status(resolution.plan.status)
+    assert resolution.plan.status in resolution.label  # the label names the committed status, whichever it is
+
+
+@pytest.mark.parametrize("study", STUDIES)
+def test_smoke_label_of_a_draft_copy_says_no_inference(study, tmp_path):
+    # the draft behaviour is exercised on a draft copy of the real files, so it holds before and after the approval commit
+    path = copy_real_study_as(REPOSITORY_ROOT, study, tmp_path, "draft")
+    resolution = load_study_with_plan(path, repository_root=tmp_path, mode="smoke").analysis_plan
+    assert resolution.plan is not None and resolution.plan.status == "draft"
     assert "draft" in resolution.label and "no inference" in resolution.label
 
 
 @pytest.mark.parametrize("study", STUDIES)
-def test_paper_mode_refuses_the_draft_plans(study):
+def test_paper_mode_refuses_the_draft_plans(study, tmp_path):
+    path = copy_real_study_as(REPOSITORY_ROOT, study, tmp_path, "draft")
     with pytest.raises(StudyServiceError, match="draft"):
-        load_study(_study_rel(study), repository_root=REPOSITORY_ROOT, mode="paper")
+        load_study(path, repository_root=tmp_path, mode="paper")
+
+
+@pytest.mark.parametrize("study", STUDIES)
+def test_paper_mode_loads_the_activated_copies(study, tmp_path):
+    path = copy_real_study_as(REPOSITORY_ROOT, study, tmp_path, "active")
+    loaded = load_study(path, repository_root=tmp_path, mode="paper")
+    assert loaded.study_id == study and loaded.status == "active"
 
 
 def test_load_study_without_a_mode_keeps_its_previous_behaviour():

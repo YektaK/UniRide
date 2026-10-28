@@ -165,6 +165,57 @@ Rerun of the nine files that held the 25 failures (`test_bildiri_quarantine_boun
 - `test_cli_filename_cannot_follow_symlink_outside_result_roots`: `WinError 1314`, unchanged (Windows privilege).
 - `test_the_real_instance_set_is_the_16_tsp_plus_ft53` and `test_without_ampl_the_runner_exits_with_code_3_and_writes_nothing`: unchanged, `'rat99' != 'kroa100'`. Correction to the cause given above: the instance set is read from `academic_benchmark/tsplib_data/tsplib.db` (`scripts/run_exact_tsp_reference.py:215-226`, TSP with `optimal` not null and dimension <= 100), not from the leftover data directories. The `tsplib.db` on this PC is 2,906,341,376 bytes, dated 2026-06-30 (file listing only; contents not read).
 
+### Rerun with the laptop's `tsplib.db` (2026-10-28)
+
+The owner copied the laptop's `tsplib.db` to this PC: 1,004,810,240 bytes, dated 2026-10-13 (file listing only; contents not read). Commit `33f1fc2bf4faa2fa9f726862289375a8081b525d` (`WIP`; lead note at merge `1a9bd225`: no file of the study path changed since `8513c2b6`); estimator `dirty: True` (untracked `archive/docs/` only). Outputs in `C:\wt\d04b2\` (`pytest-db2.txt`, `bildiri-db2\`, `yaem-db2\`, `timings-db2.txt`). Process Lasso and ProcessGovernor not running. CPU load was not sampled during these runs; after them: the Claude app about 0.5 core, explorer about 0.3 core, Opera open, Windows load samples 4 %, 54 %, 53 %, power plan Balanced ("Dengeli"), reported clock 3700 MHz.
+
+| Command | Start | Duration | Exit |
+|---|---|---|---|
+| `pytest uniride_core/tests/test_exact_tsp_runner.py::test_the_real_instance_set_is_the_16_tsp_plus_ft53 ...::test_without_ampl_the_runner_exits_with_code_3_and_writes_nothing -m "not requires_ampl" -q -p no:cacheprovider -rfs` | 00:29 | 7 s | 0: `2 passed in 4.92s` |
+| `estimate` Bildiri (same flags as above) | 00:29:18 | 154 s | 0 |
+| `estimate` YAEM (same flags as above) | 00:31:52 | 938 s | 0 |
+
+All non-time fields of both estimate outputs are identical to the first run on the old `tsplib.db` (runs, evaluation upper bounds, evaluations and stop reason per calibration row, iterations reached, native iteration counts; checked with a text diff after masking times and the commit line). Times differ:
+
+| Item | First run (`8513c2b6`, old db) | Rerun (`33f1fc2b`, laptop db) |
+|---|---|---|
+| Bildiri fixed budget | 14.02 h | 18.87 h |
+| Bildiri native | 0.01 h | 0.01 h |
+| YAEM fixed budget | 9.56 h | 13.12 h |
+| YAEM native | 5.85 h | 8.58 h |
+| Core-ThreeOpt-TSP kroa100 us/eval | 25.37 (Bildiri), 25.20 (YAEM) | 29.26 (Bildiri), 35.27 (YAEM) |
+| Core-GWO-TSP-Pure kroa100 us/eval | 111.85 (Bildiri), 59.73 (YAEM) | 154.35 (Bildiri), 77.42 (YAEM) |
+| Native ThreeOpt kroa100 s/iteration | 1.7919 | 2.4368 |
+| Memetic-3opt polish kroa100 s/iteration (GWO, HHO) | 1.7588, 1.7522 | 2.5808, 2.5882 |
+
+Rerun per-algorithm fixed-budget estimates. Bildiri: TwoOpt 1.21 h, ThreeOpt 1.25 h, OrOpt 1.18 h, GA 1.89 h, PSO 1.61 h, GA-Memetic-2opt 1.62 h, GWO-Pure 5.97 h, HHO-Pure 1.80 h, GWO-Memetic-2opt 1.23 h, HHO-Memetic-2opt 1.12 h. YAEM: TwoOpt 0.58 h, ThreeOpt 0.68 h, OrOpt 0.59 h, GWO-Pure 1.63 h, HHO-Pure 0.97 h, GWO-Memetic-2opt 0.73 h, HHO-Memetic-2opt 0.71 h, GWO-Memetic-3opt 1.85 h, HHO-Memetic-3opt 1.00 h, GWO-Memetic-ALNS 2.90 h, HHO-Memetic-ALNS 1.47 h.
+
+### Third run with recorded load (2026-10-28)
+
+Conditions set by the owner before the start: Opera closed, power plan "Yüksek performans" (High performance, `8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c`; checked with `powercfg /getactivescheme` from PowerShell just before the start; the same call from the runner script printed an empty line). Process Lasso and ProcessGovernor not running; Claude Science open but idle (0.02 core over 5 s). Same commit as the second run, `33f1fc2b` (`origin/WIP` was 8 commits ahead and was not pulled), same `tsplib.db` (laptop copy), same flags. Outputs in `C:\wt\d04b2\` (`bildiri-run3\`, `yaem-run3\`, `timings-run3.txt`, `load-run3.csv`, sampler `load_sampler.ps1`).
+
+| Command | Start | Duration | Exit |
+|---|---|---|---|
+| `estimate` Bildiri | 00:53:47 | 117 s | 0 |
+| `estimate` YAEM | 00:55:44 | 651 s | 0 |
+
+Load during the run: 43 samples every 15 s from 00:54:11 to 01:06:44 (Windows `LoadPercentage` and CPU time per process over each 15 s window). `LoadPercentage`: median 44 %, min 24 %, max 88 %. Processes among the top three: `python` (the estimator) in 41 samples, mean 1.13 cores, max 1.17; `claude` (Claude desktop app) in 43 samples, mean 0.96 cores, max 1.54; `powershell` (the sampler) mean 0.06; `TeraCopy` in 10 samples, mean 0.06; `claude-science` in 1 sample, 0.09; `MSI.TerminalServer` in 1 sample, 0.17.
+
+All non-time fields of both outputs are identical to the first run (text diff after masking times and the commit line: 0 lines).
+
+| Item | Run 1 (`8513c2b6`, old db, Balanced) | Run 2 (`33f1fc2b`, laptop db, Balanced, load not sampled) | Run 3 (`33f1fc2b`, laptop db, High performance, load sampled) |
+|---|---|---|---|
+| Bildiri fixed budget | 14.02 h | 18.87 h | 14.30 h |
+| Bildiri native | 0.01 h | 0.01 h | 0.01 h |
+| YAEM fixed budget | 9.56 h | 13.12 h | 9.53 h |
+| YAEM native | 5.85 h | 8.58 h | 5.89 h |
+| Core-ThreeOpt-TSP kroa100 us/eval (Bildiri, YAEM) | 25.37, 25.20 | 29.26, 35.27 | 27.24, 25.84 |
+| Core-GWO-TSP-Pure kroa100 us/eval (Bildiri, YAEM) | 111.85, 59.73 | 154.35, 77.42 | 115.54, 59.91 |
+| Native ThreeOpt kroa100 s/iteration | 1.7919 | 2.4368 | 1.7973 |
+| Memetic-3opt polish kroa100 s/iteration (GWO, HHO) | 1.7588, 1.7522 | 2.5808, 2.5882 | 1.7993, 1.7538 |
+
+Run 3 per-algorithm fixed-budget estimates. Bildiri: TwoOpt 0.94 h, ThreeOpt 1.11 h, OrOpt 0.91 h, GA 1.35 h, PSO 1.11 h, GA-Memetic-2opt 1.14 h, GWO-Pure 4.51 h, HHO-Pure 1.42 h, GWO-Memetic-2opt 0.91 h, HHO-Memetic-2opt 0.92 h. YAEM: TwoOpt 0.45 h, ThreeOpt 0.52 h, OrOpt 0.43 h, GWO-Pure 1.30 h, HHO-Pure 0.68 h, GWO-Memetic-2opt 0.47 h, HHO-Memetic-2opt 0.47 h, GWO-Memetic-3opt 1.39 h, HHO-Memetic-3opt 0.67 h, GWO-Memetic-ALNS 2.03 h, HHO-Memetic-ALNS 1.12 h. Native at the provisional limits: Bildiri 420 runs 33.2 s, YAEM 1320 runs 21,191.5 s `[PROVISIONAL, NOT A SCIENTIFIC SETTING]`.
+
 ### Skips (169)
 
 - 157: `uniride_core/tests/test_exact_gurobi_day_backend.py` (126 + 1 + 28 + 1 + 1): `Gurobi through AMPL unavailable: AMPL could not start via amplpy default lookup: RuntimeError`.

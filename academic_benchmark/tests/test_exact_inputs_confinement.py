@@ -92,6 +92,20 @@ def test_manifest_file_name_cannot_leave_the_collection_folder(inputs, tmp_path,
         inputs.read_collection_tour("x1", folder)
 
 
+@pytest.mark.parametrize("bad_name", ["C:/outside.opt.tour", "C:\\outside.opt.tour", "C:outside.opt.tour", "\\outside.opt.tour",
+                                      "\\\\server\\share\\outside.opt.tour"])
+def test_a_windows_drive_or_root_path_is_refused_whatever_the_host_os(inputs, tmp_path, monkeypatch, bad_name):
+    # A drive letter or a backslash root only means "absolute" to a Windows path parser, yet a manifest file_name must be a plain
+    # relative name on every OS. ``inputs.Path`` is replaced by the POSIX flavour (what a Linux runner has), so this test fails
+    # on any host if the refusal depends on the host's own path flavour.
+    from pathlib import PurePosixPath
+
+    monkeypatch.setattr(inputs, "Path", PurePosixPath)
+    # the first guard (a relative name), not the resolution guard: on Linux the latter would not see ``C:/..`` as leaving the folder
+    with pytest.raises(inputs.InputRefused, match="file_name.*must be a relative path"):
+        inputs._confined(tmp_path, bad_name, "x1: file_name")
+
+
 def test_tsp_manifest_file_name_cannot_leave_the_collection_folder(inputs, tmp_path):
     body = b"NAME : x\n"
     (tmp_path / "outside.tsp").write_bytes(body)

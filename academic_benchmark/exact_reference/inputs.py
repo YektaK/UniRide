@@ -18,7 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TSPLIB_DATA_DIR = REPO_ROOT / "academic_benchmark" / "tsplib_data"
@@ -71,7 +71,10 @@ def _confined(base: Path, relative, what: str, anchor: Path | None = None) -> Pa
     escape or a link leading outside is refused (a manifest names files of its own folder or of the dataset root, nothing
     else)."""
     text = str(relative)
-    if not text or Path(text).is_absolute() or Path(text).drive:
+    # A drive letter, a UNC share or a backslash root is "absolute" only to a Windows path parser; a manifest is read on every OS,
+    # so such a name is refused everywhere (the host flavour alone would let ``C:/x`` through on Linux).
+    windows = PureWindowsPath(text)
+    if not text or Path(text).is_absolute() or Path(text).drive or windows.drive or windows.root:
         raise InputRefused(f"{what} {text!r} must be a relative path inside {base.name}/")
     root = base.resolve()
     target = ((anchor if anchor is not None else root) / text).resolve()

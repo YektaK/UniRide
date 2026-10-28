@@ -68,7 +68,35 @@ def test_the_normalisation_helper_is_loud_on_any_unexpected_shape():
             draft_normalised_bytes(bad)
 
 
-def test_every_other_byte_stays_pinned_a_changed_byte_changes_the_normalised_hash(activated):
+def _statuses(root: Path) -> dict:
+    return {relative: json.loads((root / relative).read_text(encoding="utf-8"))["status"] for relative in FOUR_FILES}
+
+
+def _assert_one_status_for_all(root: Path) -> None:
+    statuses = _statuses(root)
+    assert set(statuses.values()) <= {"draft", "active"}, statuses
+    assert len(set(statuses.values())) == 1, f"half-done approval: the four files must carry one status, got {statuses}"
+
+
+def test_the_four_real_files_carry_the_same_status():
+    # lead decision A18 (b): one approval commit activates both studies, profiles and plans together
+    _assert_one_status_for_all(REPO)
+
+
+def test_a_half_done_approval_is_caught(tmp_path, activated):
+    _assert_one_status_for_all(activated)  # all four active: fine
+    half = tmp_path / "half"
+    for relative in FOUR_FILES:
+        target = half / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((activated / relative).read_bytes())
+    one = half / FOUR_FILES[0]
+    one.write_bytes(one.read_bytes().replace(ACTIVE, DRAFT, 1))  # only one of the four files left draft
+    with pytest.raises(AssertionError, match="half-done"):
+        _assert_one_status_for_all(half)
+
+
+def test_a_changed_non_status_byte_changes_the_normalised_hash(activated):
     relative = "academic_benchmark/studies/bildiri2026/study.json"
     data = (activated / relative).read_bytes()
     tampered = data.replace(b'"study_id": "bildiri2026"', b'"study_id": "bildiri2027"', 1)

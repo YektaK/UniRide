@@ -64,10 +64,14 @@ PINNED_FILES = {
 }
 
 
+STATUS_NORMALISED = {"academic_benchmark/studies/bildiri2026/study.json"}  # explicit: a future "lf" file is never normalised silently
+
+
 def _pinned_sha(rel: str, root: Path = REPO_ROOT) -> str:
     data = (root / rel).read_bytes()
     if PINNED_FILES[rel] == "lf":
         data = data.replace(bytes([13, 10]), bytes([10]))
+    if rel in STATUS_NORMALISED:
         data = draft_normalised_bytes(data)  # the profile is pinned in its draft form; the approval commit flips one status line
     return hashlib.sha256(data).hexdigest()
 

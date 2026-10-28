@@ -1,4 +1,7 @@
-"""C-13: the active YAEM 2026 study profile (draft, smoke only; owner Q1 option a).
+"""C-13: the active YAEM 2026 study profile (status draft until the paper-scale approval; owner Q1 option a).
+
+Owner decision 2026-10-28 (D-10 Prepare): the title, analysis plan id and venue carry no "draft"/"smoke"
+naming, so nothing paper-bound inherits it; only ``status`` stays ``draft`` (pre-approval).
 
 The profile mirrors the legacy YAEM set under truthful canonical IDs: ``GWO-LKH``/``HHO-LKH`` were
 false historical labels and are replaced by ``Core-GWO-TSP-Memetic-3opt``/``Core-HHO-TSP-Memetic-3opt``.
@@ -72,6 +75,11 @@ def test_profile_loads_through_the_study_service_and_passes_preflight(plan):
     study = plan.study
     assert study.study_id == "yaem2026"
     assert study.status == "draft"
+    assert study.title == "YAEM 2026 Canonical TSP Profile"
+    assert study.analysis_plan_id == "yaem2026-v1"
+    assert study.paper_metadata.venue == "YAEM 2026"
+    for value in (study.title, study.analysis_plan_id, study.paper_metadata.venue):
+        assert "draft" not in value.lower() and "smoke" not in value.lower()
     assert study.output_policy.repository_outputs == "smoke_only"
     assert study.problem_families == ["TSP"]
     assert study.algorithm_ids == EXPECTED_ALGORITHM_IDS

@@ -1,7 +1,7 @@
 {
   "schema_version": "uniride-study/v1",
   "study_id": "yaem2026",
-  "title": "YAEM 2026 Canonical TSP Draft Profile (smoke only)",
+  "title": "YAEM 2026 Canonical TSP Profile",
   "status": "draft",
   "algorithm_ids": [
     "Core-TwoOpt-TSP",
@@ -88,7 +88,7 @@
   "base_seed": 2027,
   "seed_protocol_version": "sha256-seed-v1",
   "problem_families": ["TSP"],
-  "analysis_plan_id": "yaem2026-draft-v1",
+  "analysis_plan_id": "yaem2026-v1",
   "output_policy": {"repository_outputs": "smoke_only", "paper_scale_location": "external"},
-  "paper_metadata": {"paper_id": "yaem2026", "year": 2026, "venue": "draft"}
+  "paper_metadata": {"paper_id": "yaem2026", "year": 2026, "venue": "YAEM 2026"}
 }

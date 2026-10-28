@@ -28,7 +28,7 @@ from academic_benchmark.studies.service import load_study_with_plan
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 STUDIES = ("bildiri2026", "yaem2026")
-PLAN_IDS = {"bildiri2026": "bildiri2026-reproduction-v1", "yaem2026": "yaem2026-draft-v1"}
+PLAN_IDS = {"bildiri2026": "bildiri2026-reproduction-v1", "yaem2026": "yaem2026-v1"}
 BILDIRI_TSP = {
     "tsplib-berlin52", "tsplib-eil51", "tsplib-st70", "tsplib-kroa100", "tsplib-rd100", "tsplib-eil76",
 }

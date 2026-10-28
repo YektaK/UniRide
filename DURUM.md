@@ -18,7 +18,8 @@ Son güncelleme: 2026-10-28 (MT1 ilk kapanış kaydı). Kararlar `docs/DECISION_
 - Yazılım ön koşulları TAMAM. Kalanlar donanım ve sahip işleri:
 - D-04b2 TAMAM (2026-10-28, A18; kayıt `docs/superpowers/plans/2026-10-27-d04b2-strong-pc-measurement.md`): güçlü PC'de seri tahmin Bildiri 14,02 sa, YAEM 9,56 sa sabit bütçe + YAEM native 5,85 sa (toplam ~29,4 sa).
 - Kampanyadan önce güçlü PC'de: dizüstündeki güncel `tsplib.db` oraya kopyalanacak ve iki örnek-kümesi testi orada geçmeli (A18 D-04b2 karar a); `pyvrp<0.14` sınırı (karar b, ayrı küçük iş).
-- Şefin ön-onay commit'i: OQ-1/3/4/16 değerlerinin profillere yazılması (30 koşu, native 1000; A20 L11), `.gitattributes` ile JSON satır sonlarının sabitlenmesi (A20 L6 d), D-10 şablonuyla doldurulmuş ve sahibin onayladığı koşu planı.
+- Ön-onay değerleri BİRLEŞTİ `cb449ed4` (A18): 30 koşu, native 1000 ve bütün algoritmalar (Bildiri listesi 2→10 düzeltildi), analiz planları `minimum_n_per_cell` 30 ve `unresolved` boş, `.gitattributes`; durumlar `draft`.
+- Sırada: güçlü PC'de Bildiri native yeniden ölçümü (istem `docs/handoff/2026-10-28-guclu-pc-bildiri-native-istem.md`; "Yüksek performans" güç planı), sonra D-10 şablonuyla iki koşu planı (Bildiri, YAEM) sahibin onayına; onay commit'i durumları `active` yapar.
 - Kural (A21 OQ-F7): onay commit'i ile kampanya arasında birleştirme yok.
 
 ## Sahibin kararını bekleyenler

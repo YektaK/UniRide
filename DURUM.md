@@ -20,7 +20,8 @@ Son güncelleme: 2026-10-28 (MT1 ilk kapanış kaydı). Kararlar `docs/DECISION_
 - Kampanyadan önce güçlü PC'de: dizüstündeki güncel `tsplib.db` oraya kopyalanacak ve iki örnek-kümesi testi orada geçmeli (A18 D-04b2 karar a); `pyvrp<0.14` sınırı (karar b, ayrı küçük iş).
 - Ön-onay değerleri BİRLEŞTİ `cb449ed4` (A18): 30 koşu, native 1000 ve bütün algoritmalar (Bildiri listesi 2→10 düzeltildi), analiz planları `minimum_n_per_cell` 30 ve `unresolved` boş, `.gitattributes`; durumlar `draft`.
 - YAEM adlandırması BİRLEŞTİ `ecea6ee6` (`yaem2026-v1`, yayın yeri "YAEM 2026"); Bildiri yayın yeri BİRLEŞTİ `bcef9feb` ("14. Uluslararası Göbeklitepe Bilimsel Çalışmalar Kongresi"); onay öncesi profil değerleri tamam. G9 deneme kontrolü geçti (A18). Koşu planı taslakları dalda: `docs/d10-run-plans` (`de3efae2`, birleşmedi; `[EKSİK]` alanlar var). Gece CI düzeltmesi BİRLEŞTİ `8ef7a23e` (A18); elle tetiklenen gece koşusu Linux'ta yeşil (8956 geçti).
-- Sırada: güçlü PC'de Bildiri native yeniden ölçümü (istem `docs/handoff/2026-10-28-guclu-pc-bildiri-native-istem.md`; "Yüksek performans" güç planı), sonra D-10 şablonuyla iki koşu planı (Bildiri, YAEM) sahibin onayına; onay commit'i durumları `active` yapar.
+- Bildiri native yeniden ölçümü BİRLEŞTİ `44c47434` (A18): Bildiri sabit bütçe 13,69 sa + native 5,83 sa (2100 koşu); YAEM 9,53 + 5,89 sa; seri toplam ~34,9 sa. `pyvrp<0.14` sınırı `pyproject.toml`'da var.
+- Sırada (A18 şef kararları a–c): (1) etkinleştirmeye hazır testler (durum `active` olunca kırılan sabitleme ve `draft` testleri; Opus denetçi) birleşir; (2) koşu planları yeni dalda tamamlanır (tek onay commit'i iki çalışma için; çıktı `C:\UniRideCampaign\<study_id>\`); (3) temel commit'te güçlü PC'de tam test koşusu; (4) sahibin onayı → onay commit'i → kampanya istemi.
 - Kural (A21 OQ-F7): onay commit'i ile kampanya arasında birleştirme yok.
 
 ## Sahibin kararını bekleyenler

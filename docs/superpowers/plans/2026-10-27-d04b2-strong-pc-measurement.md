@@ -223,3 +223,57 @@ Run 3 per-algorithm fixed-budget estimates. Bildiri: TwoOpt 0.94 h, ThreeOpt 1.1
 - 3: `academic_benchmark/tests/test_archive_manifest.py:436, 573, 774`: symlink creation unavailable (`WinError 1314`).
 - 3: `academic_benchmark/tests/test_cx02_dashboard_obsolete_csv.py:54, 61, 67`: `could not import 'streamlit'`.
 - 42 deselected by `-m "not requires_ampl"`.
+
+### Fourth run: Bildiri native with all 10 algorithms (2026-10-28)
+
+Planning numbers, not evidence: the estimator measures a calibration slice on this machine; the numbers say nothing about any algorithm. YAEM was not re-measured.
+
+Measured commit `6efe8bb5256ce51ba50f0d8125031defbceaa06d` (contains the pre-approval merge `cb449ed4`; `bildiri2026/study.json` `secondary_protocol.algorithm_ids` has 10 IDs, `termination` `{"max_iterations": 1000}`), estimator output `dirty: True` (only the known untracked `archive/docs/` copies). Same `tsplib.db` (laptop copy) and `.venv-jit` as runs 2 and 3. Outputs in `C:\wt\d04b2-native\` (`bildiri\estimate.txt`, `bildiri\estimate.json`, `bildiri-stdout.txt`, `timings.txt`, `load.csv`, sampler `load_sampler.ps1`).
+
+Conditions: power plan "Yüksek performans" (High performance, `8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c`, checked with `powercfg /getactivescheme` just before the start). No browser running. The start waited until a Claude Science job (`partial_relocation_v223` workers with `cbc.exe`) had been absent for 5 consecutive checks 60 s apart (12:52:00).
+
+| Command | Start | Duration | Exit |
+|---|---|---|---|
+| `.venv-jit\Scripts\python.exe -m academic_benchmark.studies.estimate --study academic_benchmark/studies/bildiri2026/study.json --out C:\wt\d04b2-native\bildiri --run-count 30 --native-global-iterations 1000 --native-polish-iterations 1000` (4 h limit) | 12:52:37 | 367 s | 0 |
+
+Load during the run: 20 samples every 15 s from 12:53:04 to 12:58:55 (the last one after the estimator ended at 12:58:44), Windows `LoadPercentage` and CPU time per process over each window. `LoadPercentage`: median 57 %, min 31 %, max 90 %. Processes among the top three: `python` (the estimator) in 19 samples, mean 1.15 cores, max 1.22; `claude` (Claude desktop app) in 20 samples, mean 0.58, max 0.77; `claude-science` in 14 samples, mean 0.18, max 0.36; `powershell` (the sampler) in 7 samples, mean 0.08, max 0.16.
+
+Totals (as printed):
+
+- fixed budget: 4200 runs, evaluation upper bound 1,722,960,000, estimated 49,291.0 s (13.69 h)
+- native at the provisional limits: 2100 runs, estimated 20,987.5 s (5.83 h) `[PROVISIONAL, NOT A SCIENTIFIC SETTING]`
+
+Native limits: `max_iterations=1000` for all 10 algorithms `[PROVISIONAL, NOT A SCIENTIFIC SETTING]`. Native rows as printed (every row carries `[PROVISIONAL, NOT A SCIENTIFIC SETTING]`; the estimator prints no stop reason on native rows):
+
+| Algorithm | eil51 run | eil51 s/iteration, iterations | kroa100 run | kroa100 s/iteration, iterations |
+|---|---|---|---|---|
+| Core-TwoOpt-TSP | 0.721 s | 0.0168, 43 | 11.833 s | 0.1076, 110 |
+| Core-ThreeOpt-TSP | 13.949 s | 0.4500, 31 | 119.415 s | 1.7823, 67 |
+| Core-OrOpt-TSP | 3.160 s | 0.0854, 37 | 57.676 s | 0.6202, 93 |
+| Core-GA-TSP | 0.399 s | 0.0004, 1000 | 0.530 s | 0.0005, 1000 |
+| Core-PSO-TSP | 0.866 s | 0.0009, 1000 | 1.677 s | 0.0017, 1000 |
+| Core-GA-TSP-Memetic-2opt | 0.757 s | 0.0008, 1000 | 2.844 s | 0.0028, 1000 |
+| Core-GWO-TSP-Pure | 0.030 s | 0.0000, 1000 | 0.061 s | 0.0001, 1000 |
+| Core-HHO-TSP-Pure | 0.087 s | 0.0001, 1000 | 0.154 s | 0.0002, 1000 |
+| Core-GWO-TSP-Memetic-2opt | 0.821 s | 0.0008, 1000 | 5.456 s | 0.0055, 1000 |
+| Core-HHO-TSP-Memetic-2opt | 1.048 s | 0.0010, 1000 | 6.943 s | 0.0069, 1000 |
+
+Bildiri fixed budget compared with run 3:
+
+| Item | Run 3 (`33f1fc2b`) | Run 4 (`6efe8bb5`) |
+|---|---|---|
+| Bildiri fixed budget total | 14.30 h | 13.69 h |
+| Bildiri native total | 420 runs, 33.2 s (0.01 h) | 2100 runs, 20,987.5 s (5.83 h) |
+| Core-TwoOpt-TSP | 0.94 h | 0.91 h |
+| Core-ThreeOpt-TSP | 1.11 h | 1.01 h |
+| Core-OrOpt-TSP | 0.91 h | 0.92 h |
+| Core-GA-TSP | 1.35 h | 1.31 h |
+| Core-PSO-TSP | 1.11 h | 1.06 h |
+| Core-GA-TSP-Memetic-2opt | 1.14 h | 1.11 h |
+| Core-GWO-TSP-Pure | 4.51 h | 4.23 h |
+| Core-HHO-TSP-Pure | 1.42 h | 1.32 h |
+| Core-GWO-TSP-Memetic-2opt | 0.91 h | 0.91 h |
+| Core-HHO-TSP-Memetic-2opt | 0.92 h | 0.93 h |
+| Core-ThreeOpt-TSP kroa100 us/eval | 27.24 | 24.89 |
+| Core-GWO-TSP-Pure kroa100 us/eval | 115.54 | 108.37 |
+| Native ThreeOpt kroa100 s/iteration | 1.7973 | 1.7823 |

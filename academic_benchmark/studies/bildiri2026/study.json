@@ -44,8 +44,19 @@
   "secondary_protocol": {
     "protocol_id": "algorithm_native_termination",
     "protocol_version": "uniride-native-tsp-v1",
-    "algorithm_ids": ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"],
-    "termination": {"max_iterations": 2}
+    "algorithm_ids": [
+      "Core-TwoOpt-TSP",
+      "Core-ThreeOpt-TSP",
+      "Core-OrOpt-TSP",
+      "Core-GA-TSP",
+      "Core-PSO-TSP",
+      "Core-GA-TSP-Memetic-2opt",
+      "Core-GWO-TSP-Pure",
+      "Core-HHO-TSP-Pure",
+      "Core-GWO-TSP-Memetic-2opt",
+      "Core-HHO-TSP-Memetic-2opt"
+    ],
+    "termination": {"max_iterations": 1000}
   },
   "scaled_fixed_budget_levels": {
     "rule": "two_opt_scan_multiples_v1",
@@ -60,7 +71,7 @@
       "tsplib-ft53": [68900, 344500]
     }
   },
-  "run_count": 3,
+  "run_count": 30,
   "base_seed": 2026,
   "seed_protocol_version": "sha256-seed-v1",
   "problem_families": ["TSP", "ATSP"],

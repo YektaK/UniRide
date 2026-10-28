@@ -97,7 +97,7 @@ def test_bildiri_ft53_lowest_budget_writes_two_valid_files(plan, passed_run):
     report, out = passed_run
     assert isinstance(report, SmokeReport) and report.status == "passed"
     fixed, native = _read(out / "fixed_runs.jsonl"), _read(out / "native_runs.jsonl")
-    assert len(fixed) == len(plan.study.algorithm_ids) == 10 and len(native) == 2
+    assert len(fixed) == len(plan.study.algorithm_ids) == 10 and len(native) == 10  # every study algorithm runs natively (A18 OQ-4 a)
     lowest = min(FT53_LEVELS)
     assert {row["evaluation_budget"] for row in fixed} == {lowest}
     assert {row["evaluation_budget"] for row in native} == {None}

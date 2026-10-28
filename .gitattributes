@@ -14,3 +14,5 @@ academic_benchmark/tsplib_data/opt_tours/*.opt.tour -text
 academic_benchmark/tsplib_data/opt_tours/MANIFEST.json text eol=lf
 academic_benchmark/tests/fixtures/fixed_budget_tables_golden_v1.json -text
 academic_benchmark/exact_reference/results_index.json text eol=lf
+# A20 L6 d: study profiles and analysis plans are hashed by the run service (sha256 of the file bytes), so every checkout must hold LF bytes
+academic_benchmark/studies/**/*.json text eol=lf

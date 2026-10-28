@@ -90,7 +90,27 @@ def test_budget_levels_are_the_bildiri_rule_with_its_multipliers_and_recompute(p
     for dataset_id, scan in SCAN_SIZES.items():
         levels = {r.budget_level for r in fixed if r.dataset_id == dataset_id}
         assert levels == {50 * scan, 250 * scan}  # recomputed by the service from the manifests
-    assert plan.study.run_count == 3  # smoke placeholder
+    assert plan.study.run_count == 30  # A18 OQ-1 a (owner 2026-10-26); smoke caps replicates at 3
+
+
+def test_native_protocol_lists_every_study_algorithm_with_the_1000_iteration_limit(plan):
+    """A18 OQ-4 a (owner 2026-10-26): the list is explicit (not null) and in the order of algorithm_ids."""
+    secondary = plan.study.secondary_protocol
+    assert secondary.algorithm_ids == EXPECTED_ALGORITHM_IDS == plan.study.algorithm_ids
+    assert secondary.termination == {"max_iterations": 1000}
+    assert plan.study.base_seed == 2027  # A18 OQ-3 a
+
+
+def test_native_termination_reaches_both_stages_of_every_composite_row(plan):
+    """The run service applies the profile's single termination dict to the global and the polish stage."""
+    from academic_benchmark.studies.smoke import _row_params
+
+    native = {r.algorithm_id: r for r in plan.rows if r.protocol is ExecutionProtocol.NATIVE_TERMINATION}
+    for algorithm_id in ("Core-GWO-TSP-Memetic-3opt", "Core-HHO-TSP-Memetic-ALNS"):
+        params = _row_params(plan.study, native[algorithm_id])
+        assert params["global"]["max_iterations"] == 1000 and params["polish"]["max_iterations"] == 1000
+        assert "global_fraction" not in params
+    assert _row_params(plan.study, native["Core-GWO-TSP-Pure"])["max_iterations"] == 1000
 
 
 def test_every_algorithm_runs_both_protocols_and_rows_are_not_pooled(plan):

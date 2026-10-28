@@ -141,16 +141,21 @@ def test_family_instance_sets_follow_oq8():
 
 
 @pytest.mark.parametrize("study", STUDIES)
-def test_committed_plans_stay_draft_with_unresolved_values_named(study):
+def test_committed_plans_stay_draft_but_are_fully_resolved(study):
+    # Owner 2026-10-28: minimum_n_per_cell = 30 (complete cells only) and the answered items left `unresolved`;
+    # status stays draft until the D-10 approval commit.
     plan = AnalysisPlanV1.model_validate(_plan_payload(study))
     assert plan.status == "draft"
-    assert plan.minimum_n_per_cell is None  # not invented: waits for the run count (OQ-1, D-04b1)
-    fields = {item.field for item in plan.unresolved}
-    assert {"minimum_n_per_cell", "run_count", "native_termination_limits"} <= fields
-    assert ("yaem_paper_values" in fields) == (study == "yaem2026")
-    assert ("algorithm_parameters_confirmation" in fields) == (study == "bildiri2026")
-    for item in plan.unresolved:
-        assert item.pending  # every open value names the decision or measurement it waits for
+    assert plan.minimum_n_per_cell == 30
+    assert plan.unresolved == []
+
+
+@pytest.mark.parametrize("study", STUDIES)
+def test_committed_plans_would_validate_as_active_without_being_active(study):
+    payload = _plan_payload(study)
+    assert payload["status"] == "draft"  # the committed file is not activated
+    payload["status"] = "active"  # a scratch copy only: the contract accepts the resolved plan as activatable
+    assert AnalysisPlanV1.model_validate(payload).status == "active"
 
 
 # ---- schema validation ------------------------------------------------------------------------
@@ -221,7 +226,9 @@ def test_independent_and_matched_tests_may_not_be_swapped_between_scopes():
 
 def test_active_plan_must_have_nothing_unresolved_and_a_minimum_n():
     payload = _plan_payload("bildiri2026")
-    payload["status"] = "active"  # still lists unresolved values and has no minimum n
+    payload["status"] = "active"
+    # the committed plan is now resolved, so the unresolved state is built here (reason: the old test relied on it)
+    payload["unresolved"] = [{"field": "run_count", "pending": "fixture: a value still waiting for a decision"}]
     with pytest.raises(ValidationError, match="unresolved"):
         AnalysisPlanV1.model_validate(payload)
     _make_active(payload)
@@ -232,7 +239,8 @@ def test_active_plan_must_have_nothing_unresolved_and_a_minimum_n():
 
 def test_a_missing_minimum_n_must_be_declared_unresolved():
     payload = _plan_payload("bildiri2026")
-    payload["unresolved"] = [i for i in payload["unresolved"] if i["field"] != "minimum_n_per_cell"]
+    payload["minimum_n_per_cell"] = None  # the committed plan now sets it (30); the missing state is built here
+    payload["unresolved"] = []
     with pytest.raises(ValidationError, match="minimum_n_per_cell"):
         AnalysisPlanV1.model_validate(payload)
 

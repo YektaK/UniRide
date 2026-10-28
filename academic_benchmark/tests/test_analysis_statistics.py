@@ -643,7 +643,7 @@ def test_across_instances_needs_at_least_two_instances(active):
 @pytest.mark.requires_analysis_extra
 def test_both_real_plans_are_draft_and_inference_is_refused_with_descriptive_output(draft_plans):
     for study, plan in draft_plans.items():
-        assert plan.status == "draft" and plan.minimum_n_per_cell is None
+        assert plan.status == "draft" and plan.minimum_n_per_cell == 30  # owner 2026-10-28; draft still refuses inference
         result = run(per_instance_items(SEPARATED, study_id=plan.study_id), plan, study_id=plan.study_id)
         assert result.inference is None
         assert any("draft" in reason for reason in result.inference_refused)

@@ -21,6 +21,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -194,8 +195,20 @@ def _read_output(path: Path) -> str:
     return data.decode("utf-8")
 
 
+def _read_output_raw_on_windows(path: Path) -> str:
+    """``_read_output``, plus on Windows (``os.name == "nt"``, the OS that captured the golden) a raw, unnormalised check.
+
+    The normalisation above would hide a pilot that stopped writing CRLF on the machine where CRLF is genuinely produced, so
+    on Windows the bytes as written must already equal the normalised form; elsewhere the behaviour is unchanged."""
+    text = _read_output(path)
+    if os.name == "nt":
+        raw = path.read_bytes().decode("utf-8")
+        assert raw == text, f"{path.name}: raw bytes differ from the Windows newline form the golden pins"
+    return text
+
+
 def _read_dir(path: Path) -> dict:
-    return {p.name: _read_output(p) for p in sorted(path.iterdir())}
+    return {p.name: _read_output_raw_on_windows(p) for p in sorted(path.iterdir())}
 
 
 def _strip_volatile(value: Any) -> Any:

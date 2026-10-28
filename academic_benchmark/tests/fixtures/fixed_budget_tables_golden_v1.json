@@ -54,7 +54,7 @@
   "validation.json": "{\r\n  \"checks\": [\r\n    \"strict-native-config\",\r\n    \"problem-integrity\",\r\n    \"runtime-backend-probe\",\r\n    \"preflight-gateway\",\r\n    \"native-manifest\",\r\n    \"independent-objective\",\r\n    \"paired-seeds\",\r\n    \"replay\",\r\n    \"protocol-isolation\"\r\n  ],\r\n  \"error\": null,\r\n  \"status\": \"passed\"\r\n}\r\n"
  },
  "pinned_files": {
-  "academic_benchmark/studies/bildiri2026/study.json": "2c200d37459a14753bb6c9995d1cbfb1a8b559f897fd469b1bc4aad68830b164",
+  "academic_benchmark/studies/bildiri2026/study.json": "d8f5577b18a758a625cfa6767138038b294e6ce427eb05644ead21b9f58ac639",
   "docs/paper/results/tsplib-exact-reference/stage1-verification/README.md": "d0e68c5a35ac03d1df02b326c6863c0f667eb4b753837d1fba17df8e7ed3d105",
   "docs/paper/results/tsplib-exact-reference/stage1-verification/manifest.json": "a168bc0d95de165439403c70e2ed34237a14661e421eca6015d71ab191bb4810",
   "docs/paper/results/tsplib-exact-reference/stage1-verification/reference.csv": "6b5fe1228ad0bc04dd4d55329dc48e2e52c7eeefc0cbb3047e55b2253117b39f",

@@ -77,5 +77,5 @@
   "problem_families": ["TSP", "ATSP"],
   "analysis_plan_id": "bildiri2026-reproduction-v1",
   "output_policy": {"repository_outputs": "smoke_only", "paper_scale_location": "external"},
-  "paper_metadata": {"paper_id": "bildiri2026", "year": 2026, "venue": "draft"}
+  "paper_metadata": {"paper_id": "bildiri2026", "year": 2026, "venue": "14. Uluslararası Göbeklitepe Bilimsel Çalışmalar Kongresi"}
 }

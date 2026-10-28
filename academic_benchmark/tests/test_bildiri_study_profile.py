@@ -136,6 +136,13 @@ class TestStudyManifest:
         assert study_manifest.seed_protocol_version == "sha256-seed-v1"
         assert study_manifest.output_policy.repository_outputs == "smoke_only"
 
+    def test_paper_venue_is_the_congress_name_while_status_stays_draft(self, study_manifest: StudyManifestV1):
+        # D-10 Prepare step (owner 2026-10-28): the venue is named, the status is not flipped yet.
+        assert study_manifest.status == "draft"
+        assert study_manifest.paper_metadata.venue == "14. Uluslararası Göbeklitepe Bilimsel Çalışmalar Kongresi"
+        assert study_manifest.paper_metadata.year == 2026
+        assert "draft" not in study_manifest.paper_metadata.venue.lower()
+
     def test_primary_protocol_holds_the_ten_paper_aligned_ids(self, study_manifest: StudyManifestV1):
         assert study_manifest.algorithm_ids == PRIMARY_ALGORITHM_IDS
         assert set(study_manifest.algorithm_parameters) == set(PRIMARY_ALGORITHM_IDS)

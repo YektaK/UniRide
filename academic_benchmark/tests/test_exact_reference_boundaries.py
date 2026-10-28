@@ -43,8 +43,8 @@ RESULT_FOLDER_PATTERNS = (
     re.compile(r"tsplib-exact-reference", re.IGNORECASE),
 )
 
-PINNED_LF_SHA256 = {  # at the WP-E8 base commit; the bildiri2026 profile hash is re-pinned by the pre-approval values commit (run_count 30, native protocol)
-    "academic_benchmark/studies/bildiri2026/study.json": "2c200d37459a14753bb6c9995d1cbfb1a8b559f897fd469b1bc4aad68830b164",
+PINNED_LF_SHA256 = {  # at the WP-E8 base commit; the bildiri2026 profile hash is re-pinned by the pre-approval values commits (run_count 30, native protocol; paper venue named)
+    "academic_benchmark/studies/bildiri2026/study.json": "d8f5577b18a758a625cfa6767138038b294e6ce427eb05644ead21b9f58ac639",
     "academic_benchmark/schemas/study-v1.schema.json": "ac641217e7365d1d49405b4cd6380f3e9a3d2aa3ea14be096f3ef9275c8de5ce",
     "academic_benchmark/schemas/dataset-v1.schema.json": "6584167fee1ed3d18008fa3a6aea17ce6a31f2970bcab990ec8c0ff800178da1",
     "academic_benchmark/schemas/run-v1.schema.json": "a17b7d8639c06be3b421a2e0cb2664276cb326f9d245e3213f363e18fd466846",

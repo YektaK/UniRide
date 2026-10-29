@@ -55,3 +55,10 @@ No browser (`opera`, `chrome`, `msedge`, `firefox`), no `cbc`, no Claude Science
 ## Output folders
 
 `C:\UniRideCampaign\bildiri2026` and `C:\UniRideCampaign\yaem2026`: absent before the launch (`C:\UniRideCampaign` created for the sampler output only).
+
+## Launch
+
+- Before the launch the owner closed `Raid` and `RSLHelper`; at 2026-10-29T14:29:29 no `RSLHelper`, `Raid`, browser or `cbc` process was running, and `Test-Path` gave `False` for both output folders.
+- Script `C:\wt\d10-campaign\run_campaign.ps1`: `PYTHONPATH=$CK`, `PYTHON_BASIC_REPL=1`, working directory `$CK`; runs `& $PY -m academic_benchmark.studies.run --study academic_benchmark/studies/<study>/study.json --mode paper --out C:\UniRideCampaign\<study>` for `bildiri2026`, then `yaem2026` (the second regardless of the first exit code); stdout and stderr to `C:\UniRideCampaign\<study>.out.txt` / `.err.txt`; start, `exit <study> <code>` and end lines to `C:\UniRideCampaign\campaign_log.txt`.
+- Launched with `Start-Process pwsh -ArgumentList '-NoProfile','-File','C:\wt\d10-campaign\run_campaign.ps1' -WindowStyle Minimized -PassThru` at 2026-10-29T14:29:34; script PID 4632476. Bildiri run processes at 14:29:45: `python.exe` 4495852 (parent 4632476) and 4632564 (parent 4495852).
+- `campaign_log.txt` at 14:34:08: `campaign script PID 4632476 start 2026-10-29T14:29:35`, `start bildiri2026 2026-10-29T14:29:35`. `bildiri2026.out.txt` and `bildiri2026.err.txt` empty; `C:\UniRideCampaign\bildiri2026\checkpoint\` holds `campaign.json` and `rows\` (156 files under `bildiri2026` at 14:34:08). Load samples 14:33:14-14:34:08: `python` 1.13-1.14 cores.

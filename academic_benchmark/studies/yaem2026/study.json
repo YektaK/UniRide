@@ -2,7 +2,7 @@
   "schema_version": "uniride-study/v1",
   "study_id": "yaem2026",
   "title": "YAEM 2026 Canonical TSP Profile",
-  "status": "draft",
+  "status": "active",
   "algorithm_ids": [
     "Core-TwoOpt-TSP",
     "Core-ThreeOpt-TSP",

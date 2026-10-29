@@ -2,7 +2,7 @@
   "schema_version": "uniride-study/v1",
   "study_id": "bildiri2026",
   "title": "Bildiri 2026 Canonical TSP/ATSP Reproduction Profile",
-  "status": "draft",
+  "status": "active",
   "algorithm_ids": [
     "Core-TwoOpt-TSP",
     "Core-ThreeOpt-TSP",

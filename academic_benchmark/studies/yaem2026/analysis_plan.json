@@ -2,7 +2,7 @@
   "schema_version": "uniride-analysis-plan/v1",
   "analysis_plan_id": "yaem2026-v1",
   "study_id": "yaem2026",
-  "status": "draft",
+  "status": "active",
   "decisions": [
     "DECISION_LOG A18 (2026-10-23) OQ-5 a: per instance Kruskal-Wallis, then pairwise Mann-Whitney U with Holm only after a significant omnibus test; across instances Friedman, then Wilcoxon signed-rank with Holm under the same rule; alpha 0.05; effect sizes A12, epsilon-squared, Kendall's W",
     "DECISION_LOG A18 OQ-6 a: response = relative gap to the exact reference (%), per-instance median as the Friedman unit",

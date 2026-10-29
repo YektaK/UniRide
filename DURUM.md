@@ -22,8 +22,10 @@ Son güncelleme: 2026-10-28 (MT1 ilk kapanış kaydı). Kararlar `docs/DECISION_
 - YAEM adlandırması BİRLEŞTİ `ecea6ee6` (`yaem2026-v1`, yayın yeri "YAEM 2026"); Bildiri yayın yeri BİRLEŞTİ `bcef9feb` ("14. Uluslararası Göbeklitepe Bilimsel Çalışmalar Kongresi"); onay öncesi profil değerleri tamam. G9 deneme kontrolü geçti (A18). Koşu planı taslakları dalda: `docs/d10-run-plans` (`de3efae2`, birleşmedi; `[EKSİK]` alanlar var). Gece CI düzeltmesi BİRLEŞTİ `8ef7a23e` (A18); elle tetiklenen gece koşusu Linux'ta yeşil (8956 geçti).
 - Bildiri native yeniden ölçümü BİRLEŞTİ `44c47434` (A18): Bildiri sabit bütçe 13,69 sa + native 5,83 sa (2100 koşu); YAEM 9,53 + 5,89 sa; seri toplam ~34,9 sa. `pyvrp<0.14` sınırı `pyproject.toml`'da var.
 - Etkinleştirmeye hazır testler BİRLEŞTİ `b4946252` (A18 karar a; Opus ONAY). Koşu planları `docs/d10-run-plans-v2` dalında (`bd3d4e5b`, olgu ONAY); onay commit'inde WIP'e girer.
-- **TEMEL COMMIT bu kayıt commit'idir (mesaj `docs: D-10 base commit` ile başlar). Onay commit'ine kadar WIP'e hiçbir şey eklenmez.**
-- Sırada: güçlü PC'de temel commit'te tam test koşusu (istem `docs/handoff/2026-10-28-guclu-pc-temel-commit-test-istem.md`, kayıt dalı `results/d10-base-suite`, birleşmez) → sayılar planlara → sahibin onayı → onay commit'i (iki çalışma, tek commit) → kampanya istemi.
+- Temel commit `1a322a8f`; güçlü PC tam test koşusu `results/d10-base-suite` `a06bc20a` (birleşmez; API'de 1 ortam hatası, sahip kabul etti).
+- **ONAY COMMIT'İ `2c7c5996` (2026-10-29, DECISION_LOG A22; Opus ONAY; gönderildi).** Planlar `docs/run_plans/` (olgu ONAY r3). Eski taslak dalı `docs/d10-run-plans` silindi (sahip OK).
+- Sırada: güçlü PC'de kampanya (istem `docs/handoff/2026-10-29-guclu-pc-kampanya-istem.md`, İstem A başlatır, İstem B sonrası doğrular; kayıt dalı `results/d10-campaign`; çıktı `C:\UniRideCampaign\<study_id>\`; ~35 sa). Bu DURUM satırı ve istem dosyası, kampanya başlayınca (İstem A adım 1'den sonra) düz commit olarak girer; birleştirme yok.
+- Kampanyadan sonra: kaydı oku, A22'ye sonuç notu; `docs/d10-run-plans-v2` dalı ve `C:\wt\d10-run-plans-v2` silinebilir (birleşik: planlar onay commit'inde); MT1-05/06/09/11/12.
 - Kural (A21 OQ-F7): onay commit'i ile kampanya arasında birleştirme yok.
 
 ## Sahibin kararını bekleyenler

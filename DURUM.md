@@ -24,7 +24,7 @@ Son güncelleme: 2026-10-28 (MT1 ilk kapanış kaydı). Kararlar `docs/DECISION_
 - Etkinleştirmeye hazır testler BİRLEŞTİ `b4946252` (A18 karar a; Opus ONAY). Koşu planları `docs/d10-run-plans-v2` dalında (`bd3d4e5b`, olgu ONAY); onay commit'inde WIP'e girer.
 - Temel commit `1a322a8f`; güçlü PC tam test koşusu `results/d10-base-suite` `a06bc20a` (birleşmez; API'de 1 ortam hatası, sahip kabul etti).
 - **ONAY COMMIT'İ `2c7c5996` (2026-10-29, DECISION_LOG A22; Opus ONAY; gönderildi).** Planlar `docs/run_plans/` (olgu ONAY r3). Eski taslak dalı `docs/d10-run-plans` silindi (sahip OK).
-- Sırada: güçlü PC'de kampanya (istem `docs/handoff/2026-10-29-guclu-pc-kampanya-istem.md`, İstem A başlatır, İstem B sonrası doğrular; kayıt dalı `results/d10-campaign`; çıktı `C:\UniRideCampaign\<study_id>\`; ~35 sa). Bu DURUM satırı ve istem dosyası, kampanya başlayınca (İstem A adım 1'den sonra) düz commit olarak girer; birleştirme yok.
+- Sırada: güçlü PC'de kampanya (istem `docs/handoff/2026-10-29-guclu-pc-kampanya-istem.md`, İstem A başlatır, İstem B sonrası doğrular; kayıt dalı `results/d10-campaign`; çıktı `C:\UniRideCampaign\<study_id>\`; ~35 sa). İstem dosyası ve bu DURUM satırı onay commit'inden sonra düz commit olarak girdi (`6d2ddbd1`; birleştirme yok, çalışma yolu değişmedi). 2026-10-29: sahip İstem A'yı güçlü PC'ye verdi; `results/d10-campaign` kaydı bekleniyor.
 - Kampanyadan sonra: kaydı oku, A22'ye sonuç notu; `docs/d10-run-plans-v2` dalı ve `C:\wt\d10-run-plans-v2` silinebilir (birleşik: planlar onay commit'inde); MT1-05/06/09/11/12.
 - Kural (A21 OQ-F7): onay commit'i ile kampanya arasında birleştirme yok.
 

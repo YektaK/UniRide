@@ -62,3 +62,48 @@ No browser (`opera`, `chrome`, `msedge`, `firefox`), no `cbc`, no Claude Science
 - Script `C:\wt\d10-campaign\run_campaign.ps1`: `PYTHONPATH=$CK`, `PYTHON_BASIC_REPL=1`, working directory `$CK`; runs `& $PY -m academic_benchmark.studies.run --study academic_benchmark/studies/<study>/study.json --mode paper --out C:\UniRideCampaign\<study>` for `bildiri2026`, then `yaem2026` (the second regardless of the first exit code); stdout and stderr to `C:\UniRideCampaign\<study>.out.txt` / `.err.txt`; start, `exit <study> <code>` and end lines to `C:\UniRideCampaign\campaign_log.txt`.
 - Launched with `Start-Process pwsh -ArgumentList '-NoProfile','-File','C:\wt\d10-campaign\run_campaign.ps1' -WindowStyle Minimized -PassThru` at 2026-10-29T14:29:34; script PID 4632476. Bildiri run processes at 14:29:45: `python.exe` 4495852 (parent 4632476) and 4632564 (parent 4495852).
 - `campaign_log.txt` at 14:34:08: `campaign script PID 4632476 start 2026-10-29T14:29:35`, `start bildiri2026 2026-10-29T14:29:35`. `bildiri2026.out.txt` and `bildiri2026.err.txt` empty; `C:\UniRideCampaign\bildiri2026\checkpoint\` holds `campaign.json` and `rows\` (156 files under `bildiri2026` at 14:34:08). Load samples 14:33:14-14:34:08: `python` 1.13-1.14 cores.
+
+## After the run
+
+Session that followed "İstem B" of `docs/handoff/2026-10-29-guclu-pc-kampanya-istem.md`; `--mode paper` was not run in it.
+
+- `C:\UniRideCampaign\campaign_log.txt`: `exit bildiri2026 0` and `exit yaem2026 0`; last line `end yaem2026 2026-10-30T19:35:53`. Both `.err.txt` files are 0 bytes.
+- Load sampler stopped with `Stop-Process -Id 4555696` at about 2026-10-30T20:24.
+- Checks and reports run as `C:\wt\d10-campaign\istem_b.ps1` (`pwsh`, `PYTHONPATH=$CK`, working directory `$CK`); full output `C:\wt\d10-campaign\istem_b.txt`. `git -C $CK status --short`: 0 lines before and after; `$CK` HEAD `2c7c5996ca1e924ef31c71f0c84164d3148deaf9`.
+- Load summary: `C:\wt\d10-campaign\load_summary.py` over `C:\UniRideCampaign\load_samples.csv`, per study window. `LoadPercentage` is the Windows whole-machine value; python cores are read from the three busiest processes per sample (one Bildiri sample at 14:29:48, during start-up, had no `python` among them and counts as 0.00). Other busy processes in the Bildiri window: `Taskmgr` was the busiest process in 117 of 3097 samples.
+
+### bildiri2026
+
+- Exit code 0; start 2026-10-29T14:29:35, end 2026-10-30T07:01:28, 16 h 31 min 53 s.
+- `bildiri2026.out.txt`: `Working tree clean at revision 2c7c5996ca1e924ef31c71f0c84164d3148deaf9`, `Rows: 6300 planned, 6300 completed, 0 failed`, `Result: PASSED. Every planned run completed and every row passed validation.` `fixed_runs.jsonl` 4200 rows, `native_runs.jsonl` 2100 rows.
+- `run_index.json`: `"status": "passed"`, `"failed_runs": []`; index sha256 `410d2767fccfe65865d3562a84b388e9305b99646eee455f05be52fe21f71a85`.
+- `verify_manifests C:\UniRideCampaign\bildiri2026 --repository-root $CK`, exit 0:
+
+  ```
+  OK C:\UniRideCampaign\bildiri2026: 6300 run manifest(s) verified
+    NOTE profile and analysis plan sha256 match the file(s) at commit 2c7c5996ca1e
+  ```
+
+- `campaign_report C:\UniRideCampaign\bildiri2026 --paper`, exit 0 (20:27:23-20:28:56): `Paper report: paper_report.txt (21 table(s), 24 analysis result(s), index sha256 410d2767fccfe65865d3562a84b388e9305b99646eee455f05be52fe21f71a85)`, with the same sha256 note.
+  - `C:\UniRideCampaign\bildiri2026\paper_report.txt` (373690 bytes) sha256 `09d7686fef70f69729f9f64f3c5bc22336fe72208a7f01e93d5513ed575129a0`
+  - `C:\UniRideCampaign\bildiri2026\paper_report.json` (1160145 bytes) sha256 `0ce425020fc3de81291e125d4be44809edbfc27a41b2372b01bc0370dcabb0d2`
+- Load (3097 samples): `LoadPercentage` median 51, min 0, max 100; python cores median 1.17, min 0.00, max 1.34.
+
+### yaem2026
+
+- Exit code 0; start 2026-10-30T07:01:28, end 2026-10-30T19:35:53, 12 h 34 min 25 s.
+- `yaem2026.out.txt`: `Working tree clean at revision 2c7c5996ca1e924ef31c71f0c84164d3148deaf9`, `Rows: 3960 planned, 3960 completed, 0 failed`, `Result: PASSED. Every planned run completed and every row passed validation.` `fixed_runs.jsonl` 2640 rows, `native_runs.jsonl` 1320 rows.
+- `run_index.json`: `"status": "passed"`, `"failed_runs": []`; index sha256 `72a6bba626ce1d6294142ab8f8704371e5f200d6d799ca1bb7654fa0cdabac22`.
+- `verify_manifests C:\UniRideCampaign\yaem2026 --repository-root $CK`, exit 0:
+
+  ```
+  OK C:\UniRideCampaign\yaem2026: 3960 run manifest(s) verified
+    NOTE profile and analysis plan sha256 match the file(s) at commit 2c7c5996ca1e
+  ```
+
+- `campaign_report C:\UniRideCampaign\yaem2026 --paper`, exit 0 (20:30:28-20:31:14): `Paper report: paper_report.txt (12 table(s), 15 analysis result(s), index sha256 72a6bba626ce1d6294142ab8f8704371e5f200d6d799ca1bb7654fa0cdabac22)`, with the same sha256 note.
+  - `C:\UniRideCampaign\yaem2026\paper_report.txt` (272215 bytes) sha256 `75851928bb0d291edf5a818e9b99ddc3306beaaa7258ba6179527b1f675e4af9`
+  - `C:\UniRideCampaign\yaem2026\paper_report.json` (840917 bytes) sha256 `74f6016c1e4a4630400aa6fad1e17c5ad2b830fb207107ce7bd858044a6ef38a`
+- Load (2416 samples): `LoadPercentage` median 15, min 0, max 100; python cores median 1.14, min 0.92, max 1.35.
+
+The campaign folders stay in `C:\UniRideCampaign\` and were not copied into the repository; `C:\wt\d10-campaign-ck` is kept.

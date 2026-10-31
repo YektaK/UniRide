@@ -12,6 +12,7 @@ from typing import Dict, List, Sequence, Tuple
 import numpy as np
 
 from uniride_core.algorithms.distance import tsplib_distance_by_type
+from uniride_core.algorithms.forward_tw_schedule import FORWARD_TW
 from uniride_core.models import ConstraintProfile, CostMatrix, RoutingProblem
 
 
@@ -335,6 +336,9 @@ class MatrixBuilder:
                 time_windows=[row[3] for row in customers],
                 service_times=[row[4] for row in customers],
                 depot_index=0,
+                # Solomon CVRPTW is judged with forward rules (depot ready/due time, waiting),
+                # not school-pickup rules (audit H16, MT1-11).
+                direction=FORWARD_TW,
             ),
             coordinates=coords,
             source="solomon",

@@ -525,12 +525,6 @@ with tab8:
             .reset_index(name="runs")
             .sort_values(["problem_type", "dataset_family"])
         )
-        if (routing_df["problem_type"].astype(str).str.lower() == "cvrptw").any():
-            st.warning(
-                "CVRPTW rows are validated with school-pickup rules (audit H16) "
-                "and must not be cited until MT1-11."
-            )
-
         st.markdown("### Dataset Family Coverage")
         st.dataframe(family_counts, use_container_width=True)
 

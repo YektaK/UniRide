@@ -74,6 +74,7 @@ def benchmark_rows_to_progress_frame(rows: Iterable[dict]) -> pd.DataFrame:
             "bks_source": row.get("bks_source", metadata.get("bks_source")),
             "capacity_violations": row.get("capacity_violations", 0),
             "tw_violations": row.get("tw_violations", 0),
+            "certificate_feasible": _certificate_feasible(row, metadata),
             "tour": _json_text(row.get("tour")),
             "routes_json": _json_text(row.get("routes")),
             "route_loads_json": _json_text(row.get("route_loads")),
@@ -113,13 +114,20 @@ def add_routing_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     enriched["is_routing_problem"] = enriched["problem_type"].isin(ROUTING_PROBLEM_TYPES)
     capacity_violations = _numeric_series(enriched, "capacity_violations", 0)
     tw_violations = _numeric_series(enriched, "tw_violations", 0)
-    enriched["is_feasible"] = (
+    counts_feasible = (
         capacity_violations.fillna(0).astype(float).eq(0)
         & tw_violations.fillna(0).astype(float).eq(0)
     )
+    # CVRPTW rows (Solomon, audit H16): "violation count 0" is not evidence of feasibility
+    # (the old split path counted 0 for an infeasible route). Only a feasible certificate is.
+    certificate = _certificate_series(enriched)
+    needs_certificate = enriched["problem_type"].eq("cvrptw")
+    enriched["is_feasible"] = counts_feasible & (~needs_certificate | certificate.eq(True))
     enriched["constraint_status"] = [
-        _constraint_status(cap, tw)
-        for cap, tw in zip(capacity_violations.fillna(0), tw_violations.fillna(0))
+        _constraint_status(cap, tw, cert if needs else True)
+        for cap, tw, cert, needs in zip(
+            capacity_violations.fillna(0), tw_violations.fillna(0), certificate, needs_certificate
+        )
     ]
     if "num_vehicles_bks" in enriched.columns and "num_vehicles" in enriched.columns:
         enriched["vehicle_gap"] = enriched["num_vehicles"] - enriched["num_vehicles_bks"]
@@ -195,11 +203,45 @@ def _numeric_series(df: pd.DataFrame, column: str, default: float) -> pd.Series:
     return pd.Series([default] * len(df), index=df.index)
 
 
-def _constraint_status(capacity_violations, tw_violations) -> str:
+def _certificate_series(df: pd.DataFrame) -> pd.Series:
+    """Per-row certificate verdict: True, False, or NA when the row carries none."""
+    if "certificate_feasible" not in df.columns:
+        return pd.Series([pd.NA] * len(df), index=df.index, dtype="object")
+    return df["certificate_feasible"].map(_as_certificate_flag).astype("object")
+
+
+def _as_certificate_flag(value):
+    if isinstance(value, bool):
+        return value
+    if value is None or value is pd.NA or (isinstance(value, float) and value != value):
+        return pd.NA
+    text = str(value).strip().lower()
+    if text in {"true", "1", "1.0"}:
+        return True
+    if text in {"false", "0", "0.0"}:
+        return False
+    return pd.NA
+
+
+def _certificate_feasible(row: dict, metadata: dict):
+    """Certificate verdict stored with a benchmark row, or None when there is none."""
+    if "certificate_feasible" in row:
+        return _as_certificate_flag(row["certificate_feasible"])
+    certificate = metadata.get("feasibility_certificate") if isinstance(metadata, dict) else None
+    if isinstance(certificate, dict) and "is_feasible" in certificate:
+        return _as_certificate_flag(certificate["is_feasible"])
+    return None
+
+
+def _constraint_status(capacity_violations, tw_violations, certificate_ok=True) -> str:
     cap = int(capacity_violations or 0)
     tw = int(tw_violations or 0)
     if cap == 0 and tw == 0:
-        return "feasible"
+        if certificate_ok is True or certificate_ok is None:
+            return "feasible"
+        if certificate_ok is False:
+            return "infeasible (certificate)"
+        return "no feasible certificate"
     parts = []
     if cap:
         parts.append(f"capacity={cap}")

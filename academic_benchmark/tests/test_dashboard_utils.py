@@ -97,6 +97,8 @@ def test_add_routing_analysis_columns_derives_family_feasibility_and_vehicle_gap
         "num_vehicles_bks": [2, 5, None],
         "capacity_violations": [0, 1, 0],
         "tw_violations": [0, 0, 2],
+        # MT1-11 / audit H16: a CVRPTW row is feasible only with a feasible certificate.
+        "certificate_feasible": [True, None, None],
     })
 
     enriched = add_routing_analysis_columns(frame)

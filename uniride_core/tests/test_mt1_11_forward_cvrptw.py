@@ -178,3 +178,67 @@ def test_solomon_smoke_split_path_and_certificate_agree_with_the_holistic_counte
         assert cert.is_feasible == (holistic == 0), (permutation, split.routes)
         seen.add(holistic == 0)
     assert seen == {True, False}, "smoke instance must contain feasible and infeasible orders"
+
+
+# --- review round 1 -----------------------------------------------------------------
+
+def test_numpy_integer_nodes_keep_windows_and_service_times():
+    import numpy as np
+
+    problem = _audit_problem()
+    route = [np.int64(1), np.int64(2)]
+    depot = np.int64(0)
+    result = RoutingResult(algorithm="t", problem_type="CVRPTW", objective_cost=0, routes=[route])
+    cert = certify_routing_result(result, problem)
+    assert not cert.is_feasible
+    c = problem.constraints
+    ok, _ = validate_cvrptw_solution(
+        [route], problem.matrix.values, c.demands, c.capacities, c.time_windows,
+        c.service_times, depot=depot, direction=c.direction,
+    )
+    assert not ok
+    split = split_with_time_windows_result(
+        np.array([1, 2]), problem.matrix.values, c.demands, c.capacities, c.time_windows,
+        c.service_times, depot=depot, direction=c.direction,
+    )
+    assert split.tw_violations == 1
+
+
+def test_numpy_and_python_nodes_give_the_same_violation_count():
+    import numpy as np
+
+    problem = MatrixBuilder.from_solomon_text(SMOKE)
+    c = problem.constraints
+    for permutation in itertools.permutations(range(1, 6)):
+        counts = []
+        for cast in (int, np.int64):
+            ok, errors = validate_cvrptw_solution(
+                [[cast(n) for n in permutation]], problem.matrix.values, c.demands,
+                [20], c.time_windows, c.service_times, depot=cast(0), direction=c.direction,
+            )
+            counts.append((ok, len(errors)))
+        assert counts[0] == counts[1], permutation
+
+
+def test_bool_is_not_a_node_index():
+    from uniride_core.algorithms.forward_tw_schedule import service_map, window_map
+
+    assert window_map([(1, 2), (3, 4)], [True]) == {}
+    assert service_map([5, 6], [True]) == {True: 0.0}
+
+
+def _arc10(i, j):
+    return 10.0
+
+
+def test_service_start_exactly_at_the_due_time_is_feasible_and_a_hair_later_is_not():
+    from uniride_core.algorithms.forward_tw_schedule import simulate_forward_tw
+
+    on_time = simulate_forward_tw([1], _arc10, depot_window=(0, 20), windows={1: (0, 10)})
+    assert on_time.feasible
+    late = simulate_forward_tw([1], _arc10, depot_window=(0, 20), windows={1: (0, 10 - 1e-6)})
+    assert not late.feasible
+    back_on_time = simulate_forward_tw([1], _arc10, depot_window=(0, 20), windows={1: (0, 10)})
+    assert back_on_time.end == 20.0 and back_on_time.feasible  # return exactly at the due time
+    back_late = simulate_forward_tw([1], _arc10, depot_window=(0, 20 - 1e-6), windows={1: (0, 10)})
+    assert not back_late.feasible

@@ -16,6 +16,8 @@ academic_benchmark/tests/fixtures/fixed_budget_tables_golden_v1.json -text
 academic_benchmark/exact_reference/results_index.json text eol=lf
 # A20 L6 d: study profiles and analysis plans are hashed by the run service (sha256 of the file bytes), so every checkout must hold LF bytes
 academic_benchmark/studies/**/*.json text eol=lf
+# A23: copies of finished paper-scale outputs carried between the two PCs; the campaign records hold their sha256, so byte-exact
+tasima/sonuclar/** -text
 # Nightly CI fix: the recorded sha256 values of these archived files were taken on a Windows checkout (core.autocrlf), i.e. of CRLF bytes,
 # while git stores LF; a Linux checkout therefore hashed other bytes. Every OS now checks out the CRLF bytes that were hashed.
 # Scope: the files of the 4sw5so archive root (not its figures/ folder, whose hashes are not recorded) and the two WP-E10 re-run

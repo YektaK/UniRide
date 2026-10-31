@@ -24,8 +24,18 @@ Son güncelleme: 2026-10-31 (D-10 kampanyası tamam). Kararlar `docs/DECISION_LO
 - Etkinleştirmeye hazır testler BİRLEŞTİ `b4946252` (A18 karar a; Opus ONAY). Koşu planları `docs/d10-run-plans-v2` dalında (`bd3d4e5b`, olgu ONAY); onay commit'inde WIP'e girer.
 - Temel commit `1a322a8f`; güçlü PC tam test koşusu `results/d10-base-suite` `a06bc20a` (birleşmez; API'de 1 ortam hatası, sahip kabul etti).
 - **ONAY COMMIT'İ `2c7c5996` (2026-10-29, DECISION_LOG A22; Opus ONAY; gönderildi).** Planlar `docs/run_plans/` (olgu ONAY r3). Eski taslak dalı `docs/d10-run-plans` silindi (sahip OK).
-- **KAMPANYA TAMAM (2026-10-31, A22 sonuç notu).** Kayıt `docs/superpowers/plans/2026-10-29-d10-campaign-record.md` (birleşti `960f1282`). bildiri2026 6300/6300, yaem2026 3960/3960, 0 başarısız; `verify_manifests` OK; `campaign_report --paper` iki çalışmada da exit 0. Çıktılar güçlü PC'de `C:\UniRideCampaign\<study_id>\` (depoya girmez); `C:\wt\d10-campaign-ck` orada duruyor. OQ-F7 birleştirme yasağı kapandı.
-- Sırada: makale raporlarının (`paper_report.txt/.json`) yazı hattına taşınması (sahip: kopyalama yeri); `docs/d10-run-plans-v2` dalı + `C:\wt\d10-run-plans-v2` ve `results/d10-base-suite`, `results/d10-campaign` dallarının silinmesi (sahip OK); MT1-05/06/09/11/12.
+- **KAMPANYA TAMAM (2026-10-31, A22 sonuç notu).** Kayıt `docs/superpowers/plans/2026-10-29-d10-campaign-record.md` (birleşti `960f1282`). bildiri2026 6300/6300, yaem2026 3960/3960, 0 başarısız; `verify_manifests` OK; `campaign_report --paper` iki çalışmada da exit 0. Çıktılar güçlü PC'de `C:\UniRideCampaign\<study_id>\` (koşu dışarı yazar); raporlar + koşu dizinleri taşıma klasörüne kopyalanıyor (görev G1, A23); `C:\wt\d10-campaign-ck` orada duruyor. OQ-F7 birleştirme yasağı kapandı.
+- Sırada: G1 sonucu gelince raporların yazı hattına alınması; `docs/d10-run-plans-v2` dalı + `C:\wt\d10-run-plans-v2` ve `results/d10-base-suite`, `results/d10-campaign` dallarının silinmesi (sahip OK bekliyor); MT1-05/06/09/11/12 (sahip OK bekliyor).
+
+## Bilgisayarlar arası görevler
+
+Kurallar `tasima/README.md` ve `AGENTS.md` ("Cross-Machine Tasks"); karar A23. Görev durumu yalnızca bu tabloda. Durumlar: `bekliyor`, `başladı`, `sonuç geldi`, `tamam`.
+
+| No | İstem dosyası | Bilgisayar | Durum | Sonuç dalı |
+|---|---|---|---|---|
+| G1 | `tasima/gorevler/2026-10-31-guclu-pc-d10-rapor-kopya-istem.md` (D-10 raporları + koşu dizinleri → `tasima/sonuclar/d10-campaign/`) | güçlü PC | bekliyor | `results/d10-reports` |
+
+Önceki güçlü PC istemleri (D-04b2, Bildiri native, temel commit testi, D-10 kampanyası) `tasima/gorevler/` altında; hepsi tamam.
 
 ## Sahibin kararını bekleyenler
 

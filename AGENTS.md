@@ -61,3 +61,7 @@ Do not skip a gate or begin a later package while an earlier package lacks its s
 - Require exact file/line evidence and separate confirmed findings from assumptions.
 - Preserve unrelated dirty-tree changes.
 - Never pull directly into a rescue checkout or overwrite uncommitted work.
+
+## Cross-Machine Tasks (laptop and stronger PC)
+
+The owner works on two computers that share this repository through git (DECISION_LOG A23). At the start of a session, read the "Bilgisayarlar arası görevler" table in `DURUM.md` and the prompt files in `tasima/gorevler/`; if a task with status `bekliyor` is assigned to this computer, tell the owner its number and prompt file. Do not start it on your own: the owner pastes the prompt into a new session. A task commits only to its own `results/...` branch; only the laptop lead session merges into `WIP`. Task status lives only in that `DURUM.md` table. `tasima/README.md` describes the folder.

@@ -301,6 +301,8 @@ def check_ride_time(
     """
     if max_ride_time is None or matrix is None:
         return []
+    if is_forward_tw(direction):
+        return []  # academic forward CVRPTW (Solomon) has no ride-time limit
 
     mat = np.asarray(matrix, dtype=np.float64)
     dropoff = str(getattr(direction, "value", direction)).strip().lower() == "dropoff"

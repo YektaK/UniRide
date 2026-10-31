@@ -242,3 +242,11 @@ def test_service_start_exactly_at_the_due_time_is_feasible_and_a_hair_later_is_n
     assert back_on_time.end == 20.0 and back_on_time.feasible  # return exactly at the due time
     back_late = simulate_forward_tw([1], _arc10, depot_window=(0, 20 - 1e-6), windows={1: (0, 10)})
     assert not back_late.feasible
+
+
+def test_forward_profile_has_no_ride_time_limit():
+    from uniride_core.algorithms.feasibility_certificate import check_ride_time
+
+    problem = _audit_problem()
+    assert check_ride_time([[1, 2]], problem.matrix.values, 0, 1.0, "forward_tw") == []
+    assert check_ride_time([[1, 2]], problem.matrix.values, 0, 1.0, "pickup") != []

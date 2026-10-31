@@ -18,6 +18,11 @@ I/O. The module is placed next to ``route_schedule.py`` instead of inside it bec
 ``route_schedule.py`` is owned by the MT1-01/MT1-05 line; moving the function there is a
 mechanical change.
 
+Tolerance: a window close or the depot due time is met when the service start (or the
+return) is at most ``due + 1e-9`` minutes, so float round-off in a sum of decimal arcs is
+not a violation; ``due + 1e-6`` is. The holistic counter compares strictly (``>``) without
+tolerance; the two can differ only when a time lands within 1e-9 minutes after a due time.
+
 ``route`` lists customers in visiting order without the depot. ``arc(i, j)`` is the
 directed travel time. ``windows`` maps a node to ``(ready, due)``; a node without a
 window is unconstrained. ``depot_window`` is ``(ready, due)`` of the depot, or ``None``
@@ -26,6 +31,7 @@ window is unconstrained. ``depot_window`` is ``(ready, due)`` of the depot, or `
 
 from __future__ import annotations
 
+import operator
 from typing import Hashable, Mapping, Sequence
 
 from uniride_core.algorithms.route_schedule import (
@@ -38,7 +44,7 @@ from uniride_core.algorithms.route_schedule import (
 )
 
 FORWARD_TW = "forward_tw"
-_TOLERANCE = 1e-9  # same tolerance as route_schedule.py
+_TOLERANCE = 1e-9  # same tolerance as route_schedule.py (see module docstring)
 
 
 def is_forward_tw(direction: object) -> bool:
@@ -46,15 +52,30 @@ def is_forward_tw(direction: object) -> bool:
     return str(direction or "").strip().lower() == FORWARD_TW
 
 
+def _index(node: Hashable, size: int) -> int | None:
+    """Position of ``node`` in a node-indexed list, or None when it has none.
+
+    Accepts Python and numpy integers (``operator.index``); bool is not a node id.
+    """
+    if isinstance(node, bool):
+        return None
+    try:
+        position = operator.index(node)  # type: ignore[arg-type]
+    except TypeError:
+        return None
+    return position if 0 <= position < size else None
+
+
 def service_map(
     service_times: Sequence[float] | None, nodes: Sequence[Hashable]
 ) -> dict[Hashable, float]:
     """Service minutes of ``nodes`` from a node-indexed list (missing entries are 0)."""
     times = list(service_times or [])
-    return {
-        node: float(times[node]) if isinstance(node, int) and 0 <= node < len(times) else 0.0
-        for node in nodes
-    }
+    result: dict[Hashable, float] = {}
+    for node in nodes:
+        position = _index(node, len(times))
+        result[node] = float(times[position]) if position is not None else 0.0
+    return result
 
 
 def window_map(
@@ -62,11 +83,12 @@ def window_map(
 ) -> dict[Hashable, tuple[float, float]]:
     """Windows of ``nodes`` from a node-indexed list; nodes beyond the list are free."""
     table = list(time_windows or [])
-    return {
-        node: (float(table[node][0]), float(table[node][1]))
-        for node in nodes
-        if isinstance(node, int) and 0 <= node < len(table)
-    }
+    result: dict[Hashable, tuple[float, float]] = {}
+    for node in nodes:
+        position = _index(node, len(table))
+        if position is not None:
+            result[node] = (float(table[position][0]), float(table[position][1]))
+    return result
 
 
 def simulate_forward_tw(

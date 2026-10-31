@@ -11,6 +11,13 @@ from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from uniride_core.algorithms.forward_tw_schedule import (
+    is_forward_tw,
+    service_map,
+    simulate_forward_tw,
+    window_map,
+)
+
 
 DemandVector = List[int]
 
@@ -273,6 +280,17 @@ def _count_time_window_violations(
     if not route or not time_windows:
         return 0
     matrix = np.asarray(dm, dtype=np.float64)
+    if is_forward_tw(direction):
+        # Academic CVRPTW (Solomon, audit H16): forward simulation incl. the depot due time.
+        schedule = simulate_forward_tw(
+            route,
+            lambda i, j: float(matrix[i, j]),
+            depot_window=window_map(time_windows, [depot]).get(depot),
+            windows=window_map(time_windows, route),
+            service=service_map(service_times, route),
+            depot=depot,
+        )
+        return len(schedule.violations)
     service = list(service_times or [0] * len(time_windows))
     if direction.lower() == "pickup":
         latest = target_time if target_time is not None else max(time_windows[node][1] for node in route)

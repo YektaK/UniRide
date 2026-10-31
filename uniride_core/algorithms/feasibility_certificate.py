@@ -12,6 +12,13 @@ from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
+from uniride_core.algorithms.forward_tw_schedule import (
+    is_forward_tw,
+    service_map,
+    simulate_forward_tw,
+    window_map,
+)
+from uniride_core.algorithms.route_schedule import DEADLINE
 from uniride_core.algorithms.split_decoder import SplitResult, calculate_route_cost, route_load
 from uniride_core.models import ConstraintProfile, CostMatrix, ProblemInstance, RoutingProblem, RoutingResult
 
@@ -294,6 +301,8 @@ def check_ride_time(
     """
     if max_ride_time is None or matrix is None:
         return []
+    if is_forward_tw(direction):
+        return []  # academic forward CVRPTW (Solomon) has no ride-time limit
 
     mat = np.asarray(matrix, dtype=np.float64)
     dropoff = str(getattr(direction, "value", direction)).strip().lower() == "dropoff"
@@ -354,6 +363,8 @@ def check_time_windows(
         return []
 
     mat = np.asarray(matrix, dtype=np.float64)
+    if is_forward_tw(direction):
+        return _check_forward_time_windows(routes, mat, depot, time_windows, service_times)
     service = list(service_times or [0] * len(time_windows))
     violations: List[Violation] = []
 
@@ -432,6 +443,73 @@ def check_time_windows(
             current += service_duration
             prev = node
 
+    return violations
+
+
+def _check_forward_time_windows(
+    routes: Sequence[Sequence[int]],
+    mat: np.ndarray,
+    depot: int,
+    time_windows: Sequence[Tuple[int, int]],
+    service_times: Optional[Sequence[int]],
+) -> List[Violation]:
+    """Academic CVRPTW (Solomon, audit H16): forward simulation with the depot due time.
+
+    Leave at the depot ready time, wait for early windows, serve every customer, return by
+    the depot due time. Same rules as ``simulate_forward_tw``; one ``Violation`` per late
+    customer and one per late depot return.
+    """
+    violations: List[Violation] = []
+    depot_window = window_map(time_windows, [depot]).get(depot)
+    for idx, route in enumerate(routes):
+        if not route:
+            continue
+        nodes = [depot, *route]
+        arcs_ok = True
+        for a, b in zip(nodes, [*route, depot]):
+            if not (0 <= a < mat.shape[0] and 0 <= b < mat.shape[0]):
+                arcs_ok = False
+                break
+            if not math.isfinite(float(mat[a, b])):
+                violations.append(Violation(
+                    type=TIME_WINDOW_VIOLATION,
+                    severity="error",
+                    details=f"Route {idx} arc {a}->{b} has a non-finite travel duration",
+                    route_index=idx,
+                    node=b if b != depot else None,
+                ))
+                arcs_ok = False
+                break
+        if not arcs_ok:
+            continue
+        schedule = simulate_forward_tw(
+            route,
+            lambda i, j: float(mat[i, j]),
+            depot_window=depot_window,
+            windows=window_map(time_windows, route),
+            service=service_map(service_times, route),
+            depot=depot,
+        )
+        for violation in schedule.violations:
+            if violation.kind == DEADLINE:
+                details = (
+                    f"Route {idx} returns to the depot at {schedule.end} "
+                    f"after its due time {violation.limit}"
+                )
+                node = None
+            else:
+                node = route[violation.position]
+                details = (
+                    f"Route {idx} node {node} service start {violation.actual} "
+                    f"exceeds latest {violation.limit}"
+                )
+            violations.append(Violation(
+                type=TIME_WINDOW_VIOLATION,
+                severity="error",
+                details=details,
+                route_index=idx,
+                node=node,
+            ))
     return violations
 
 

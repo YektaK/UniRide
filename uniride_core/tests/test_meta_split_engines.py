@@ -102,6 +102,7 @@ def test_meta_split_soft_windows_keep_positive_violation_route(solver, config):
         use_time_windows=True,
         time_windows={"A": (100, 110)},
         direction="pickup",
+        target_time=60,  # MT1-05: windows need an explicit target; A opens at 100
         offset_minutes=0,
     )
 

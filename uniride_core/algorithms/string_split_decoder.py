@@ -236,8 +236,11 @@ class SplitDecoder:
         
         n = len(giant_tour)
         
-        # Build auxiliary graph edges (feasible trips)
-        if self.use_time_windows:
+        # Build auxiliary graph edges (feasible trips). Time-window mode needs an
+        # anchor: windows without ``target_time`` raise ValueError in
+        # ``_build_trips_with_tw``. With neither windows nor a target there is
+        # nothing to enforce, so the capacity-only trips are used.
+        if self.use_time_windows and (self.time_windows or self.target_time is not None):
             trips = self._build_trips_with_tw(giant_tour, depot, distance_matrix, demands)
         else:
             trips = self._build_trips(giant_tour, depot, distance_matrix, demands)

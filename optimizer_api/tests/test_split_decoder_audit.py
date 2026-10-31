@@ -100,9 +100,8 @@ def test_fix03_trip_end_boundary():
     }
     demands = {"L1": (1, 0), "L2": (1, 0), "L3": (1, 0)}
     
-    # Target arrival time of a subset is the max `latest` bound in that subset
-    # for ["L1", "L2"], max is 200.
-    # If the bug was present (using loop var j instead of trip_end), it might have included L3's time (300).
+    # MT1-05: the target (50) is the hard deadline; it is no longer stretched to the
+    # latest window close of the trip, so no window (L3's 300 included) moves it.
     
     trips = decoder._build_trips_with_tw(giant_tour, depot, distance_matrix, demands)
     
@@ -110,11 +109,10 @@ def test_fix03_trip_end_boundary():
     trip_1_2 = next((t for t in trips[2] if t.start_idx == 0 and t.end_idx == 1), None)
     assert trip_1_2 is not None
     
-    # departure time = target_arrival - total_cost - offset
-    # Target arrival for L1, L2 should be 200 (not 300)
+    # departure time = deadline - total_cost - offset
     # total_cost = 10(D->L1) + 10(L1->L2) + 10(L2->D) = 30
-    # departure = 200 - 30 - 0 = 170
-    assert trip_1_2.departure_time == 170, f"Expected 170, got {trip_1_2.departure_time}"
+    # departure = 50 - 30 - 0 = 20 (was 170 when the anchor stretched to L2's close)
+    assert trip_1_2.departure_time == 20, f"Expected 20, got {trip_1_2.departure_time}"
 
 
 if __name__ == '__main__':

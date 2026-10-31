@@ -1,6 +1,6 @@
 # DURUM — devam eden işler
 
-Son güncelleme: 2026-10-28 (MT1 ilk kapanış kaydı). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L13) ve **A21** (MT6 takip planı, OQ-F1..F8); her biri seçenekler, artı/eksi, seçim, geri alma yolu ile.
+Son güncelleme: 2026-10-31 (D-10 kampanyası tamam). Kararlar `docs/DECISION_LOG.md` içinde; bu dosya yalnızca işin nerede olduğunu gösterir. Sahip dışarıdayken şefin aldığı kararlar: DECISION_LOG **A20** (L1–L13) ve **A21** (MT6 takip planı, OQ-F1..F8); her biri seçenekler, artı/eksi, seçim, geri alma yolu ile.
 
 ## Durum
 
@@ -24,9 +24,8 @@ Son güncelleme: 2026-10-28 (MT1 ilk kapanış kaydı). Kararlar `docs/DECISION_
 - Etkinleştirmeye hazır testler BİRLEŞTİ `b4946252` (A18 karar a; Opus ONAY). Koşu planları `docs/d10-run-plans-v2` dalında (`bd3d4e5b`, olgu ONAY); onay commit'inde WIP'e girer.
 - Temel commit `1a322a8f`; güçlü PC tam test koşusu `results/d10-base-suite` `a06bc20a` (birleşmez; API'de 1 ortam hatası, sahip kabul etti).
 - **ONAY COMMIT'İ `2c7c5996` (2026-10-29, DECISION_LOG A22; Opus ONAY; gönderildi).** Planlar `docs/run_plans/` (olgu ONAY r3). Eski taslak dalı `docs/d10-run-plans` silindi (sahip OK).
-- Sırada: güçlü PC'de kampanya (istem `docs/handoff/2026-10-29-guclu-pc-kampanya-istem.md`, İstem A başlatır, İstem B sonrası doğrular; kayıt dalı `results/d10-campaign`; çıktı `C:\UniRideCampaign\<study_id>\`; ~35 sa). İstem dosyası ve bu DURUM satırı onay commit'inden sonra düz commit olarak girdi (`6d2ddbd1`; birleştirme yok, çalışma yolu değişmedi). 2026-10-29: sahip İstem A'yı güçlü PC'ye verdi; `results/d10-campaign` kaydı bekleniyor.
-- Kampanyadan sonra: kaydı oku, A22'ye sonuç notu; `docs/d10-run-plans-v2` dalı ve `C:\wt\d10-run-plans-v2` silinebilir (birleşik: planlar onay commit'inde); MT1-05/06/09/11/12.
-- Kural (A21 OQ-F7): onay commit'i ile kampanya arasında birleştirme yok.
+- **KAMPANYA TAMAM (2026-10-31, A22 sonuç notu).** Kayıt `docs/superpowers/plans/2026-10-29-d10-campaign-record.md` (birleşti `960f1282`). bildiri2026 6300/6300, yaem2026 3960/3960, 0 başarısız; `verify_manifests` OK; `campaign_report --paper` iki çalışmada da exit 0. Çıktılar güçlü PC'de `C:\UniRideCampaign\<study_id>\` (depoya girmez); `C:\wt\d10-campaign-ck` orada duruyor. OQ-F7 birleştirme yasağı kapandı.
+- Sırada: makale raporlarının (`paper_report.txt/.json`) yazı hattına taşınması (sahip: kopyalama yeri); `docs/d10-run-plans-v2` dalı + `C:\wt\d10-run-plans-v2` ve `results/d10-base-suite`, `results/d10-campaign` dallarının silinmesi (sahip OK); MT1-05/06/09/11/12.
 
 ## Sahibin kararını bekleyenler
 

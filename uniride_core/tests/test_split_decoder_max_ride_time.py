@@ -263,9 +263,11 @@ def test_time_window_dropoff_waiting_inside_vehicle_counts():
 
 def test_time_window_pickup_waiting_after_first_pickup_counts():
     dm = _line_matrix()
-    # Backward scheduling: departure 1440 - 60 = 1380, B reached at 1400 but
-    # its window opens at 1405: the vehicle waits 5 minutes with A aboard.
-    windows = {"A": (0, 1440), "B": (1405, 1440), "C": (0, 1440)}
+    # MT1-05: deadline 1440 is hard (the old default anchor stretched to the latest
+    # window close and never checked it). A closes at 1385, so the vehicle departs
+    # 1375, reaches A at 1385 and B at 1395, but B opens at 1400: it waits 5 minutes
+    # with A aboard and still reaches the school at 1440.
+    windows = {"A": (0, 1385), "B": (1400, 1440), "C": (0, 1440)}
     kw = dict(
         giant_tour=["A", "B", "C"],
         depot=DEPOT,
@@ -273,7 +275,7 @@ def test_time_window_pickup_waiting_after_first_pickup_counts():
         demands=DEMANDS,
         time_windows=windows,
         direction=Direction.PICKUP,
-        target_time=420,
+        target_time=1440,
         offset_minutes=0,
         sw_capacity=4,
         so_capacity=10,
@@ -286,10 +288,10 @@ def test_time_window_pickup_waiting_after_first_pickup_counts():
 
 
 def test_time_window_pickup_wait_at_first_stop_is_not_ride_time():
-    """The first student boards after the wait, so it is not part of any ride."""
+    """A first stop that opens late does not add to any ride."""
     dm = _line_matrix()
-    # departure 1440 - 60 = 1380; A reached at 1390 but opens at 1395: a
-    # 5 minute wait at the FIRST stop, before anyone is aboard.
+    # MT1-05: with a hard deadline the vehicle departs later instead of waiting at
+    # the first stop: deadline 1445, A opens at 1395, departure 1385, A at 1395.
     windows = {"A": (1395, 1440), "B": (0, 1440), "C": (0, 1440)}
     kw = dict(
         giant_tour=["A", "B", "C"],
@@ -298,14 +300,14 @@ def test_time_window_pickup_wait_at_first_stop_is_not_ride_time():
         demands=DEMANDS,
         time_windows=windows,
         direction=Direction.PICKUP,
-        target_time=420,
+        target_time=1445,
         offset_minutes=0,
         sw_capacity=4,
         so_capacity=10,
         max_tour_duration=1000,
         is_asymmetric=True,
     )
-    # pure travel ride of A is exactly 50; the first-stop wait must not add to it
+    # pure travel ride of A is exactly 50; the late opening must not add to it
     assert decode_with_time_windows(max_ride_time=50, **kw)["routes"] == [["A", "B", "C"]]
     assert decode_with_time_windows(max_ride_time=49, **kw)["routes"] != [["A", "B", "C"]]
 

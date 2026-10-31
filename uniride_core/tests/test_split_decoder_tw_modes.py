@@ -45,11 +45,14 @@ def _demands_sw(*locs):
 
 
 def test_split_soft_keeps_violating_pickup_trip():
+    # MT1-05: explicit target (no 09:00 default). Deadline 60 cannot be met because
+    # both students are only available from 100: one deadline violation.
     decoder = SplitDecoder(
         use_time_windows=True,
         direction=Direction.PICKUP,
         time_windows={"L1": (100, 110), "L2": (100, 200)},
         max_tour_duration=1000,
+        target_time=60,
         offset_minutes=0,
     )
     trips = decoder._build_trips_with_tw(
@@ -58,7 +61,7 @@ def test_split_soft_keeps_violating_pickup_trip():
 
     violating = next((t for t in trips[2] if t.start_idx == 0 and t.end_idx == 1), None)
     assert violating is not None
-    assert violating.time_window_violations == 2
+    assert violating.time_window_violations == 1  # was 2 per-stop counts at the old anchor
 
 
 def test_split_strict_drops_violating_pickup_trip():
@@ -67,6 +70,7 @@ def test_split_strict_drops_violating_pickup_trip():
         direction=Direction.PICKUP,
         time_windows={"L1": (100, 110), "L2": (100, 200)},
         max_tour_duration=1000,
+        target_time=60,
         offset_minutes=0,
         strict_time_windows=True,
     )
@@ -120,6 +124,7 @@ def test_split_soft_decode_accepts_only_violating_path():
         direction=Direction.PICKUP,
         time_windows={"L1": (100, 110)},
         max_tour_duration=1000,
+        target_time=60,  # MT1-05: explicit target; L1 opens at 100, school deadline 60
         offset_minutes=0,
     )
 
@@ -139,6 +144,7 @@ def test_split_strict_decode_rejects_only_violating_path():
         direction=Direction.PICKUP,
         time_windows={"L1": (100, 110)},
         max_tour_duration=1000,
+        target_time=60,  # MT1-05: explicit target; L1 opens at 100, school deadline 60
         offset_minutes=0,
         strict_time_windows=True,
     )
@@ -158,6 +164,7 @@ def test_split_dp_prefers_violation_free_routes_over_cheaper_violating_route():
         direction=Direction.PICKUP,
         time_windows={"L1": (590, 600), "L2": (530, 540)},
         max_tour_duration=1000,
+        target_time=610,  # MT1-05: explicit deadline; [L1, L2] misses L2's close
         offset_minutes=0,
     )
     matrix = {
@@ -226,6 +233,7 @@ def test_pickup_enumerates_every_capacity_feasible_prefix():
         use_time_windows=True,
         direction=Direction.PICKUP,
         max_tour_duration=1000,
+        target_time=540,  # MT1-05: explicit anchor, no 09:00 default
         offset_minutes=0,
     )
     trips = decoder._build_trips_with_tw(
@@ -244,6 +252,7 @@ def test_pickup_prefix_enumeration_unblocks_dp():
         use_time_windows=True,
         direction=Direction.PICKUP,
         max_tour_duration=1000,
+        target_time=540,  # MT1-05: explicit anchor, no 09:00 default
         offset_minutes=0,
     )
     result = decoder.decode(["A", "B", "C"], DEPOT, _cap2_tour_matrix(), _demands_sw("A", "B", "C"))
@@ -260,6 +269,7 @@ def test_dropoff_still_emits_every_prefix():
         use_time_windows=True,
         direction=Direction.DROPOFF,
         max_tour_duration=1000,
+        target_time=540,  # MT1-05: explicit anchor, no 14:00 default
         offset_minutes=0,
     )
     trips = decoder._build_trips_with_tw(

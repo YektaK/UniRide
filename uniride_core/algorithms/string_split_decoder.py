@@ -3,8 +3,10 @@ Split Decoder Algorithm for CVRP/CVRPTW
 Based on Prins (2004) - A Simple and Effective Evolutionary Algorithm for VRP
 
 Enhanced with:
-- Backward Scheduling for Time Windows (CVRPTW)
-- Forward Scheduling for Dropoff scenarios
+- Time windows (CVRPTW) timed by the route simulator ``route_schedule`` (MT1-05):
+  pickup departs as late as possible and must reach the school by
+  ``target_time - offset_minutes``; drop-off leaves the school at
+  ``target_time + offset_minutes``; waits and service count in tour and ride time
 - Direction-aware route planning
 
 Reference:
@@ -17,6 +19,14 @@ import math
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
+
+from uniride_core.algorithms.route_schedule import (
+    DEADLINE,
+    WINDOW,
+    RouteSchedule as SimulatedSchedule,
+    simulate_school_dropoff,
+    simulate_school_pickup,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +101,8 @@ class Trip:
     so_count: int   # Other disability passengers
     is_feasible: bool
     time_window_violations: int = 0  # Number of TW violations
-    departure_time: Optional[int] = None  # Departure time from depot (minutes)
+    departure_time: Optional[float] = None  # Departure time from depot (minutes, exact)
+    schedule: Optional[SimulatedSchedule] = None  # simulator result (time-window mode)
 
 
 @dataclass
@@ -110,13 +121,17 @@ class SplitDecoder:
     Converts a giant tour (TSP solution) into feasible vehicle routes.
     Supports both CVRP (capacity only) and CVRPTW (capacity + time window) modes.
     
-    Time Window Modes:
-    - PICKUP (backward scheduling): Work backwards from target arrival at school
-    - DROPOFF (forward scheduling): Work forward from departure from school
-    
+    Time Window Modes (every candidate trip is timed by ``route_schedule``):
+    - PICKUP: latest feasible departure; the school must be reached by
+      ``target_time - offset_minutes`` (hard deadline)
+    - DROPOFF: leave the school at ``target_time + offset_minutes``
+    ``target_time`` is required in time-window mode (no 09:00 / 14:00 default).
+    The tour limit (``max_tour_duration``) and the ride limit count waiting and
+    service; the trip cost the DP minimises stays the pure travel time.
+
     Time Complexity (n = customers, L = max customers per route, bounded by
-    capacity): CVRP mode O(n*L); pickup time-window mode O(n*L^2), worst case
-    O(n^3) when L ~ n; dropoff time-window mode O(n*L). Space: O(n*L) for the
+    capacity): CVRP mode O(n*L); time-window modes O(n*L^2) (one simulation per
+    candidate trip), worst case O(n^3) when L ~ n. Space: O(n*L) for the
     candidate trips.
 
     Optimality: only in CVRP mode (no time windows) is the result the
@@ -139,13 +154,27 @@ class SplitDecoder:
         is_asymmetric: bool = False,
         strict_time_windows: bool = False,
         max_ride_time: Optional[float] = None,
+        stop_dwell_minutes: float = 0.0,
+        sw_boarding_minutes: float = 0.0,
     ):
+        # Service time (OQ-MT1-5 b), time-window mode only: every giant-tour node is
+        # one stop and takes ``stop_dwell_minutes`` plus ``sw_boarding_minutes`` when
+        # its demand has a Sw part. Both default to 0 (no effect).
+        for name, value in (
+            ("stop_dwell_minutes", stop_dwell_minutes),
+            ("sw_boarding_minutes", sw_boarding_minutes),
+        ):
+            if not (math.isfinite(value) and value >= 0):
+                raise ValueError(f"{name} must be a finite number >= 0, got {value!r}")
+        self.stop_dwell_minutes = float(stop_dwell_minutes)
+        self.sw_boarding_minutes = float(sw_boarding_minutes)
         # Per-student maximum ride time (minutes).  ``None`` = no limit, which
         # leaves every pre-existing behaviour unchanged.  Definitions (route =
         # depot -> s1..sk -> depot, no waiting):
         #   pickup : longest ride = first student's = arcs s1->..->sk->depot
         #   dropoff: longest ride = last student's  = arcs depot->s1->..->sk
-        # In the time-window paths waiting aboard the vehicle is added.
+        # In the time-window path the simulator's ride time (waits and service
+        # after boarding included) is used.
         if max_ride_time is not None and not (max_ride_time > 0):
             raise ValueError(f"max_ride_time must be positive, got {max_ride_time!r}")
         self.max_ride_time = max_ride_time
@@ -207,8 +236,11 @@ class SplitDecoder:
         
         n = len(giant_tour)
         
-        # Build auxiliary graph edges (feasible trips)
-        if self.use_time_windows:
+        # Build auxiliary graph edges (feasible trips). Time-window mode needs an
+        # anchor: windows without ``target_time`` raise ValueError in
+        # ``_build_trips_with_tw``. With neither windows nor a target there is
+        # nothing to enforce, so the capacity-only trips are used.
+        if self.use_time_windows and (self.time_windows or self.target_time is not None):
             trips = self._build_trips_with_tw(giant_tour, depot, distance_matrix, demands)
         else:
             trips = self._build_trips(giant_tour, depot, distance_matrix, demands)
@@ -262,11 +294,16 @@ class SplitDecoder:
                 if trip.start_idx == prev:
                     costs.append(trip.cost)
                     if trip.departure_time is not None:
-                        schedules.append({
+                        entry = {
                             "departure_time": trip.departure_time,
                             "locations": route,
                             "tw_violations": trip.time_window_violations
-                        })
+                        }
+                        if trip.schedule is not None:
+                            entry["end"] = trip.schedule.end
+                            entry["arrivals"] = dict(zip(route, trip.schedule.arrivals))
+                            entry["waits"] = dict(zip(route, trip.schedule.waits))
+                        schedules.append(entry)
                     break
             
             current = prev
@@ -376,6 +413,61 @@ class SplitDecoder:
 
         return trips
     
+    def _service_inputs(
+        self,
+        nodes: List[str],
+        demands: Dict[str, Tuple[int, int]],
+    ) -> Tuple[Dict[str, float], Dict[str, int]]:
+        """Per-stop service minutes and Sw counts for the simulator."""
+        service = {node: self.stop_dwell_minutes for node in nodes}
+        sw_counts = {node: 1 if demands.get(node, (0, 0))[0] > 0 else 0 for node in nodes}
+        return service, sw_counts
+
+    def _simulate_trip(
+        self,
+        nodes: List[str],
+        depot: str,
+        distance_matrix: Dict[str, Dict[str, float]],
+        demands: Dict[str, Tuple[int, int]],
+    ) -> Tuple[SimulatedSchedule, int]:
+        """Time one candidate trip on the route simulator.
+
+        Returns the schedule and the number of violations it carries: window and
+        deadline violations plus one per stop whose own window is empty (opens after
+        it closes, so no schedule can meet it). Day-boundary violations are not
+        counted here; the caller drops such a trip (physically impossible).
+        """
+        windows: Dict[str, Tuple[float, float]] = {}
+        empty_windows = 0
+        for node in nodes:
+            if node in self.time_windows:
+                earliest, latest = self.time_windows[node]
+                if earliest > latest:
+                    empty_windows += 1
+                else:
+                    windows[node] = (float(earliest), float(latest))
+        service, sw_counts = self._service_inputs(nodes, demands)
+
+        def arc(a: str, b: str) -> float:
+            return self._get_dist(a, b, distance_matrix)
+
+        target = float(self.target_time)
+        offset = float(self.offset_minutes)
+        if self.direction == Direction.PICKUP:
+            schedule = simulate_school_pickup(
+                nodes, arc, deadline=target - offset, windows=windows,
+                service=service, sw_boarding=self.sw_boarding_minutes,
+                sw_counts=sw_counts, depot=depot,
+            )
+        else:
+            schedule = simulate_school_dropoff(
+                nodes, arc, ready=target + offset, windows=windows,
+                service=service, sw_boarding=self.sw_boarding_minutes,
+                sw_counts=sw_counts, depot=depot,
+            )
+        counted = sum(1 for v in schedule.violations if v.kind in (WINDOW, DEADLINE))
+        return schedule, counted + empty_windows
+
     def _build_trips_with_tw(
         self,
         giant_tour: List[str],
@@ -384,247 +476,92 @@ class SplitDecoder:
         demands: Dict[str, Tuple[int, int]]
     ) -> Dict[int, List[Trip]]:
         """
-        Build feasible trips with time window constraints.
+        Build candidate trips with time-window constraints (MT1-05).
 
-        For PICKUP (backward scheduling):
-        - Determine latest time from time_windows (latest arrival at school)
-        - Calculate backwards: departure = latest - tour_duration - offset
-        - FIX-01: Trips with negative departure are skipped (physically infeasible)
-        - FIX-11: every capacity-feasible prefix i..k is emitted as its own trip
+        Every capacity-feasible trip i..k is timed by the route simulator
+        (``simulate_school_pickup`` / ``simulate_school_dropoff``, exact floats, no
+        truncation, return arc included):
 
-        For DROPOFF (forward scheduling):
-        - Determine earliest time from time_windows
-        - Calculate forwards: arrival times accumulate from departure
-        - FIX-02A: tw_violations counter initialised before loop (not inside)
-        - FIX-02B: early arrivals wait until earliest window opens
+        - PICKUP: depart as late as possible; the school must be reached by
+          ``target_time - offset_minutes`` (hard deadline, counted as a violation).
+        - DROPOFF: leave the school at ``target_time + offset_minutes`` and wait where
+          a window opens later.
+
+        A trip is dropped when its travel or its tour (waits and service included)
+        exceeds ``max_tour_duration``, when a ride (waits and service after boarding
+        included) exceeds ``max_ride_time``, when the schedule starts before 00:00 or
+        ends after 24:00 (FIX-01), when an arc is missing (FIX-10), and in strict
+        mode when it has any violation. In soft mode it is kept with its violation
+        count. ``Trip.cost`` is the pure travel time including the return arc.
+
+        ``target_time`` is required: without it the anchor would be invented, so a
+        ``ValueError`` is raised.
         """
+        if self.target_time is None:
+            raise ValueError(
+                "time-window decoding requires target_time (no default anchor)"
+            )
         n = len(giant_tour)
         trips = {k: [] for k in range(1, n + 1)}
+        tolerance = 1e-9
 
         for i in range(n):
             sw_load = 0
             so_load = 0
             cost = 0.0
             prev = depot
-            arrival_times: Dict[str, int] = {}
 
-            if self.direction == Direction.PICKUP:
-                # ── BACKWARD SCHEDULING ──────────────────────────────────────
-                # LOOP 1: record load + travel cost of every capacity-feasible
-                # prefix i..k. FIX-11: every prefix becomes its own trip so the
-                # DP can pick an intermediate pickup prefix just like DROPOFF.
-                prefix_cost: Dict[int, float] = {}
-                prefix_sw: Dict[int, int] = {}
-                prefix_so: Dict[int, int] = {}
-                prefix_tail: Dict[int, float] = {}  # arcs after the first stop
-                cum_cost = 0.0
-                cum_tail = 0.0
-                cum_sw = 0
-                cum_so = 0
-                prev = depot
-                for k in range(i, n):
-                    loc = giant_tour[k]
-                    sw_d, so_d = demands.get(loc, (0, 0))
-                    if cum_sw + sw_d > self.sw_capacity or cum_so + so_d > self.so_capacity:
-                        break
-                    travel_time = self._get_dist(prev, loc, distance_matrix)
-                    if math.isinf(travel_time):
-                        break  # FIX-10: missing arc means this prefix is unusable
-                    cum_cost += travel_time
-                    if k > i:
-                        cum_tail += travel_time
-                    prefix_tail[k] = cum_tail
-                    cum_sw += sw_d
-                    cum_so += so_d
-                    prefix_cost[k] = cum_cost
-                    prefix_sw[k] = cum_sw
-                    prefix_so[k] = cum_so
-                    prev = loc
+            for k in range(i, n):
+                loc = giant_tour[k]
+                sw_d, so_d = demands.get(loc, (0, 0))
+                sw_load += sw_d
+                so_load += so_d
+                if sw_load > self.sw_capacity or so_load > self.so_capacity:
+                    break
+                travel_time = self._get_dist(prev, loc, distance_matrix)
+                if math.isinf(travel_time):
+                    break  # FIX-10: missing arc means this prefix is unusable
+                cost += travel_time
+                prev = loc
 
-                # LOOP 2: emit one Trip per capacity-feasible prefix.
-                for k in prefix_cost:
-                    closing_arc = self._get_dist(giant_tour[k], depot, distance_matrix)
-                    total_trip_cost = prefix_cost[k] + closing_arc
+                closing_arc = self._get_dist(loc, depot, distance_matrix)
+                if math.isinf(closing_arc):
+                    continue
+                total_trip_cost = cost + closing_arc
+                if total_trip_cost > self.max_tour_duration:
+                    continue
 
-                    if total_trip_cost > self.max_tour_duration:
-                        continue
-
-                    # Pure-travel ride of the first student (s1 -> .. -> depot);
-                    # waiting aboard is added after the schedule simulation.
-                    pickup_ride = prefix_tail[k] + closing_arc
-                    if self.max_ride_time is not None and not (
-                        pickup_ride <= self.max_ride_time
-                    ):
-                        continue
-
-                    target_arrival = self._get_target_arrival_time(
-                        giant_tour[i:k + 1]  # FIX-11: per-prefix target arrival
-                    )
-
-                    departure_time = (
-                        target_arrival - int(total_trip_cost) - self.offset_minutes
-                    )
-
-                    # FIX-01: If departure_time is negative the trip is physically
-                    # impossible (driver would depart before midnight). Skip it.
-                    if departure_time < 0:
-                        logger.debug(
-                            "Skipping infeasible pickup trip i=%d end=%d: "
-                            "departure_time=%d < 0 (target=%d cost=%d offset=%d)",
-                            i, k, departure_time,
-                            target_arrival, int(total_trip_cost), self.offset_minutes,
-                        )
-                        continue
-
-                    # LOOP 3: verify time windows for this exact prefix.
-                    tw_violations = 0
-                    current_time = departure_time
-                    prev = depot
-                    waited_aboard = 0  # waits at stops after the first pickup
-
-                    for x in range(i, k + 1):
-                        loc = giant_tour[x]
-                        travel_time = self._get_dist(prev, loc, distance_matrix)
-                        current_time += int(travel_time)
-
-                        if loc in self.time_windows:
-                            earliest, latest = self.time_windows[loc]
-                            if current_time > latest:
-                                tw_violations += 1
-                            elif current_time < earliest:
-                                if x > i:
-                                    waited_aboard += earliest - current_time
-                                current_time = earliest  # wait until window opens
-
-                        arrival_times[loc] = current_time
-                        prev = loc
-
-                    if self.strict_time_windows and tw_violations > 0:
-                        continue
-
-                    # Waiting inside the vehicle counts toward the first
-                    # student's ride (audit H2: only simulated paths see it).
-                    if self.max_ride_time is not None and not (
-                        pickup_ride + waited_aboard <= self.max_ride_time
-                    ):
-                        continue
-
-                    trips[k + 1].append(Trip(
-                        start_idx=i,
-                        end_idx=k,
-                        cost=total_trip_cost,
-                        sw_count=prefix_sw[k],
-                        so_count=prefix_so[k],
-                        is_feasible=True,
-                        time_window_violations=tw_violations,
-                        departure_time=departure_time,  # FIX-01: guaranteed >= 0
-                    ))
-
-            else:  # ── DROPOFF — FORWARD SCHEDULING ─────────────────────────
-                current_time = self._get_target_departure_time(
-                    giant_tour[i:min(i + 1, n)]
+                schedule, tw_violations = self._simulate_trip(
+                    giant_tour[i:k + 1], depot, distance_matrix, demands
                 )
+                if any(v.kind not in (WINDOW, DEADLINE) for v in schedule.violations):
+                    continue  # FIX-01: before midnight / after the day end
+                if schedule.tour > self.max_tour_duration + tolerance:
+                    continue  # waits and service count in the tour
+                if self.strict_time_windows and tw_violations > 0:
+                    continue
+                if self.max_ride_time is not None and not (
+                    max(schedule.ride_times) <= self.max_ride_time + tolerance
+                ):
+                    continue
 
-                # FIX-02A: initialise BEFORE the loop so count accumulates
-                tw_violations = 0
-                waited_aboard = 0  # waits so far; every student aboard bears them
-
-                for j in range(i, n):
-                    loc = giant_tour[j]
-                    sw_d, so_d = demands.get(loc, (0, 0))
-                    sw_load += sw_d
-                    so_load += so_d
-
-                    if sw_load > self.sw_capacity or so_load > self.so_capacity:
-                        break
-
-                    travel_time = self._get_dist(prev, loc, distance_matrix)
-                    if math.isinf(travel_time):
-                        break  # FIX-10: missing arc kills the forward schedule
-                    cost += travel_time
-                    current_time += int(travel_time)
-
-                    # FIX-02B: check both window bounds
-                    if loc in self.time_windows:
-                        earliest, latest = self.time_windows[loc]
-                        if current_time > latest:
-                            tw_violations += 1  # FIX-02A: accumulate, not reset
-                        elif current_time < earliest:
-                            waited_aboard += earliest - current_time
-                            current_time = earliest  # wait until window opens
-
-                    arrival_times[loc] = current_time  # record after possible wait
-                    prev = loc
-
-                    return_cost = self._get_dist(loc, depot, distance_matrix)
-                    total_trip_cost = cost + return_cost
-
-                    if total_trip_cost > self.max_tour_duration:
-                        continue
-
-                    # Last student's ride = travel campus -> sk plus any waiting
-                    # aboard (the closing arc is not part of a dropoff ride).
-                    if self.max_ride_time is not None and not (
-                        cost + waited_aboard <= self.max_ride_time
-                    ):
-                        continue
-
-                    if self.strict_time_windows and tw_violations > 0:
-                        continue
-
-                    trips[j + 1].append(Trip(
-                        start_idx=i,
-                        end_idx=j,
-                        cost=total_trip_cost,
-                        sw_count=sw_load,
-                        so_count=so_load,
-                        is_feasible=True,
-                        time_window_violations=tw_violations,
-                        departure_time=current_time - int(cost),
-                    ))
+                trips[k + 1].append(Trip(
+                    start_idx=i,
+                    end_idx=k,
+                    cost=total_trip_cost,
+                    sw_count=sw_load,
+                    so_count=so_load,
+                    is_feasible=True,
+                    time_window_violations=tw_violations,
+                    departure_time=schedule.start,
+                    schedule=schedule,
+                ))
 
         return trips
-    
-    def _get_target_arrival_time(self, locations: List[str], depot: Optional[str] = None) -> int:
-        """
-        Get target arrival time for a PICKUP trip.
 
-        Returns the latest time window bound across all locations in the
-        trip, defaulting to 09:00 when no time windows are set.
-
-        FIX-09: removed unused `depot` parameter.
-        """
-        latest_time = self.target_time or (9 * 60)  # Default 09:00
-
-        for loc in locations:
-            if loc in self.time_windows:
-                _, latest = self.time_windows[loc]
-                if latest > latest_time:
-                    latest_time = latest
-
-        return latest_time
-
-    def _get_target_departure_time(self, locations: List[str], depot: Optional[str] = None) -> int:
-        """
-        Get target departure time for a DROPOFF trip.
-
-        Returns the earliest time window bound across all locations in the
-        trip, defaulting to 14:00 when no time windows are set.
-
-        FIX-09: removed unused `depot` parameter.
-        """
-        earliest_time = self.target_time or (14 * 60)  # Default 14:00
-
-        for loc in locations:
-            if loc in self.time_windows:
-                earliest, _ = self.time_windows[loc]
-                if earliest < earliest_time:
-                    earliest_time = earliest
-
-        return earliest_time
-    
-    def _minutes_to_time(self, minutes: int) -> str:
-        """Convert minutes-from-midnight integer to HH:MM string."""
+    def _minutes_to_time(self, minutes: float) -> str:
+        """Convert minutes from midnight to HH:MM (rounded down, OQ-MT1-10 b)."""
+        minutes = int(math.floor(minutes + 1e-9))
         hours = (minutes // 60) % 24
         mins = minutes % 60
         return f"{hours:02d}:{mins:02d}"
@@ -729,6 +666,8 @@ def decode_with_time_windows(
     max_tour_duration: float = 120.0,
     is_asymmetric: bool = False,
     max_ride_time: Optional[float] = None,
+    stop_dwell_minutes: float = 0.0,
+    sw_boarding_minutes: float = 0.0,
 ) -> Dict:
     """
     Convenience function for CVRPTW decoding.
@@ -740,8 +679,12 @@ def decode_with_time_windows(
         demands: Dict of location -> (sw_demand, so_demand)
         time_windows: Dict of location -> (earliest, latest) in minutes from midnight
         direction: PICKUP or DROPOFF
-        target_time: Global target time in minutes from midnight
-        offset_minutes: Buffer for driver notification
+        target_time: Required. Anchor in minutes from midnight: pickup deadline is
+            ``target_time - offset_minutes``, drop-off ready time ``target_time +
+            offset_minutes``. ``None`` raises ``ValueError``.
+        offset_minutes: Buffer (see target_time)
+        stop_dwell_minutes / sw_boarding_minutes: service time per stop and extra
+            per Sw stop (default 0)
         is_asymmetric: When True, respects asymmetric distance matrix (d(i,j) != d(j,i))
     
     Returns:
@@ -758,6 +701,8 @@ def decode_with_time_windows(
         offset_minutes=offset_minutes,
         is_asymmetric=is_asymmetric,
         max_ride_time=max_ride_time,
+        stop_dwell_minutes=stop_dwell_minutes,
+        sw_boarding_minutes=sw_boarding_minutes,
     )
     return decoder.decode_with_details(giant_tour, depot, distance_matrix, demands)
 

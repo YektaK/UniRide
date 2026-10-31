@@ -166,7 +166,8 @@ class TestSplitDecoderTimeWindows:
             so_capacity=5,
             time_windows=tight_tw,
             use_time_windows=True,
-            direction=Direction.PICKUP
+            direction=Direction.PICKUP,
+            target_time=540  # MT1-05: windows need an explicit target (no 09:00 default)
         )
         
         result = decoder.decode(giant_tour, depot, distance_matrix, demands)
@@ -264,48 +265,12 @@ class TestBackwardScheduling:
             offset_minutes=10
         )
     
-    def test_target_arrival_time(self, decoder):
-        """Test target arrival time calculation"""
-        time_windows = {
-            "Sw1": (480, 540),  # latest = 540
-            "Sw2": (510, 555)   # latest = 555
-        }
-        decoder.time_windows = time_windows
-        
-        target = decoder._get_target_arrival_time(["Sw1", "Sw2"], "D.Kampus")
-        
-        # Should use the latest time window (555)
-        assert target == 555
-    
     def test_minutes_to_time(self, decoder):
         """Test minutes to time string conversion"""
         assert decoder._minutes_to_time(540) == "09:00"
         assert decoder._minutes_to_time(480) == "08:00"
         assert decoder._minutes_to_time(0) == "00:00"
         assert decoder._minutes_to_time(720) == "12:00"
-
-
-class TestForwardScheduling:
-    """Test forward scheduling for dropoff"""
-    
-    def test_target_departure_time(self):
-        """Test target departure time calculation"""
-        decoder = SplitDecoder(
-            use_time_windows=True,
-            direction=Direction.DROPOFF,
-            target_time=480
-        )
-        
-        time_windows = {
-            "Sw1": (480, 540),  # earliest = 480
-            "Sw2": (450, 510)   # earliest = 450
-        }
-        decoder.time_windows = time_windows
-        
-        target = decoder._get_target_departure_time(["Sw1", "Sw2"], "D.Kampus")
-        
-        # Should use the earliest time window (450)
-        assert target == 450
 
 
 class TestIntegration:
